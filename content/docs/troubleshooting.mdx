@@ -1,0 +1,57 @@
+---
+title: Troubleshooting
+description: Common sxPanel issues and how to resolve them.
+---
+
+Most sxPanel issues come down to the `monitor/` folder swap, the FXServer launch
+command, or Discord bot configuration. This page covers the most common ones.
+
+## The panel URL does not open
+
+<Callout>
+  sxPanel prints a setup URL to the console on first boot. If you started
+  FXServer **with** `+exec server.cfg`, the panel may not have started. Launch
+  without it — sxPanel manages the server lifecycle for you.
+</Callout>
+
+- Confirm the `monitor/` folder contains the sxPanel build (look for the
+  `sxpanel` entry point).
+- Check the console for the printed URL; it usually runs on
+  `http://localhost:40120`.
+- If the port is in use, set an alternate port in the configuration.
+
+## Migration from txAdmin appears broken
+
+Existing `txData` directories work without modification. If something looks off:
+
+1. Verify you replaced the entire `monitor/` folder, not just part of it.
+2. Confirm `txData` is in its original location and is readable by FXServer.
+3. Restart FXServer so sxPanel re-scans the data directory.
+
+See the [Quick Start](/docs/quick-start) for the full migration walkthrough.
+
+## The Discord bot is offline
+
+- Double-check the bot token in the panel's Discord settings.
+- Ensure the bot has the required permissions in your server (send messages,
+  embed links, manage roles if using Role whitelist mode).
+- Re-invite the bot with the correct scopes if it was removed.
+
+## Players can't connect after enabling whitelist
+
+- Confirm the whitelist mode matches what you intend (e.g. Discord membership vs.
+  a specific Role).
+- For Role mode, verify the role mapping in Discord settings.
+- Check the [Whitelist](/docs/whitelist) guide for mode combinations.
+
+## Charts or console look empty
+
+Insights and the live console depend on the server running through sxPanel. If
+you bypass the panel and start FXServer directly, telemetry won't be captured.
+Always start via sxPanel so it can instrument the server.
+
+## Still stuck
+
+If none of the above helps, join the [Discord community](/docs/discord) or open
+an issue on [GitHub](https://github.com/Snipzil/sxpanel). Include the relevant
+JSONL log lines from the system logger — they make diagnosing much faster.

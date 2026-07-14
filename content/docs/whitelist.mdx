@@ -1,0 +1,45 @@
+---
+title: Whitelist
+description: Control exactly who can join your server — Discord, License, Role, or Admin-only.
+---
+
+sxPanel's whitelist keeps unwanted players out without the overhead of a
+separate resource. It runs on the self-contained database and can be managed
+from the web panel, Discord, or your own scripts via the
+[Events API](/docs/events-api).
+
+## Whitelist modes
+
+| Mode | How it works | Best for |
+| --- | --- | --- |
+| **Discord** | Players must be a member of your Discord server | Community servers |
+| **License** | Allow-list of FiveM/RedM license identifiers | Closed beta, staff testing |
+| **Role** | Requires a specific Discord role | Donators, verified members |
+| **Admin-only** | Only admins can join | Maintenance and staging |
+
+<Callout title="Combine modes">
+  You can stack modes — for example requiring both Discord membership and a
+  specific role. A player must satisfy every enabled mode to join.
+</Callout>
+
+## Managing entries
+
+- **From the panel** — open the Whitelist tab and add, search or remove
+  entries. Changes apply instantly; no restart needed.
+- **From Discord** — use the `/whitelist` slash command to add or remove
+  players without leaving your community channel.
+- **From scripts** — emit `sxpanel:whitelist:changed` via the Events API to
+  keep an external system in sync.
+
+## Discord role linking
+
+When using Role mode, map a Discord role to whitelist access in the panel's
+Discord settings. sxPanel verifies membership on connect and re-checks
+periodically, so revoked roles take effect automatically.
+
+## Next steps
+
+- Enable [Discord notifications](/docs/discord) to get alerted on whitelist
+  changes and join attempts.
+- Review [permissions](/docs/permissions) to decide which admins can manage the
+  whitelist.

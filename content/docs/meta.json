@@ -3,8 +3,14 @@
   "pages": [
     "index",
     "quick-start",
+    "---",
     "features",
     "discord",
-    "configuration"
+    "---",
+    "configuration",
+    "events-api",
+    "permissions",
+    "whitelist",
+    "troubleshooting"
   ]
 }

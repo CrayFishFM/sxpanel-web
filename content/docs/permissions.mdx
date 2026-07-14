@@ -1,0 +1,57 @@
+---
+title: Permissions
+description: 40+ granular permissions with presets and per-admin action logging.
+---
+
+sxPanel ships with 40+ granular permissions so you can give each admin exactly
+the access they need — nothing more. Permissions are grouped into presets for
+fast onboarding, and every action is logged per-admin for full accountability.
+
+## Permission presets
+
+Presets are bundles of permissions you can assign to a role in one click. Start
+from a preset, then fine-tune individual permissions.
+
+| Preset | Console | Players | Server | Insights |
+| --- | --- | --- | --- | --- |
+| Viewer | read | read | read | read |
+| Moderator | read | warn, kick, ban | read | read |
+| Admin | read + write | full | config | read |
+| Owner | full | full | full | full |
+
+<Callout>
+  Presets are starting points, not limits. After assigning a preset, toggle any
+  individual permission on or off for that admin.
+</Callout>
+
+## Permission categories
+
+- **Console** — read the live console, run commands, clear the buffer.
+- **Players** — view, warn, kick, ban, edit notes and whitelist entries.
+- **Server** — edit CFG, manage resources, schedule restarts, deploy recipes.
+- **Insights** — view analytics, export data, read admin action logs.
+- **Access control** — manage admins, assign permissions, view the system
+  logger.
+
+## Per-admin logging
+
+Every privileged action is written to a structured JSONL system logger with the
+admin identity, timestamp, target and payload. This is the single source of
+truth for auditing who did what, and when.
+
+```json
+{
+  "ts": "2026-07-13T20:14:00Z",
+  "admin": "snipz",
+  "action": "player.ban",
+  "target": "license:abc123",
+  "reason": "cheating",
+  "duration": "permanent"
+}
+```
+
+## Next steps
+
+- Wire [Discord slash commands](/docs/discord) to the same permission model so
+  admins can only run what they're allowed to.
+- Use the [Events API](/docs/events-api) to react to admin actions in real time.

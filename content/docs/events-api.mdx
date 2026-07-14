@@ -1,0 +1,55 @@
+---
+title: Events API
+description: React to bans, warnings, whitelist changes and more from your own resources.
+---
+
+sxPanel emits server-side events that your resources can listen to. This lets
+custom scripts react in real time to moderation actions, whitelist changes and
+server lifecycle events — without polling or extra database access.
+
+## Listening to events
+
+Use the standard FiveM event handler pattern. sxPanel namespaces all of its
+events under `sxpanel:` so they never collide with your own.
+
+```lua
+RegisterNetEvent('sxpanel:player:banned', function(player, reason, duration)
+  print(('Banned %s for %s (%s)'):format(player.name, reason, duration))
+end)
+```
+
+<Callout title="Server-side only">
+  All Events API emissions happen server-side. Register your handlers in a
+  server resource, never on the client.
+</Callout>
+
+## Event reference
+
+| Event | Payload | Fires when |
+| --- | --- | --- |
+| `sxpanel:player:warned` | `player, reason, admin` | A player is warned |
+| `sxpanel:player:banned` | `player, reason, duration` | A player is banned |
+| `sxpanel:player:kicked` | `player, reason, admin` | A player is kicked |
+| `sxpanel:player:unbanned` | `player` | A ban is removed |
+| `sxpanel:whitelist:changed` | `identifier, action` | A whitelist entry is added or removed |
+| `sxpanel:server:restarting` | `delaySeconds` | A scheduled restart is announced |
+| `sxpanel:server:crashed` | `details` | The server process crashes |
+
+## Custom tags via exports
+
+You can push custom tags into the playerlist from any resource. Tags appear
+instantly in the web panel and can be filtered on.
+
+```lua
+-- up to 20 custom tags per server
+exports.sxpanel:setPlayerTag(playerSrc, 'donator', {
+  color = '#7c5cff',
+})
+```
+
+## Next steps
+
+- Pair events with [Discord notifications](/docs/discord) to mirror actions in
+  your community.
+- Review [access control](/docs/permissions) to scope which admins can trigger
+  each event.

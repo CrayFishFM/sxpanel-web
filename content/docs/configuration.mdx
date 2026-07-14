@@ -20,15 +20,20 @@ files required.
 ## Environment variables & advanced options
 
 Advanced deployments can be tuned with environment variables and configuration
-options. See the official
-[Configuration docs](https://sxpanel.org/docs/configuration) for the full
-reference.
+options. The most useful ones are listed below; the panel also exposes a
+settings UI for everything else.
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `SXPANEL_PORT` | `40120` | Port the web panel listens on |
+| `SXPANEL_LOG_LEVEL` | `info` | System logger verbosity |
+| `SXPANEL_DISABLE_BOT` | `false` | Disable the built-in Discord bot |
 
 ## Events API
 
 Listen to sxPanel server events in your own resources with the
-[Events API](https://sxpanel.org/docs/events). This lets your scripts react to
-bans, warnings, whitelist changes and other panel activity in real time.
+[Events API](/docs/events-api). This lets your scripts react to bans, warnings,
+whitelist changes and other panel activity in real time.
 
 ## Migrating from txAdmin
 

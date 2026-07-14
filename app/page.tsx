@@ -1,11 +1,17 @@
+import type { ReactNode } from "react"
+import Link from "next/link"
 import {
   ArrowRight,
   BarChart3,
   Check,
+  Flag,
   Gamepad2,
   Globe,
   Languages,
+  ListChecks,
   MessageSquare,
+  Package,
+  RotateCw,
   ShieldCheck,
   Terminal,
   Timer,
@@ -30,16 +36,19 @@ import {
 } from "@/components/ui/accordion"
 import { SiteHeader } from "@/components/site-header"
 import { GithubIcon } from "@/components/icons"
-
-const DISCORD_URL = "https://discord.gg/hUM3pQeGFc"
-const GITHUB_URL = "https://github.com/Snipzil/sxpanel"
-const RELEASES_URL = "https://github.com/Snipzil/sxpanel/releases"
+import { Brand } from "@/components/brand"
+import { Reveal } from "@/components/reveal"
+import { ProductMockup } from "@/components/landing/product-mockup"
+import { AnalyticsShowcase } from "@/components/landing/analytics-showcase"
+import { NotifyForm } from "@/components/landing/notify-form"
+import { siteConfig } from "@/lib/site"
 
 const FEATURES = [
   {
     icon: Terminal,
     title: "Web Panel",
     description: "A real-time control room for your server.",
+    href: "/docs/features#web-panel",
     points: [
       "Live console with block-based buffer & lazy-loading",
       "Performance charts — CPU, memory & threads",
@@ -52,6 +61,7 @@ const FEATURES = [
     icon: Gamepad2,
     title: "In-Game Menu",
     description: "Admin tooling that lives inside the game.",
+    href: "/docs/features#in-game-menu",
     points: [
       "Player Mode: NoClip, God, SuperJump",
       "Teleport, Vehicle, Heal & Announcements",
@@ -64,6 +74,7 @@ const FEATURES = [
     icon: BarChart3,
     title: "Insights & Analytics",
     description: "Understand how your server actually performs.",
+    href: "#analytics",
     points: [
       "Player count & memory timeline up to 96h",
       "Retention metrics — 1d / 7d / 30d",
@@ -76,6 +87,7 @@ const FEATURES = [
     icon: Users,
     title: "Player Management",
     description: "Everything you need to keep the peace.",
+    href: "/docs/features#player-management",
     points: [
       "Warning & Ban system with full history",
       "Whitelist — Discord, License, Role, Admin-only",
@@ -88,6 +100,7 @@ const FEATURES = [
     icon: ShieldCheck,
     title: "Access Control",
     description: "Granular permissions for every admin.",
+    href: "/docs/permissions",
     points: [
       "Login via Cfx.re or password",
       "40+ granular permissions with presets",
@@ -99,6 +112,7 @@ const FEATURES = [
     icon: MessageSquare,
     title: "Discord Integration",
     description: "Manage and monitor without leaving Discord.",
+    href: "/docs/discord",
     points: [
       "Auto-updated status embed with custom footer",
       "/status, /whitelist, /warn, /ban, /history & more",
@@ -131,6 +145,46 @@ const STEPS = [
   {
     title: "Open the panel URL",
     body: "Visit the URL shown in the console to set up your account and server.",
+  },
+]
+
+const SETUP_STEPS: { label: string; done: boolean; active?: boolean }[] = [
+  { label: "Create admin account", done: true },
+  { label: "Link FXServer", done: true },
+  { label: "Configure Discord bot", done: false, active: true },
+  { label: "Review permissions", done: false },
+]
+
+const MORE_CAPABILITIES = [
+  {
+    icon: Zap,
+    title: "Recipe-based deployer",
+    body: "Stand up a new server in under 60 seconds with declarative recipes.",
+  },
+  {
+    icon: Terminal,
+    title: "GitHub token & headless CLI",
+    body: "Automate deploys and artifact pulls from CI without a browser.",
+  },
+  {
+    icon: Package,
+    title: "Artifact management",
+    body: "Browse, pin and switch FXServer artifact builds from the panel.",
+  },
+  {
+    icon: RotateCw,
+    title: "Scheduled restarts",
+    body: "Cron-style restarts with postponable temp schedules and warnings.",
+  },
+  {
+    icon: Flag,
+    title: "Report system",
+    body: "In-game player reports with Discord alerts and a triage queue.",
+  },
+  {
+    icon: Languages,
+    title: "30+ languages",
+    body: "Localised panel and in-game menu, with community translations.",
   },
 ]
 
@@ -170,17 +224,43 @@ const FAQ = [
   },
 ]
 
+function SectionHeading({
+  badge,
+  title,
+  children,
+}: {
+  badge?: string
+  title: string
+  children?: ReactNode
+}) {
+  return (
+    <Reveal className="mx-auto max-w-2xl text-center">
+      {badge && (
+        <Badge variant="secondary" className="mb-4">
+          {badge}
+        </Badge>
+      )}
+      <h2 className="font-heading text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
+        {title}
+      </h2>
+      {children && (
+        <p className="mt-4 text-muted-foreground">{children}</p>
+      )}
+    </Reveal>
+  )
+}
+
 export default function Page() {
   return (
     <div id="top" className="flex min-h-svh flex-col bg-background">
       <SiteHeader />
 
-      <main className="flex-1">
+      <main id="main" className="flex-1">
         {/* Hero */}
         <section className="relative overflow-hidden">
           <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(60%_50%_at_50%_0%,var(--brand-muted),transparent_70%)] opacity-60" />
           <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
-          <div className="mx-auto flex max-w-6xl flex-col items-center px-4 pt-20 pb-16 text-center sm:px-6 sm:pt-28">
+          <div className="mx-auto flex max-w-6xl flex-col items-center px-4 pt-16 pb-12 text-center sm:px-6 sm:pt-24">
             <Badge
               variant="outline"
               className="mb-6 h-7 gap-1.5 border-brand/30 bg-brand/5 px-3 text-brand"
@@ -189,33 +269,29 @@ export default function Page() {
               Drop-in replacement for txAdmin
             </Badge>
 
-            <h1 className="font-heading max-w-3xl text-4xl font-semibold tracking-tight text-balance sm:text-5xl md:text-6xl">
+            <h1 className="font-heading mx-auto max-w-3xl text-4xl font-semibold tracking-tight text-balance sm:text-5xl md:text-6xl">
               Manage your FiveM &amp; RedM server from one{" "}
-              <span className="bg-gradient-to-r from-brand to-brand/60 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-brand to-brand/80 bg-clip-text text-transparent">
                 powerful panel
               </span>
             </h1>
 
-            <p className="mt-6 max-w-2xl text-base text-pretty text-muted-foreground sm:text-lg">
-              sxPanel is a full-featured web panel and in-game menu — a complete
-              overhaul of txAdmin with live console, deep insights, player
-              management and Discord integration. Fully compatible with your
-              existing servers and configs.
+            <p className="mx-auto mt-6 max-w-2xl text-base text-pretty text-muted-foreground sm:text-lg">
+              sxPanel is a full-featured web panel and in-game menu — a
+              complete overhaul of txAdmin with live console, deep insights,
+              player management and Discord integration. Fully compatible with
+              your existing servers and configs.
             </p>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Button
-                size="lg"
-                asChild
-                className="bg-brand text-brand-foreground shadow-sm shadow-brand/30 hover:bg-brand/90"
-              >
-                <a href={RELEASES_URL} target="_blank" rel="noreferrer">
-                  Download latest release
+              <Button variant="brand" size="lg" asChild>
+                <a href={siteConfig.releases} target="_blank" rel="noreferrer">
                   <ArrowRight />
+                  Download latest release
                 </a>
               </Button>
               <Button size="lg" variant="outline" asChild>
-                <a href={GITHUB_URL} target="_blank" rel="noreferrer">
+                <a href={siteConfig.github} target="_blank" rel="noreferrer">
                   <GithubIcon />
                   View on GitHub
                 </a>
@@ -223,54 +299,12 @@ export default function Page() {
             </div>
 
             <p className="mt-4 text-xs text-muted-foreground">
-              MIT licensed · Existing txData directories work without modification
+              MIT licensed · Existing txData directories work without
+              modification
             </p>
 
-            {/* Console mockup */}
-            <div className="mt-14 w-full max-w-4xl">
-              <div className="overflow-hidden rounded-xl border border-border bg-card text-left shadow-2xl shadow-black/10 ring-1 ring-foreground/5">
-                <div className="flex items-center gap-2 border-b border-border bg-muted/50 px-4 py-3">
-                  <span className="size-3 rounded-full bg-destructive/60" />
-                  <span className="size-3 rounded-full bg-chart-2/60" />
-                  <span className="size-3 rounded-full bg-brand/60" />
-                  <span className="ml-3 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                    <Terminal className="size-3.5" />
-                    sxPanel · Live Console
-                  </span>
-                  <Badge
-                    variant="outline"
-                    className="ml-auto border-brand/30 bg-brand/5 text-[10px] text-brand"
-                  >
-                    ● online
-                  </Badge>
-                </div>
-                <div className="space-y-1.5 p-4 font-mono text-xs leading-relaxed sm:text-sm">
-                  <p className="text-muted-foreground">
-                    <span className="text-brand">sxpanel</span> ~ starting server
-                    monitor
-                  </p>
-                  <p>
-                    <span className="text-chart-2">[OK]</span> txData directory
-                    detected — 0 migrations needed
-                  </p>
-                  <p>
-                    <span className="text-chart-2">[OK]</span> Web panel ready on{" "}
-                    <span className="text-brand">http://localhost:40120</span>
-                  </p>
-                  <p>
-                    <span className="text-chart-2">[OK]</span> Discord bot
-                    connected · status embed updated
-                  </p>
-                  <p className="text-muted-foreground">
-                    <span className="text-foreground">players</span> 42 online ·
-                    peak 118 · uptime 6d 14h
-                  </p>
-                  <p className="flex items-center gap-2 text-muted-foreground">
-                    <span className="text-brand">sxpanel</span> ~{" "}
-                    <span className="inline-block h-4 w-2 animate-pulse bg-foreground/70" />
-                  </p>
-                </div>
-              </div>
+            <div className="mt-12 w-full max-w-4xl sm:mt-16">
+              <ProductMockup />
             </div>
           </div>
         </section>
@@ -278,7 +312,9 @@ export default function Page() {
         {/* Trust strip */}
         <section className="border-y border-border/60 bg-muted/30">
           <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-8 gap-y-3 px-4 py-6 text-sm font-medium text-muted-foreground sm:px-6">
-            <span className="text-xs tracking-wide uppercase">Works with</span>
+            <span className="text-xs tracking-wide uppercase">
+              Works with
+            </span>
             {["txAdmin", "FiveM", "RedM", "FXServer", "Cfx.re"].map((name) => (
               <span key={name} className="flex items-center gap-1.5">
                 <Check className="size-4 text-brand" />
@@ -290,75 +326,77 @@ export default function Page() {
 
         {/* Features */}
         <section id="features" className="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-24">
-          <div className="mx-auto max-w-2xl text-center">
-            <Badge variant="secondary" className="mb-4">
-              Everything, in one place
-            </Badge>
-            <h2 className="font-heading text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
-              Built to run serious servers
-            </h2>
-            <p className="mt-4 text-muted-foreground">
-              Six pillars of functionality, each designed to replace a pile of
-              separate resources and dashboards.
-            </p>
-          </div>
+          <SectionHeading
+            badge="Everything, in one place"
+            title="Built to run serious servers"
+          >
+            Six pillars of functionality, each designed to replace a pile of
+            separate resources and dashboards.
+          </SectionHeading>
 
-          <div id="ingame" className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {FEATURES.map((feature) => (
-              <Card
-                key={feature.title}
-                className="group transition-colors hover:ring-brand/30"
-              >
-                <CardHeader>
-                  <div className="mb-2 grid size-10 place-items-center rounded-lg bg-brand/10 text-brand ring-1 ring-brand/20 transition-colors group-hover:bg-brand group-hover:text-brand-foreground">
-                    <feature.icon className="size-5" />
-                  </div>
-                  <CardTitle className="text-lg">{feature.title}</CardTitle>
-                  <CardDescription>{feature.description}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-2.5">
-                    {feature.points.map((point) => (
-                      <li key={point} className="flex gap-2.5 text-sm text-muted-foreground">
-                        <Check className="mt-0.5 size-4 shrink-0 text-brand" />
-                        <span>{point}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
+          <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {FEATURES.map((feature, i) => (
+              <Reveal key={feature.title} delay={i * 60}>
+                <a href={feature.href} className="group block h-full">
+                  <Card className="h-full transition-all duration-300 ease-[var(--ease-out-quart)] hover:-translate-y-1 hover:border-brand/40 hover:shadow-card-hover">
+                    <CardHeader>
+                      <div className="mb-2 grid size-10 place-items-center rounded-lg bg-brand/10 text-brand ring-1 ring-brand/20 transition-colors group-hover:bg-brand group-hover:text-brand-foreground">
+                        <feature.icon className="size-5" />
+                      </div>
+                      <CardTitle className="text-lg">{feature.title}</CardTitle>
+                      <CardDescription>{feature.description}</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <ul className="space-y-2.5">
+                        {feature.points.map((point) => (
+                          <li
+                            key={point}
+                            className="flex gap-2.5 text-sm text-muted-foreground"
+                          >
+                            <Check className="mt-0.5 size-4 shrink-0 text-success" />
+                            <span>{point}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </CardContent>
+                  </Card>
+                </a>
+              </Reveal>
             ))}
           </div>
         </section>
 
+        {/* Analytics showcase */}
+        <AnalyticsShowcase />
+
         {/* Stats */}
-        <section id="insights" className="border-y border-border/60 bg-muted/30">
-          <div className="mx-auto grid max-w-6xl gap-px overflow-hidden px-4 py-4 sm:grid-cols-2 sm:px-6 lg:grid-cols-4">
+        <section className="border-y border-border/60 bg-brand/5">
+          <div className="mx-auto grid max-w-6xl grid-cols-1 divide-y divide-border/60 px-4 sm:grid-cols-4 sm:divide-x sm:divide-y-0 sm:px-6">
             {STATS.map((stat) => (
               <div
                 key={stat.label}
                 className="flex flex-col items-center gap-2 px-6 py-8 text-center"
               >
                 <stat.icon className="size-5 text-brand" />
-                <span className="font-heading text-4xl font-semibold tracking-tight">
+                <span className="font-heading text-4xl font-semibold tracking-tight tabular-nums">
                   {stat.value}
                 </span>
-                <span className="text-sm text-muted-foreground">{stat.label}</span>
+                <span className="text-sm text-muted-foreground">
+                  {stat.label}
+                </span>
               </div>
             ))}
           </div>
         </section>
 
-        {/* Drop-in / Quick start */}
-        <section id="quickstart" className="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-24">
+        {/* Quick start */}
+        <section
+          id="quickstart"
+          className="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-24"
+        >
           <div className="grid gap-12 lg:grid-cols-2 lg:gap-16">
             <div>
-              <Badge variant="secondary" className="mb-4">
-                Migrate in minutes
-              </Badge>
-              <h2 className="font-heading text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
-                A true drop-in replacement
-              </h2>
+              <SectionHeading badge="Migrate in minutes" title="A true drop-in replacement" />
               <p className="mt-4 text-muted-foreground">
                 sxPanel is built on top of txAdmin with full compatibility for
                 existing servers, databases and configurations. No data
@@ -383,6 +421,56 @@ export default function Page() {
             </div>
 
             <div className="flex flex-col gap-5">
+              {/* Onboarding preview */}
+              <Card className="bg-card">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <ListChecks className="size-4 text-brand" />
+                    First-run setup wizard
+                  </CardTitle>
+                  <CardDescription>
+                    Open the panel URL and sxPanel walks you through the rest.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2.5">
+                    {SETUP_STEPS.map((s) => (
+                      <div key={s.label} className="flex items-center gap-3">
+                        <span
+                          className={
+                            s.done
+                              ? "grid size-5 place-items-center rounded-full bg-success text-success-foreground"
+                              : s.active
+                                ? "grid size-5 place-items-center rounded-full border-2 border-brand bg-brand/10"
+                                : "grid size-5 place-items-center rounded-full border border-border"
+                          }
+                        >
+                          {s.done && <Check className="size-3" />}
+                          {s.active && (
+                            <span className="size-1.5 rounded-full bg-brand" />
+                          )}
+                        </span>
+                        <span
+                          className={
+                            s.done
+                              ? "text-sm text-muted-foreground line-through"
+                              : s.active
+                                ? "text-sm font-medium"
+                                : "text-sm text-muted-foreground"
+                          }
+                        >
+                          {s.label}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-muted">
+                    <div className="h-full w-1/2 rounded-full bg-brand" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Migration code */}
               <Card className="bg-card">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-base">
@@ -392,56 +480,63 @@ export default function Page() {
                 </CardHeader>
                 <CardContent>
                   <div className="rounded-lg border border-border bg-muted/40 p-4 font-mono text-xs leading-relaxed">
-                    <p className="text-muted-foreground"># in your FXServer artifacts</p>
+                    <p className="text-muted-foreground">
+                      # in your FXServer artifacts
+                    </p>
                     <p>
                       <span className="text-brand">$</span> rm -rf monitor/
                     </p>
                     <p>
                       <span className="text-brand">$</span> unzip sxpanel-latest.zip -d monitor/
                     </p>
-                    <p className="text-chart-2"># existing txData works as-is ✔</p>
+                    <p className="text-success">
+                      # existing txData works as-is ✓
+                    </p>
                   </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <Zap className="size-4 text-brand" />
-                    And plenty more
-                  </CardTitle>
-                  <CardDescription>
-                    Beyond the highlights, sxPanel ships with:
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ul className="grid gap-2.5 sm:grid-cols-2">
-                    {[
-                      "Recipe-based deployer (<60s)",
-                      "GitHub token support & headless CLI",
-                      "Artifact management",
-                      "Scheduled & postponable restarts",
-                      "Report system w/ Discord alerts",
-                      "30+ languages built in",
-                    ].map((item) => (
-                      <li key={item} className="flex gap-2 text-sm text-muted-foreground">
-                        <Check className="mt-0.5 size-4 shrink-0 text-brand" />
-                        <span>{item}</span>
-                      </li>
-                    ))}
-                  </ul>
                 </CardContent>
               </Card>
             </div>
           </div>
         </section>
 
-        {/* Discord commands */}
-        <section className="border-t border-border/60 bg-muted/30">
+        {/* More capabilities */}
+        <section className="border-y border-border/60 bg-muted/30">
+          <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-24">
+            <SectionHeading badge="And plenty more" title="Everything else, built in" />
+            <p className="mx-auto mt-4 max-w-2xl text-center text-muted-foreground">
+              Beyond the highlights, sxPanel ships with the operational tools
+              serious communities rely on.
+            </p>
+            <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {MORE_CAPABILITIES.map((item, i) => (
+                <Reveal key={item.title} delay={i * 50}>
+                  <div className="flex h-full gap-3.5 rounded-xl border border-border/60 bg-card p-4 shadow-card">
+                    <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-brand/10 text-brand">
+                      <item.icon className="size-4.5" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-medium">{item.title}</h3>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {item.body}
+                      </p>
+                    </div>
+                  </div>
+                </Reveal>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Discord */}
+        <section
+          id="discord"
+          className="relative overflow-hidden border-b border-border/60"
+        >
+          <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(50%_60%_at_80%_50%,var(--brand-muted),transparent_70%)] opacity-50" />
           <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-24">
             <div className="grid items-center gap-10 lg:grid-cols-2">
               <div>
-                <Badge variant="secondary" className="mb-4">
+                <Badge variant="brand" className="mb-4">
                   <MessageSquare className="size-3" />
                   Discord Integration
                 </Badge>
@@ -464,7 +559,7 @@ export default function Page() {
                   ))}
                 </div>
                 <Button asChild variant="outline" className="mt-8">
-                  <a href={DISCORD_URL} target="_blank" rel="noreferrer">
+                  <a href={siteConfig.discord} target="_blank" rel="noreferrer">
                     <MessageSquare />
                     Join the Discord
                   </a>
@@ -483,7 +578,11 @@ export default function Page() {
                         Auto-updated · custom footer
                       </CardDescription>
                     </div>
-                    <Badge className="ml-auto bg-chart-2/15 text-chart-2">
+                    <Badge variant="success" className="ml-auto">
+                      <span className="relative flex size-1.5">
+                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-60" />
+                        <span className="relative inline-flex size-1.5 rounded-full bg-success" />
+                      </span>
                       Online
                     </Badge>
                   </div>
@@ -500,7 +599,7 @@ export default function Page() {
                       className="flex items-center justify-between border-b border-border/60 pb-2 last:border-0 last:pb-0"
                     >
                       <span className="text-muted-foreground">{k}</span>
-                      <span className="font-medium">{v}</span>
+                      <span className="font-medium tabular-nums">{v}</span>
                     </div>
                   ))}
                 </CardContent>
@@ -510,19 +609,17 @@ export default function Page() {
         </section>
 
         {/* FAQ */}
-        <section id="faq" className="mx-auto max-w-3xl px-4 py-20 sm:px-6 sm:py-24">
-          <div className="text-center">
-            <Badge variant="secondary" className="mb-4">
-              FAQ
-            </Badge>
-            <h2 className="font-heading text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
-              Frequently asked questions
-            </h2>
-          </div>
+        <section
+          id="faq"
+          className="mx-auto max-w-3xl px-4 py-20 sm:px-6 sm:py-24"
+        >
+          <SectionHeading badge="FAQ" title="Frequently asked questions" />
           <Accordion type="single" collapsible className="mt-10">
             {FAQ.map((item) => (
               <AccordionItem key={item.q} value={item.q}>
-                <AccordionTrigger className="text-base">{item.q}</AccordionTrigger>
+                <AccordionTrigger className="text-base">
+                  {item.q}
+                </AccordionTrigger>
                 <AccordionContent className="text-muted-foreground">
                   {item.a}
                 </AccordionContent>
@@ -533,7 +630,7 @@ export default function Page() {
 
         {/* Final CTA */}
         <section className="mx-auto max-w-6xl px-4 pb-24 sm:px-6">
-          <div className="relative overflow-hidden rounded-2xl border border-border bg-card px-6 py-16 text-center ring-1 ring-foreground/5 sm:px-12">
+          <div className="relative overflow-hidden rounded-2xl border border-border bg-card px-6 py-16 text-center shadow-card ring-1 ring-foreground/5 sm:px-12">
             <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(60%_80%_at_50%_0%,var(--brand-muted),transparent_70%)] opacity-70" />
             <h2 className="font-heading mx-auto max-w-2xl text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
               Take control of your server today
@@ -542,23 +639,23 @@ export default function Page() {
               Download the latest release, swap the folder, and open the panel —
               you&apos;ll be up and running in minutes.
             </p>
-            <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-              <Button
-                size="lg"
-                asChild
-                className="bg-brand text-brand-foreground shadow-sm shadow-brand/30 hover:bg-brand/90"
-              >
-                <a href={RELEASES_URL} target="_blank" rel="noreferrer">
-                  Download sxPanel
-                  <ArrowRight />
-                </a>
-              </Button>
-              <Button size="lg" variant="outline" asChild>
-                <a href={DISCORD_URL} target="_blank" rel="noreferrer">
-                  <MessageSquare />
-                  Join the community
-                </a>
-              </Button>
+
+            <div className="mt-8 flex flex-col items-center justify-center gap-4">
+              <NotifyForm />
+              <div className="flex flex-col justify-center gap-3 sm:flex-row">
+                <Button variant="brand" size="lg" asChild>
+                  <a href={siteConfig.releases} target="_blank" rel="noreferrer">
+                    <ArrowRight />
+                    Download sxPanel
+                  </a>
+                </Button>
+                <Button size="lg" variant="outline" asChild>
+                  <a href={siteConfig.discord} target="_blank" rel="noreferrer">
+                    <MessageSquare />
+                    Join the community
+                  </a>
+                </Button>
+              </div>
             </div>
           </div>
         </section>
@@ -566,41 +663,82 @@ export default function Page() {
 
       {/* Footer */}
       <footer className="border-t border-border/60">
-        <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-10 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-          <div className="flex items-center gap-2">
-            <span className="grid size-7 place-items-center rounded-md bg-brand font-heading text-xs font-bold text-brand-foreground">
-              sx
-            </span>
-            <span className="font-heading font-semibold">sxPanel</span>
-            <span className="text-sm text-muted-foreground">
-              · MIT licensed
-            </span>
+        <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
+          <div className="grid gap-10 md:grid-cols-[1.5fr_1fr_1fr]">
+            <div className="space-y-4">
+              <Brand href="#top" size="md" />
+              <p className="max-w-xs text-sm text-muted-foreground">
+                A full-featured web panel and in-game menu for FiveM &amp; RedM
+                — a drop-in overhaul of txAdmin.
+              </p>
+            </div>
+
+            <div>
+              <h3 className="text-sm font-semibold">Product</h3>
+              <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
+                <li>
+                  <a href="#features" className="hover:text-foreground">
+                    Features
+                  </a>
+                </li>
+                <li>
+                  <a href="#analytics" className="hover:text-foreground">
+                    Analytics
+                  </a>
+                </li>
+                <li>
+                  <a href="#quickstart" className="hover:text-foreground">
+                    Quick Start
+                  </a>
+                </li>
+                <li>
+                  <a href={siteConfig.releases} className="hover:text-foreground" target="_blank" rel="noreferrer">
+                    Releases
+                  </a>
+                </li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="text-sm font-semibold">Resources</h3>
+              <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
+                <li>
+                  <Link href="/docs" className="hover:text-foreground">
+                    Documentation
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/docs/permissions" className="hover:text-foreground">
+                    Permissions
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/docs/events-api" className="hover:text-foreground">
+                    Events API
+                  </Link>
+                </li>
+                <li>
+                  <a href={siteConfig.discord} className="hover:text-foreground" target="_blank" rel="noreferrer">
+                    Discord
+                  </a>
+                </li>
+                <li>
+                  <a href={siteConfig.github} className="hover:text-foreground inline-flex items-center gap-1.5" target="_blank" rel="noreferrer">
+                    <GithubIcon className="size-4" />
+                    GitHub
+                  </a>
+                </li>
+              </ul>
+            </div>
           </div>
 
-          <nav className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
-            <a href="https://sxpanel.org/docs" className="hover:text-foreground" target="_blank" rel="noreferrer">
-              Documentation
-            </a>
-            <a href="https://sxpanel.org/docs/recipes" className="hover:text-foreground" target="_blank" rel="noreferrer">
-              Recipes
-            </a>
-            <a href={RELEASES_URL} className="hover:text-foreground" target="_blank" rel="noreferrer">
-              Releases
-            </a>
-            <a href={DISCORD_URL} className="hover:text-foreground" target="_blank" rel="noreferrer">
-              Discord
-            </a>
-            <a href={GITHUB_URL} className="flex items-center gap-1.5 hover:text-foreground" target="_blank" rel="noreferrer">
-              <GithubIcon className="size-4" />
-              GitHub
-            </a>
-          </nav>
-        </div>
-        <div className="border-t border-border/60">
-          <p className="mx-auto max-w-6xl px-4 py-5 text-xs text-muted-foreground sm:px-6">
-            Built by snipz &amp; contributors. Originally created by tabarra as
-            txAdmin.
-          </p>
+          <div className="mt-10 flex flex-col gap-2 border-t border-border/60 pt-6 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+            <p>
+              Built by snipz &amp; contributors. Originally created by tabarra as
+              txAdmin.
+            </p>
+            <p>MIT licensed · {new Date().getFullYear()}</p>
+          </div>
         </div>
       </footer>
     </div>
