@@ -4,6 +4,7 @@ import { Geist, Geist_Mono, Inter } from "next/font/google"
 import { RootProvider } from "fumadocs-ui/provider/next"
 
 import "./globals.css"
+import { DevConsoleMessage } from "@/components/dev-console-message"
 import { ThemeProvider } from "@/components/theme-provider"
 import { cn } from "@/lib/utils"
 import { siteConfig } from "@/lib/site"
@@ -100,6 +101,7 @@ export default function RootLayout({
         <ThemeProvider>
           <RootProvider theme={{ enabled: false }}>{children}</RootProvider>
         </ThemeProvider>
+        <DevConsoleMessage />
       </body>
     </html>
   )

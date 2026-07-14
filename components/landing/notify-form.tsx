@@ -17,7 +17,7 @@ export function NotifyForm() {
 
   if (done) {
     return (
-      <div className="inline-flex items-center gap-2 rounded-lg border border-success/30 bg-success/10 px-4 py-2.5 text-sm font-medium text-success">
+      <div className="animate-in fade-in-0 zoom-in-95 inline-flex items-center gap-2 rounded-lg border border-success/30 bg-success/10 px-4 py-2.5 text-sm font-medium text-success duration-300 ease-[var(--ease-out-quart)]">
         <Check className="size-4" />
         You&apos;re on the list — we&apos;ll ping you on new releases.
       </div>

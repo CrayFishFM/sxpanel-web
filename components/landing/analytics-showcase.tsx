@@ -69,11 +69,7 @@ export function AnalyticsShowcase() {
   return (
     <section id="analytics" className="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-24">
       <Reveal className="mx-auto max-w-2xl text-center">
-        <Badge variant="brand" className="mb-4">
-          <Activity className="size-3" />
-          Insights &amp; Analytics
-        </Badge>
-        <h2 className="font-heading text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
+        <h2 className="font-heading text-3xl font-semibold tracking-tight text-balance sm:text-4xl md:text-5xl">
           Understand how your server actually performs
         </h2>
         <p className="mt-4 text-muted-foreground">

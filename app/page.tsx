@@ -1,4 +1,3 @@
-import type { ReactNode } from "react"
 import Link from "next/link"
 import {
   ArrowRight,
@@ -19,6 +18,7 @@ import {
   Zap,
 } from "lucide-react"
 
+import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -41,6 +41,9 @@ import { Reveal } from "@/components/reveal"
 import { ProductMockup } from "@/components/landing/product-mockup"
 import { AnalyticsShowcase } from "@/components/landing/analytics-showcase"
 import { NotifyForm } from "@/components/landing/notify-form"
+import { MigrationSnippet } from "@/components/landing/migration-snippet"
+import { DiscordCommands } from "@/components/landing/discord-commands"
+import { StatValue } from "@/components/landing/stat-value"
 import { siteConfig } from "@/lib/site"
 
 const FEATURES = [
@@ -224,32 +227,6 @@ const FAQ = [
   },
 ]
 
-function SectionHeading({
-  badge,
-  title,
-  children,
-}: {
-  badge?: string
-  title: string
-  children?: ReactNode
-}) {
-  return (
-    <Reveal className="mx-auto max-w-2xl text-center">
-      {badge && (
-        <Badge variant="secondary" className="mb-4">
-          {badge}
-        </Badge>
-      )}
-      <h2 className="font-heading text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
-        {title}
-      </h2>
-      {children && (
-        <p className="mt-4 text-muted-foreground">{children}</p>
-      )}
-    </Reveal>
-  )
-}
-
 export default function Page() {
   return (
     <div id="top" className="flex min-h-svh flex-col bg-background">
@@ -271,16 +248,17 @@ export default function Page() {
 
             <h1 className="font-heading mx-auto max-w-3xl text-4xl font-semibold tracking-tight text-balance sm:text-5xl md:text-6xl">
               Manage your FiveM &amp; RedM server from one{" "}
-              <span className="bg-gradient-to-r from-brand to-brand/80 bg-clip-text text-transparent">
-                powerful panel
-              </span>
+              <span className="text-brand">powerful panel</span>
             </h1>
 
-            <p className="mx-auto mt-6 max-w-2xl text-base text-pretty text-muted-foreground sm:text-lg">
-              sxPanel is a full-featured web panel and in-game menu — a
-              complete overhaul of txAdmin with live console, deep insights,
-              player management and Discord integration. Fully compatible with
-              your existing servers and configs.
+            <p className="font-heading mx-auto mt-6 max-w-2xl text-lg font-medium text-balance sm:text-xl">
+              Swap the folder, keep everything, get a lot more.
+            </p>
+
+            <p className="mx-auto mt-3 max-w-2xl text-base text-pretty text-muted-foreground sm:text-lg">
+              Live console, deep insights, player management, granular
+              permissions and Discord integration — layered onto the txAdmin
+              foundation you already run, with zero migration.
             </p>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -326,43 +304,74 @@ export default function Page() {
 
         {/* Features */}
         <section id="features" className="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-24">
-          <SectionHeading
-            badge="Everything, in one place"
-            title="Built to run serious servers"
-          >
-            Six pillars of functionality, each designed to replace a pile of
-            separate resources and dashboards.
-          </SectionHeading>
+          <Reveal className="grid gap-6 lg:grid-cols-[1.2fr_1fr] lg:items-end">
+            <h2 className="font-heading text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
+              Built to run serious servers
+            </h2>
+            <p className="text-muted-foreground lg:text-right">
+              Six pillars of functionality, each designed to replace a pile of
+              separate resources and dashboards.
+            </p>
+          </Reveal>
 
           <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {FEATURES.map((feature, i) => (
-              <Reveal key={feature.title} delay={i * 60}>
-                <a href={feature.href} className="group block h-full">
-                  <Card className="h-full transition-all duration-300 ease-[var(--ease-out-quart)] hover:-translate-y-1 hover:border-brand/40 hover:shadow-card-hover">
-                    <CardHeader>
-                      <div className="mb-2 grid size-10 place-items-center rounded-lg bg-brand/10 text-brand ring-1 ring-brand/20 transition-colors group-hover:bg-brand group-hover:text-brand-foreground">
-                        <feature.icon className="size-5" />
-                      </div>
-                      <CardTitle className="text-lg">{feature.title}</CardTitle>
-                      <CardDescription>{feature.description}</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <ul className="space-y-2.5">
-                        {feature.points.map((point) => (
-                          <li
-                            key={point}
-                            className="flex gap-2.5 text-sm text-muted-foreground"
-                          >
-                            <Check className="mt-0.5 size-4 shrink-0 text-success" />
-                            <span>{point}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </CardContent>
-                  </Card>
-                </a>
-              </Reveal>
-            ))}
+            {FEATURES.map((feature, i) => {
+              const flagship = i === 0
+              return (
+                <Reveal
+                  key={feature.title}
+                  delay={i * 60}
+                  className={flagship ? "sm:col-span-2" : undefined}
+                >
+                  <a
+                    href={feature.href}
+                    className="group block h-full rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                  >
+                    <Card
+                      className={cn(
+                        "h-full transition-all duration-300 ease-[var(--ease-out-quart)] hover:-translate-y-1 hover:border-brand/40 hover:shadow-card-hover",
+                        flagship && "border-brand/25 bg-brand/5"
+                      )}
+                    >
+                      <CardHeader>
+                        <div className="mb-2 grid size-10 place-items-center rounded-lg bg-brand/10 text-brand ring-1 ring-brand/20 transition-colors group-hover:bg-brand group-hover:text-brand-foreground">
+                          <feature.icon className="size-5" />
+                        </div>
+                        <CardTitle asChild className="text-lg">
+                          <h3>{feature.title}</h3>
+                        </CardTitle>
+                        <CardDescription>{feature.description}</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <ul
+                          className={cn(
+                            "space-y-2.5",
+                            flagship &&
+                              "sm:grid sm:grid-cols-2 sm:gap-x-6 sm:space-y-0 sm:gap-y-2.5"
+                          )}
+                        >
+                          {feature.points.map((point) => (
+                            <li
+                              key={point}
+                              className="flex gap-2.5 text-sm text-muted-foreground"
+                            >
+                              <Check className="mt-0.5 size-4 shrink-0 text-success" />
+                              <span>{point}</span>
+                            </li>
+                          ))}
+                        </ul>
+                        {flagship && (
+                          <div className="mt-4 rounded-md border border-border/60 bg-muted/30 px-3 py-2 font-mono text-[11px] text-muted-foreground">
+                            <span className="relative mr-1.5 inline-flex size-1.5 rounded-full bg-success align-middle" />
+                            tailing console · 3 resources attached
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </a>
+                </Reveal>
+              )
+            })}
           </div>
         </section>
 
@@ -378,8 +387,8 @@ export default function Page() {
                 className="flex flex-col items-center gap-2 px-6 py-8 text-center"
               >
                 <stat.icon className="size-5 text-brand" />
-                <span className="font-heading text-4xl font-semibold tracking-tight tabular-nums">
-                  {stat.value}
+                <span className="font-heading text-4xl font-semibold tracking-tight">
+                  <StatValue value={stat.value} />
                 </span>
                 <span className="text-sm text-muted-foreground">
                   {stat.label}
@@ -396,16 +405,19 @@ export default function Page() {
         >
           <div className="grid gap-12 lg:grid-cols-2 lg:gap-16">
             <div>
-              <SectionHeading badge="Migrate in minutes" title="A true drop-in replacement" />
+              <h2 className="font-heading text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
+                A true drop-in replacement
+              </h2>
               <p className="mt-4 text-muted-foreground">
                 sxPanel is built on top of txAdmin with full compatibility for
-                existing servers, databases and configurations. No data
-                migration, no rewrites — just swap the folder and go.
+                existing servers, databases and configurations. No new folder
+                structure to learn — it drops into the artifacts you already
+                deploy.
               </p>
 
-              <div className="mt-8 space-y-6">
+              <ol className="mt-8 space-y-6">
                 {STEPS.map((step, i) => (
-                  <div key={step.title} className="flex gap-4">
+                  <li key={step.title} className="flex gap-4">
                     <span className="grid size-8 shrink-0 place-items-center rounded-full bg-brand/10 font-heading text-sm font-semibold text-brand ring-1 ring-brand/20">
                       {i + 1}
                     </span>
@@ -415,9 +427,9 @@ export default function Page() {
                         {step.body}
                       </p>
                     </div>
-                  </div>
+                  </li>
                 ))}
-              </div>
+              </ol>
             </div>
 
             <div className="flex flex-col gap-5">
@@ -471,30 +483,7 @@ export default function Page() {
               </Card>
 
               {/* Migration code */}
-              <Card className="bg-card">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <Terminal className="size-4 text-brand" />
-                    Migrating from txAdmin
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="rounded-lg border border-border bg-muted/40 p-4 font-mono text-xs leading-relaxed">
-                    <p className="text-muted-foreground">
-                      # in your FXServer artifacts
-                    </p>
-                    <p>
-                      <span className="text-brand">$</span> rm -rf monitor/
-                    </p>
-                    <p>
-                      <span className="text-brand">$</span> unzip sxpanel-latest.zip -d monitor/
-                    </p>
-                    <p className="text-success">
-                      # existing txData works as-is ✓
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
+              <MigrationSnippet />
             </div>
           </div>
         </section>
@@ -502,28 +491,42 @@ export default function Page() {
         {/* More capabilities */}
         <section className="border-y border-border/60 bg-muted/30">
           <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-24">
-            <SectionHeading badge="And plenty more" title="Everything else, built in" />
-            <p className="mx-auto mt-4 max-w-2xl text-center text-muted-foreground">
-              Beyond the highlights, sxPanel ships with the operational tools
-              serious communities rely on.
-            </p>
-            <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {MORE_CAPABILITIES.map((item, i) => (
-                <Reveal key={item.title} delay={i * 50}>
-                  <div className="flex h-full gap-3.5 rounded-xl border border-border/60 bg-card p-4 shadow-card">
-                    <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-brand/10 text-brand">
-                      <item.icon className="size-4.5" />
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-medium">{item.title}</h3>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        {item.body}
-                      </p>
-                    </div>
+            <Reveal>
+              <div className="overflow-hidden rounded-2xl border border-border/60">
+                <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-border/60 bg-muted/50 px-5 py-4">
+                  <div>
+                    <h2 className="font-heading text-lg font-semibold tracking-tight">
+                      Full capability manifest
+                    </h2>
+                    <p className="mt-0.5 text-sm text-muted-foreground">
+                      Beyond the highlights — the operational tools serious
+                      communities rely on.
+                    </p>
                   </div>
-                </Reveal>
-              ))}
-            </div>
+                  <span className="text-xs text-muted-foreground">
+                    {MORE_CAPABILITIES.length} systems
+                  </span>
+                </div>
+                <div className="grid gap-px bg-border/60 sm:grid-cols-2">
+                  {MORE_CAPABILITIES.map((item) => (
+                    <div
+                      key={item.title}
+                      className="flex items-start gap-3.5 bg-card p-5"
+                    >
+                      <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-brand/10 text-brand">
+                        <item.icon className="size-4.5" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-medium">{item.title}</h3>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          {item.body}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </Reveal>
           </div>
         </section>
 
@@ -532,14 +535,10 @@ export default function Page() {
           id="discord"
           className="relative overflow-hidden border-b border-border/60"
         >
-          <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(50%_60%_at_80%_50%,var(--brand-muted),transparent_70%)] opacity-50" />
+          <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(50%_60%_at_20%_50%,var(--brand-muted),transparent_70%)] opacity-50" />
           <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-24">
             <div className="grid items-center gap-10 lg:grid-cols-2">
-              <div>
-                <Badge variant="brand" className="mb-4">
-                  <MessageSquare className="size-3" />
-                  Discord Integration
-                </Badge>
+              <div className="lg:order-2">
                 <h2 className="font-heading text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
                   Run your server from Discord
                 </h2>
@@ -548,16 +547,7 @@ export default function Page() {
                   while a full suite of slash commands lets admins moderate
                   without ever opening the panel.
                 </p>
-                <div className="mt-6 flex flex-wrap gap-2">
-                  {COMMANDS.map((cmd) => (
-                    <span
-                      key={cmd}
-                      className="rounded-md border border-border bg-background px-2.5 py-1 font-mono text-xs text-muted-foreground"
-                    >
-                      {cmd}
-                    </span>
-                  ))}
-                </div>
+                <DiscordCommands commands={COMMANDS} />
                 <Button asChild variant="outline" className="mt-8">
                   <a href={siteConfig.discord} target="_blank" rel="noreferrer">
                     <MessageSquare />
@@ -566,7 +556,7 @@ export default function Page() {
                 </Button>
               </div>
 
-              <Card className="lg:justify-self-end lg:max-w-md">
+              <Card className="lg:order-1">
                 <CardHeader className="border-b">
                   <div className="flex items-center gap-3">
                     <span className="grid size-9 place-items-center rounded-lg bg-brand text-brand-foreground">
@@ -613,8 +603,20 @@ export default function Page() {
           id="faq"
           className="mx-auto max-w-3xl px-4 py-20 sm:px-6 sm:py-24"
         >
-          <SectionHeading badge="FAQ" title="Frequently asked questions" />
-          <Accordion type="single" collapsible className="mt-10">
+          <Reveal className="flex items-baseline justify-between gap-4 border-b border-border/60 pb-4">
+            <h2 className="font-heading text-2xl font-semibold tracking-tight">
+              Questions, answered
+            </h2>
+            <a
+              href={siteConfig.discord}
+              target="_blank"
+              rel="noreferrer"
+              className="hidden shrink-0 text-sm text-muted-foreground hover:text-brand sm:inline"
+            >
+              Still stuck? Ask in Discord →
+            </a>
+          </Reveal>
+          <Accordion type="single" collapsible className="mt-6">
             {FAQ.map((item) => (
               <AccordionItem key={item.q} value={item.q}>
                 <AccordionTrigger className="text-base">
