@@ -1,0 +1,59 @@
+---
+title: Quick Start
+description: Install sxPanel and open your panel in under a minute.
+---
+
+sxPanel ships as a replacement for the `monitor/` folder inside your FXServer
+artifacts. If you already run txAdmin, migrating takes a single folder swap.
+
+## Steps
+
+<Steps>
+<Step>
+
+### Download the latest release
+
+Grab the newest build from the
+[GitHub Releases](https://github.com/Snipzil/sxpanel/releases) page.
+
+</Step>
+<Step>
+
+### Replace the `monitor/` folder
+
+Swap the `monitor/` folder in your FXServer artifacts with the sxPanel build.
+
+```bash
+# in your FXServer artifacts directory
+rm -rf monitor/
+unzip sxpanel-latest.zip -d monitor/
+```
+
+<Callout>
+  Existing `txData` directories work without modification — no migration needed.
+</Callout>
+
+</Step>
+<Step>
+
+### Start FXServer
+
+Start FXServer **without** `+exec server.cfg` — sxPanel starts automatically.
+
+</Step>
+<Step>
+
+### Open the panel URL
+
+Open the URL shown in the console to set up your account and server.
+
+</Step>
+</Steps>
+
+## What's next?
+
+- Review the [Configuration](/docs/configuration) options for environment
+  variables and advanced settings.
+- Set up the [Discord integration](/docs/discord) for status embeds and slash
+  commands.
+- Explore the [full feature list](/docs/features).

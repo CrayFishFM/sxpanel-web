@@ -1,0 +1,41 @@
+---
+title: Configuration
+description: Environment variables, advanced options and the Events API.
+---
+
+Most of sxPanel is configured through the web panel itself during first-time
+setup. This page covers the lower-level knobs.
+
+## First-time setup
+
+When you start FXServer with the sxPanel build in place, the console prints a
+setup URL. Open it to create your account and link your server — no manual config
+files required.
+
+<Callout>
+  Start FXServer **without** `+exec server.cfg`. sxPanel starts automatically and
+  manages the server lifecycle for you.
+</Callout>
+
+## Environment variables & advanced options
+
+Advanced deployments can be tuned with environment variables and configuration
+options. See the official
+[Configuration docs](https://sxpanel.org/docs/configuration) for the full
+reference.
+
+## Events API
+
+Listen to sxPanel server events in your own resources with the
+[Events API](https://sxpanel.org/docs/events). This lets your scripts react to
+bans, warnings, whitelist changes and other panel activity in real time.
+
+## Migrating from txAdmin
+
+sxPanel is a drop-in replacement. To migrate:
+
+1. Replace the `monitor/` folder in your FXServer artifacts with the sxPanel build.
+2. Keep your existing `txData` directory in place — it works without modification.
+3. Restart FXServer.
+
+See the [Quick Start](/docs/quick-start) for the full walkthrough.

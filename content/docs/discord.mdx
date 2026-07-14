@@ -1,0 +1,42 @@
+---
+title: Discord Integration
+description: Run and monitor your server directly from Discord.
+---
+
+sxPanel ships with a built-in Discord bot. It keeps an auto-updated status embed
+in your server and exposes a full suite of slash commands so admins can moderate
+without ever opening the panel.
+
+## Status embed
+
+An auto-updated status embed shows live server information with a custom footer.
+It surfaces player counts, uptime and more at a glance.
+
+## Slash commands
+
+| Command | Description |
+| --- | --- |
+| `/status` | Show live server status |
+| `/whitelist` | Manage whitelist entries |
+| `/info` | Look up server information |
+| `/admininfo` | Show admin information |
+| `/warn` | Warn a player |
+| `/kick` | Kick a player |
+| `/ban` | Ban a player |
+| `/unban` | Remove a ban |
+| `/notes` | View or edit player notes |
+| `/history` | View a player's history |
+
+## Notifications
+
+sxPanel can push Discord notifications for:
+
+- New reports
+- Bans
+- Crashes
+- Whitelist events
+
+<Callout title="Tip">
+  Combine slash commands with per-admin [access control](/docs/features#access-control)
+  so each admin only sees the actions they're permitted to run.
+</Callout>
