@@ -642,8 +642,7 @@ export default function Page() {
               you&apos;ll be up and running in minutes.
             </p>
 
-            <div className="mt-8 flex flex-col items-center justify-center gap-4">
-              <NotifyForm />
+            <div className="mt-8 flex flex-col items-center justify-center gap-8">
               <div className="flex flex-col justify-center gap-3 sm:flex-row">
                 <Button variant="brand" size="lg" asChild>
                   <a href={siteConfig.releases} target="_blank" rel="noreferrer">
@@ -658,6 +657,14 @@ export default function Page() {
                   </a>
                 </Button>
               </div>
+
+              <div className="flex w-full max-w-md items-center gap-3 text-xs text-muted-foreground/70">
+                <span className="h-px flex-1 bg-border" />
+                or
+                <span className="h-px flex-1 bg-border" />
+              </div>
+
+              <NotifyForm />
             </div>
           </div>
         </section>
