@@ -14,11 +14,13 @@ command, or Discord bot configuration. This page covers the most common ones.
   without it — sxPanel manages the server lifecycle for you.
 </Callout>
 
-- Confirm the `monitor/` folder contains the sxPanel build (look for the
-  `sxpanel` entry point).
+- Confirm the `monitor/` folder contains the sxPanel build and that FXServer
+  loaded a resource literally named `monitor` (this is required — see the
+  [Events API](/docs/events-api) note on the resource name).
 - Check the console for the printed URL; it usually runs on
   `http://localhost:40120`.
-- If the port is in use, set an alternate port in the configuration.
+- If the port is in use, set the `TXHOST_TXA_PORT` environment variable to an
+  alternate port (see [Configuration](/docs/configuration)).
 
 ## Migration from txAdmin appears broken
 
@@ -32,17 +34,20 @@ See the [Quick Start](/docs/quick-start) for the full migration walkthrough.
 
 ## The Discord bot is offline
 
-- Double-check the bot token in the panel's Discord settings.
-- Ensure the bot has the required permissions in your server (send messages,
-  embed links, manage roles if using Role whitelist mode).
+- Double-check the bot token and "Bot Enabled" toggle in the panel's Discord
+  settings.
+- Make sure the **Server Members Intent** and **Message Content Intent** are
+  enabled for your bot application in the Discord Developer Portal — the bot
+  needs both to resolve roles and read command interactions.
 - Re-invite the bot with the correct scopes if it was removed.
 
 ## Players can't connect after enabling whitelist
 
-- Confirm the whitelist mode matches what you intend (e.g. Discord membership vs.
-  a specific Role).
-- For Role mode, verify the role mapping in Discord settings.
-- Check the [Whitelist](/docs/whitelist) guide for mode combinations.
+- Confirm the active whitelist workflow matches what you intend (Admin Only,
+  Discord Member, Discord Role, or Manual Review).
+- For Discord Role workflows, verify the role IDs configured in Discord settings.
+- Remember only one workflow is active at a time — check the
+  [Whitelist](/docs/whitelist) guide if you expected multiple checks to combine.
 
 ## Charts or console look empty
 

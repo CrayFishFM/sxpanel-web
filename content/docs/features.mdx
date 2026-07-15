@@ -23,7 +23,7 @@ Admin tooling that lives inside the game.
 - Player Mode: NoClip, God, SuperJump
 - Teleport, Vehicle, Heal, Announcements
 - Live Spectate from the web panel
-- Built-in screenshot capture (no `screenshot-basic`)
+- Built-in screenshot capture (replaces `screenshot-basic`)
 - Ban / Warn / DM with editable durations
 
 ## Insights & Analytics
@@ -42,16 +42,16 @@ Everything you need to keep the peace.
 
 - Warning & Ban system with full history
 - Whitelist (Discord, License, Role, Admin-only)
-- Auto-tags + up to 20 custom tags via resource exports
+- Auto-tags + up to 20 custom tags, settable from other resources via exports
 - Activity heatmap, risk assessment, name history
-- Self-contained database — no MySQL required
+- Self-contained flat-file database — no MySQL required
 
 ## Access Control
 
 Granular permissions for every admin.
 
-- Login via Cfx.re or password
-- 40+ granular permissions with presets
+- Login via Discord, Cfx.re (Discourse) OAuth, or password with optional 2FA
+- 37+ granular permissions with custom, user-defined presets
 - Per-admin statistics & action logging
 - Structured JSONL system logger
 
@@ -67,7 +67,7 @@ Manage and monitor without leaving Discord. See the
 ## And more
 
 <Callout>
-  Recipe-based server deployer (&lt;60s) with GitHub token support & headless CLI ·
+  Recipe-based server deployer with GitHub token support & a headless CLI ·
   Artifact management · Scheduled restarts with postponable temp schedules ·
-  Report system with Discord notifications · 30+ languages.
+  Ticket/report system with Discord notifications · 35 languages.
 </Callout>

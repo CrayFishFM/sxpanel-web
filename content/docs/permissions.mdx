@@ -1,54 +1,62 @@
 ---
 title: Permissions
-description: 40+ granular permissions with presets and per-admin action logging.
+description: 37+ granular permissions with custom presets and per-admin action logging.
 ---
 
-sxPanel ships with 40+ granular permissions so you can give each admin exactly
-the access they need — nothing more. Permissions are grouped into presets for
-fast onboarding, and every action is logged per-admin for full accountability.
+sxPanel ships with 37+ granular permissions (plus any extra permissions
+registered by installed addons) so you can give each admin exactly the access
+they need — nothing more. Permissions can be bundled into presets for fast
+onboarding, and every privileged action is logged per-admin for full
+accountability.
 
 ## Permission presets
 
-Presets are bundles of permissions you can assign to a role in one click. Start
-from a preset, then fine-tune individual permissions.
-
-| Preset | Console | Players | Server | Insights |
-| --- | --- | --- | --- | --- |
-| Viewer | read | read | read | read |
-| Moderator | read | warn, kick, ban | read | read |
-| Admin | read + write | full | config | read |
-| Owner | full | full | full | full |
+Presets are named bundles of permissions that admins can be assigned. Unlike a
+fixed "Viewer / Moderator / Admin" tier list, presets in sxPanel are fully
+custom — you create, name and edit them yourself from the admin manager, and
+assign one or more presets to an admin alongside any individually toggled
+permissions.
 
 <Callout>
-  Presets are starting points, not limits. After assigning a preset, toggle any
-  individual permission on or off for that admin.
+  sxPanel does not ship with built-in preset tiers. Create your own presets
+  (e.g. "Moderator" or "Head Admin") from the permissions you actually want to
+  bundle together, then assign them to admins.
 </Callout>
 
 ## Permission categories
 
-- **Console** — read the live console, run commands, clear the buffer.
-- **Players** — view, warn, kick, ban, edit notes and whitelist entries.
-- **Server** — edit CFG, manage resources, schedule restarts, deploy recipes.
-- **Insights** — view analytics, export data, read admin action logs.
-- **Access control** — manage admins, assign permissions, view the system
-  logger.
+- **System** — manage admins, view/change settings, view system logs, or grant
+  the root "All Permissions" permission.
+- **Server** — view/write the live console, start/stop/restart the server,
+  send announcements, manage resources, edit `server.cfg`, view server logs.
+- **In-Game Menu** — spawn/fix/boost/delete vehicles, reset a world area, view
+  player IDs and map blips.
+- **Player Management** — direct message, whitelist, warn, kick, ban/unban,
+  freeze, heal, NoClip/God Mode/Super Jump, spectate, teleport, troll actions,
+  reports, ticket management, and permanently deleting player data.
+- **Addons** — permissions registered dynamically by installed addons.
 
 ## Per-admin logging
 
-Every privileged action is written to a structured JSONL system logger with the
-admin identity, timestamp, target and payload. This is the single source of
-truth for auditing who did what, and when.
+Every privileged action is written to a structured JSONL system logger
+(`system_session.jsonl`, rotated periodically) with the author, category,
+timestamp and a human-readable action description. This is the single source
+of truth for auditing who did what, and when.
 
 ```json
 {
-  "ts": "2026-07-13T20:14:00Z",
-  "admin": "snipz",
-  "action": "player.ban",
-  "target": "license:abc123",
-  "reason": "cheating",
-  "duration": "permanent"
+  "ts": 1752527640000,
+  "author": "snipz",
+  "category": "action",
+  "action": "Banned \"PlayerName\" (license:abc123): cheating",
+  "actionId": "player.ban"
 }
 ```
+
+## Logging in
+
+Admins can sign in via Discord OAuth, Cfx.re (Discourse) OAuth, or a local
+password — optionally protected with TOTP two-factor authentication.
 
 ## Next steps
 

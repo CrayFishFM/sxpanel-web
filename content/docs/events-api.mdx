@@ -7,14 +7,20 @@ sxPanel emits server-side events that your resources can listen to. This lets
 custom scripts react in real time to moderation actions, whitelist changes and
 server lifecycle events — without polling or extra database access.
 
+<Callout title="Resource must be named `monitor`">
+  sxPanel's FXServer resource is expected to be named `monitor` (this is the
+  same convention txAdmin used). Exports are called as `exports.monitor:...`.
+</Callout>
+
 ## Listening to events
 
-Use the standard FiveM event handler pattern. sxPanel namespaces all of its
-events under `sxpanel:` so they never collide with your own.
+Events are namespaced under `txAdmin:events:` (kept from the underlying
+txAdmin codebase sxPanel is built on) and fire with a single data table
+argument.
 
 ```lua
-RegisterNetEvent('sxpanel:player:banned', function(player, reason, duration)
-  print(('Banned %s for %s (%s)'):format(player.name, reason, duration))
+AddEventHandler('txAdmin:events:playerBanned', function(eventData)
+  print(('Banned %s: %s'):format(eventData.targetName, eventData.reason))
 end)
 ```
 
@@ -27,24 +33,58 @@ end)
 
 | Event | Payload | Fires when |
 | --- | --- | --- |
-| `sxpanel:player:warned` | `player, reason, admin` | A player is warned |
-| `sxpanel:player:banned` | `player, reason, duration` | A player is banned |
-| `sxpanel:player:kicked` | `player, reason, admin` | A player is kicked |
-| `sxpanel:player:unbanned` | `player` | A ban is removed |
-| `sxpanel:whitelist:changed` | `identifier, action` | A whitelist entry is added or removed |
-| `sxpanel:server:restarting` | `delaySeconds` | A scheduled restart is announced |
-| `sxpanel:server:crashed` | `details` | The server process crashes |
+| `txAdmin:events:playerWarned` | `author, reason, actionId, targetNetId, targetIds, targetName` | A player is warned |
+| `txAdmin:events:playerBanned` | `author, reason, actionId, expiration, durationInput, durationTranslated, targetNetId, targetIds, targetHwids, targetName, kickMessage` | A player is banned |
+| `txAdmin:events:playerKicked` | `target, author, reason, dropMessage` | A player is kicked |
+| `txAdmin:events:actionRevoked` | `actionId, actionType, actionReason, actionAuthor, playerName, playerIds, playerHwids, revokedBy` | A ban/warn is revoked (unbanned/unwarned) |
+| `txAdmin:events:whitelistPlayer` | `action ('added'\|'removed'), license, playerName, adminName` | A whitelist entry is added or removed |
+| `txAdmin:events:playerDirectMessage` | `target, author, message` | An admin sends a player a direct message |
+| `txAdmin:events:announcement` | `message, author` | An admin broadcasts a server announcement |
+| `txAdmin:events:scheduledRestart` | `secondsRemaining, translatedMessage` | A scheduled restart warning is sent |
+| `txAdmin:events:scheduledRestartSkipped` | `secondsRemaining, temporary, author` | A scheduled restart is postponed/skipped |
+| `txAdmin:events:configChanged` | — | The panel configuration is saved |
 
-## Custom tags via exports
+<Callout>
+  There is no dedicated "server crashed" event — restart/crash handling is
+  covered by the monitor logs surfaced in the panel and in [Discord log
+  routes](/docs/discord#notifications).
+</Callout>
 
-You can push custom tags into the playerlist from any resource. Tags appear
-instantly in the web panel and can be filtered on.
+## Resource exports
+
+All 10 exports live on the `monitor` resource (server-side only) and are
+called as `exports.monitor:<name>(...)`. There are two families: **tag
+exports** (act on any player) and **admin/action exports** (the first
+argument is always the acting *admin's* server ID, not the target's — sxPanel
+looks that admin up and checks their permission before doing anything).
+
+| Export | Parameters | Returns | Notes |
+| --- | --- | --- | --- |
+| `addPlayerTag` | `serverId, tagId` | `boolean` success | `tagId` must already exist in Settings → Player Tags |
+| `removePlayerTag` | `serverId, tagId` | `boolean` success | Removes a previously-applied tag |
+| `hasPermission` | `serverId, permission` | `boolean` | Checks if `serverId` (an admin) has the given permission, e.g. `players.ban` |
+| `isPlayerAdmin` | `serverId` | `boolean` | Whether `serverId` is a logged-in sxPanel admin |
+| `getAdminUsername` | `serverId` | `string \| nil` | The admin's username, or `nil` if not an admin |
+| `getAdminPermissions` | `serverId` | `table \| nil` | Array of the admin's permission strings, or `nil` |
+| `kickPlayer` | `serverId, targetId, reason?` | — | `serverId` must have `players.kick`; logs to action history |
+| `banPlayer` | `serverId, targetId, reason?, duration?` | — | `serverId` must have `players.ban`; `duration` e.g. `'2 hours'`, `'1 week'`, defaults to `'permanent'` |
+| `warnPlayer` | `serverId, targetId, reason?` | — | `serverId` must have `players.warn`; logs to action history |
+| `sendAnnouncement` | `serverId, message` | — | `serverId` must have `announcement` permission |
 
 ```lua
--- up to 20 custom tags per server
-exports.sxpanel:setPlayerTag(playerSrc, 'donator', {
-  color = '#7c5cff',
-})
+-- tag exports: target the player directly
+exports.monitor:addPlayerTag(targetServerId, 'donator')
+exports.monitor:removePlayerTag(targetServerId, 'donator')
+
+-- admin/action exports: first arg is the ADMIN performing the action
+exports.monitor:hasPermission(adminServerId, 'players.ban') -- boolean
+exports.monitor:isPlayerAdmin(adminServerId)                -- boolean
+exports.monitor:getAdminUsername(adminServerId)
+exports.monitor:getAdminPermissions(adminServerId)
+exports.monitor:kickPlayer(adminServerId, targetServerId, reason)
+exports.monitor:banPlayer(adminServerId, targetServerId, reason, duration)
+exports.monitor:warnPlayer(adminServerId, targetServerId, reason)
+exports.monitor:sendAnnouncement(adminServerId, message)
 ```
 
 ## Next steps

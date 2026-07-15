@@ -19,15 +19,29 @@ files required.
 
 ## Environment variables & advanced options
 
-Advanced deployments can be tuned with environment variables and configuration
-options. The most useful ones are listed below; the panel also exposes a
-settings UI for everything else.
+Advanced deployments can be tuned with `TXHOST_*` environment variables (the
+same convention txAdmin used — legacy `txAdminPort`/`txDataPath`/`txAdminInterface`
+ConVars still work but print a deprecation warning telling you which
+`TXHOST_*` variable replaces them). The most useful ones are listed below; the
+panel also exposes a settings UI for everything else, including enabling or
+disabling the Discord bot.
 
 | Variable | Default | Description |
 | --- | --- | --- |
-| `SXPANEL_PORT` | `40120` | Port the web panel listens on |
-| `SXPANEL_LOG_LEVEL` | `info` | System logger verbosity |
-| `SXPANEL_DISABLE_BOT` | `false` | Disable the built-in Discord bot |
+| `TXHOST_TXA_PORT` | `40120` | Port the web panel listens on (cannot be `30120`) |
+| `TXHOST_DATA_PATH` | `txData` next to your artifacts | Absolute path to the data directory |
+| `TXHOST_INTERFACE` | — | IPv4 address to bind the web panel to |
+| `TXHOST_FXS_PORT` | — | The FXServer game port (cannot be `40120`-`40150`, which is reserved for the panel) |
+| `TXHOST_API_TOKEN` | — | Token for the host/provider API, or `disabled` to turn it off |
+| `TXHOST_MAX_SLOTS` | — | Max player slots reported to the host/provider |
+| `TXHOST_QUIET_MODE` | `false` | Reduce console output |
+
+<Callout>
+  There is no `SXPANEL_LOG_LEVEL`-style verbosity variable — the system logger
+  writes structured JSONL entries at a fixed level. There is also no dedicated
+  variable to disable the Discord bot; toggle "Bot Enabled" in the panel's
+  Discord settings instead.
+</Callout>
 
 ## Events API
 

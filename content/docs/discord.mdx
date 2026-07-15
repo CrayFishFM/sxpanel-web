@@ -3,40 +3,58 @@ title: Discord Integration
 description: Run and monitor your server directly from Discord.
 ---
 
-sxPanel ships with a built-in Discord bot. It keeps an auto-updated status embed
-in your server and exposes a full suite of slash commands so admins can moderate
-without ever opening the panel.
+sxPanel ships with a built-in Discord bot. It can maintain persistent,
+auto-updated status/player-list embeds in your server and exposes a suite of
+slash commands so admins can moderate without ever opening the panel.
 
-## Status embed
+## Status & player list embeds
 
-An auto-updated status embed shows live server information with a custom footer.
-It surfaces player counts, uptime and more at a glance.
+`/status` and `/players` each create a persistent, auto-updated embed —
+server status and live player list respectively. Both embeds are fully
+templated (custom JSON, including footer) from the panel's Discord settings
+and refresh on an interval you control.
 
 ## Slash commands
 
 | Command | Description |
 | --- | --- |
-| `/status` | Show live server status |
-| `/whitelist` | Manage whitelist entries |
-| `/info` | Look up server information |
-| `/admininfo` | Show admin information |
+| `/status add` / `/status remove` | Create or remove the persistent status embed |
+| `/players add` / `/players remove` | Create or remove the persistent player list embed |
+| `/info` | Look up a player (self, Discord member, or license/ID) in the sxPanel database |
+| `/admininfo` | Admin-only: look up a player's identifiers, notes and action history |
+| `/history` | Show recent moderation history for your linked account |
+| `/notes` | View or update player notes |
 | `/warn` | Warn a player |
 | `/kick` | Kick a player |
 | `/ban` | Ban a player |
 | `/unban` | Remove a ban |
-| `/notes` | View or edit player notes |
-| `/history` | View a player's history |
+| `/whitelist member` / `/whitelist application` | Add a member to the whitelist, or approve a pending application by ID |
+| `/reports summary` | Discord-native report/ticket triage |
 
 ## Notifications
 
-sxPanel can push Discord notifications for:
+Discord notifications are configured as "Log Routes" in the panel's Discord
+settings — each route can be routed to its own channel and filtered. Routes
+include:
 
-- New reports
-- Bans
-- Crashes
-- Whitelist events
+- Panel action logs (moderation activity, ticket workflow)
+- Whitelist logs (applications, approvals, grants, revocations)
+- Panel/console command logs
+- Admin login logs
+- Config change logs
+- Monitor logs (restarts, crash handling, health alerts)
+- Scheduler logs
+- Admin in-game menu command logs
+
+Reports/tickets can also open their own Discord threads for triage.
+
+<Callout title="Bot permissions">
+  The bot needs the **Server Members Intent** and **Message Content Intent**
+  enabled in the Discord Developer Portal to resolve member roles and read
+  message-based interactions.
+</Callout>
 
 <Callout title="Tip">
-  Combine slash commands with per-admin [access control](/docs/features#access-control)
+  Combine slash commands with per-admin [access control](/docs/permissions)
   so each admin only sees the actions they're permitted to run.
 </Callout>

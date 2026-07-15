@@ -38,7 +38,9 @@ unzip sxpanel-latest.zip -d monitor/
 
 ### Start FXServer
 
-Start FXServer **without** `+exec server.cfg` — sxPanel starts automatically.
+Start FXServer **without** `+exec server.cfg`. FXServer detects the `monitor`
+resource and boots sxPanel first; sxPanel then launches the actual game server
+(and its `server.cfg`) for you.
 
 </Step>
 <Step>
