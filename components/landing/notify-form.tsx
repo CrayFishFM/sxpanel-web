@@ -67,7 +67,7 @@ export function NotifyForm() {
           aria-describedby={error ? "notify-email-error" : undefined}
           className="h-11 w-full flex-1 rounded-lg border border-border bg-background px-4 text-sm shadow-sm outline-none transition-colors placeholder:text-muted-foreground/70 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/40 aria-invalid:border-destructive/50 aria-invalid:focus-visible:ring-destructive/20"
         />
-        <Button type="submit" variant="brand" size="lg" className="h-11 shrink-0">
+        <Button type="submit" variant="default" size="lg" className="h-11 shrink-0">
           Notify me
           <ArrowRight />
         </Button>

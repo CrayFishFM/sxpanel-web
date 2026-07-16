@@ -1,0 +1,1 @@
+CREATE INDEX "installs_last_seen_at_idx" ON "installs" USING btree ("last_seen_at");

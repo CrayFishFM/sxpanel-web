@@ -262,13 +262,13 @@ export default function Page() {
             </p>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Button variant="brand" size="lg" asChild>
+              <Button variant="default" size="lg" asChild>
                 <a href={siteConfig.releases} target="_blank" rel="noreferrer">
                   <ArrowRight />
                   Download latest release
                 </a>
               </Button>
-              <Button size="lg" variant="outline" asChild>
+              <Button size="lg" variant="secondary" asChild>
                 <a href={siteConfig.github} target="_blank" rel="noreferrer">
                   <GithubIcon />
                   View on GitHub
@@ -548,7 +548,7 @@ export default function Page() {
                   without ever opening the panel.
                 </p>
                 <DiscordCommands commands={COMMANDS} />
-                <Button asChild variant="outline" className="mt-8">
+                <Button asChild variant="secondary" className="mt-8">
                   <a href={siteConfig.discord} target="_blank" rel="noreferrer">
                     <MessageSquare />
                     Join the Discord
@@ -644,13 +644,13 @@ export default function Page() {
 
             <div className="mt-8 flex flex-col items-center justify-center gap-8">
               <div className="flex flex-col justify-center gap-3 sm:flex-row">
-                <Button variant="brand" size="lg" asChild>
+                <Button variant="default" size="lg" asChild>
                   <a href={siteConfig.releases} target="_blank" rel="noreferrer">
                     <ArrowRight />
                     Download sxPanel
                   </a>
                 </Button>
-                <Button size="lg" variant="outline" asChild>
+                <Button size="lg" variant="secondary" asChild>
                   <a href={siteConfig.discord} target="_blank" rel="noreferrer">
                     <MessageSquare />
                     Join the community

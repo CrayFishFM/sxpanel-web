@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next"
-import { Geist, Geist_Mono, Inter } from "next/font/google"
+import { Geist, JetBrains_Mono } from "next/font/google"
 
 import { RootProvider } from "fumadocs-ui/provider/next"
 
@@ -9,15 +9,13 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { cn } from "@/lib/utils"
 import { siteConfig } from "@/lib/site"
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
-
 const geist = Geist({
   subsets: ["latin"],
-  variable: "--font-geist",
+  variable: "--font-sans",
   display: "swap",
 })
 
-const fontMono = Geist_Mono({
+const fontMono = JetBrains_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
   display: "swap",
@@ -67,11 +65,8 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#1a1d22" },
-  ],
-  colorScheme: "light dark",
+  themeColor: "#0e0e10",
+  colorScheme: "dark",
 }
 
 export default function RootLayout({
@@ -87,7 +82,6 @@ export default function RootLayout({
         "antialiased",
         geist.variable,
         fontMono.variable,
-        inter.variable,
         "font-sans"
       )}
     >

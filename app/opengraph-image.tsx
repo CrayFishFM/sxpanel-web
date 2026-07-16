@@ -25,8 +25,8 @@ export default async function Image() {
           justifyContent: "space-between",
           padding: "80px",
           background:
-            "radial-gradient(120% 120% at 20% 0%, #2a1f4d 0%, #15171c 55%, #0e1014 100%)",
-          color: "white",
+            "radial-gradient(120% 120% at 20% 0%, #1c3a63 0%, #161618 55%, #0e0e10 100%)",
+          color: "#fafafa",
           fontFamily: "Inter",
         }}
       >
@@ -39,10 +39,10 @@ export default async function Image() {
               width: 88,
               height: 88,
               borderRadius: 20,
-              background: "linear-gradient(135deg, #7c5cff 0%, #5b3fd6 100%)",
+              background: "linear-gradient(135deg, #3c83f6 0%, #2f68c4 100%)",
               fontSize: 44,
               fontWeight: 700,
-              boxShadow: "0 8px 32px rgba(124,92,255,0.4)",
+              boxShadow: "0 8px 32px rgba(60,131,246,0.4)",
             }}
           >
             sx
@@ -64,7 +64,7 @@ export default async function Image() {
           >
             The control room for your FiveM &amp; RedM server
           </div>
-          <div style={{ fontSize: 30, color: "#a8acb8", maxWidth: 820 }}>
+          <div style={{ fontSize: 30, color: "#a1a1aa", maxWidth: 820 }}>
             Live console, deep insights, player management &amp; Discord — a
             drop-in overhaul of txAdmin.
           </div>

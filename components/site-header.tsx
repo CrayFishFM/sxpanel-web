@@ -1,8 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { useTheme } from "next-themes"
-import { ArrowRight, Download, Menu, MessageSquare, Moon, Sun } from "lucide-react"
+import { ArrowRight, Download, Menu, MessageSquare } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -33,33 +32,9 @@ const SECTION_IDS = NAV_LINKS
   .filter((l): l is NavLink & { id: string } => Boolean(l.id))
   .map((l) => l.id)
 
-function useMounted() {
-  return React.useSyncExternalStore(
-    () => () => {},
-    () => true,
-    () => false
-  )
-}
-
-function ThemeToggle() {
-  const { resolvedTheme, setTheme } = useTheme()
-  const mounted = useMounted()
-
-  return (
-    <Button
-      variant="ghost"
-      size="icon-sm"
-      aria-label="Toggle theme"
-      onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
-    >
-      {mounted && resolvedTheme === "dark" ? <Sun /> : <Moon />}
-    </Button>
-  )
-}
-
 function DownloadButton({ className }: { className?: string }) {
   return (
-    <Button variant="brand" size="sm" asChild className={className}>
+    <Button variant="default" size="sm" asChild className={className}>
       <a href={siteConfig.releases} target="_blank" rel="noreferrer">
         <Download />
         <span className="hidden sm:inline">Download</span>
@@ -116,7 +91,6 @@ export function SiteHeader() {
         </nav>
 
         <div className="flex items-center gap-1.5">
-          <ThemeToggle />
           <Button
             variant="ghost"
             size="sm"
@@ -164,7 +138,7 @@ export function SiteHeader() {
               </nav>
               <div className="mt-auto space-y-2 border-t border-border/60 p-4">
                 <SheetClose asChild>
-                  <Button variant="outline" asChild className="h-11 w-full">
+                  <Button variant="secondary" asChild className="h-11 w-full">
                     <a href={siteConfig.github} target="_blank" rel="noreferrer">
                       <GithubIcon />
                       GitHub
@@ -172,7 +146,7 @@ export function SiteHeader() {
                   </Button>
                 </SheetClose>
                 <SheetClose asChild>
-                  <Button variant="outline" asChild className="h-11 w-full">
+                  <Button variant="secondary" asChild className="h-11 w-full">
                     <a href={siteConfig.discord} target="_blank" rel="noreferrer">
                       <MessageSquare />
                       Discord
@@ -180,7 +154,7 @@ export function SiteHeader() {
                   </Button>
                 </SheetClose>
                 <SheetClose asChild>
-                  <Button variant="brand" asChild className="h-11 w-full">
+                  <Button variant="default" asChild className="h-11 w-full">
                     <a href={siteConfig.releases} target="_blank" rel="noreferrer">
                       <ArrowRight />
                       Download latest release
