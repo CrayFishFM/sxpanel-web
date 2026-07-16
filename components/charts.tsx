@@ -166,6 +166,45 @@ export function Heatmap({
   )
 }
 
+/** Two-series stacked vertical bar mini-chart (e.g. new vs. returning players per day). */
+export function DualBarList({
+  data,
+  className,
+  colorA = "var(--chart-1)",
+  colorB = "var(--chart-5)",
+}: {
+  data: { a: number; b: number }[]
+  className?: string
+  colorA?: string
+  colorB?: string
+}) {
+  const max = Math.max(...data.map((d) => d.a + d.b)) || 1
+  return (
+    <div className={cn("flex items-end gap-[3px]", className)}>
+      {data.map((d, i) => (
+        <div key={i} className="flex flex-1 flex-col items-stretch justify-end">
+          <div
+            className="w-full rounded-t-[2px]"
+            style={{
+              height: `${(d.a / max) * 100}%`,
+              backgroundColor: colorA,
+              minHeight: d.a > 0 ? 1 : 0,
+            }}
+          />
+          <div
+            className="w-full"
+            style={{
+              height: `${(d.b / max) * 100}%`,
+              backgroundColor: colorB,
+              minHeight: d.b > 0 ? 1 : 0,
+            }}
+          />
+        </div>
+      ))}
+    </div>
+  )
+}
+
 /** Vertical bar mini-chart for distributions. */
 export function BarList({
   data,

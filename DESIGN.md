@@ -145,6 +145,8 @@ A near-black charcoal scale with one committed accent and a small semantic set f
 ### Chart Palette
 The five categorical chart colors reuse the semantic set directly — cfx-blue, cyan, amber, alert-red, emerald — rather than a separate palette, so analytics visuals (player timelines, retention curves, peak-hour heatmaps) read as an extension of the same system instead of a distinct "charts" brand.
 
+**Chart Rose** (`#f43f5e`): One additional hue, used only for the FXServer-memory line in the Insights dual-chart (player count vs. host memory). Reserved specifically for memory/resource series so they're never confused with the emerald success color or the cyan player-count line sharing the same chart.
+
 ### Named Rules
 **The Wayfinding Blue Rule.** cfx-blue marks the thing that helps you navigate or points at "this is interactive" — nav, focus, links, small chips — never the thing you press to take the primary action, and never a large surface. If blue is filling a button's whole background or covering more than a chip/underline/single restrained glow, it's being overused.
 

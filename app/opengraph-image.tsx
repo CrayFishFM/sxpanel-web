@@ -10,9 +10,11 @@ export const size = { width: 1200, height: 630 }
 export const contentType = "image/png"
 
 export default async function Image() {
-  const font = await readFile(
-    join(process.cwd(), "public/fonts/inter-700.ttf")
-  )
+  const [font, logo] = await Promise.all([
+    readFile(join(process.cwd(), "public/fonts/inter-700.ttf")),
+    readFile(join(process.cwd(), "public/logo2.png")),
+  ])
+  const logoSrc = `data:image/png;base64,${logo.toString("base64")}`
 
   return new ImageResponse(
     (
@@ -31,22 +33,12 @@ export default async function Image() {
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: 88,
-              height: 88,
-              borderRadius: 20,
-              background: "linear-gradient(135deg, #3c83f6 0%, #2f68c4 100%)",
-              fontSize: 44,
-              fontWeight: 700,
-              boxShadow: "0 8px 32px rgba(60,131,246,0.4)",
-            }}
-          >
-            sx
-          </div>
+          <img
+            src={logoSrc}
+            width={88}
+            height={88}
+            style={{ borderRadius: 20 }}
+          />
           <div style={{ fontSize: 40, fontWeight: 700, letterSpacing: -1 }}>
             {siteConfig.name}
           </div>
@@ -76,7 +68,7 @@ export default async function Image() {
             alignItems: "center",
             justifyContent: "space-between",
             fontSize: 26,
-            color: "#8a8f9c",
+            color: "#a1a1aa",
           }}
         >
           <span>{siteConfig.url.replace("https://", "")}</span>
