@@ -8,6 +8,36 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { authClient } from "@/lib/auth-client"
 
+function friendlyError(error: { code?: string; status?: number; message?: string } | Error): string {
+  const code = "code" in error ? error.code : undefined
+  const message = "message" in error ? error.message : undefined
+
+  switch (code) {
+    case "INVALID_EMAIL_OR_PASSWORD":
+    case "INVALID_PASSWORD":
+    case "INVALID_EMAIL":
+      return "Email or password is incorrect."
+    case "EMAIL_NOT_VERIFIED":
+      return "Your email hasn't been verified yet."
+    case "USER_NOT_FOUND":
+      return "No account found for that email."
+    case "TOO_MANY_REQUESTS":
+      return "Too many attempts. Please wait a moment and try again."
+    case "FAILED_TO_CREATE_USER":
+      return "We couldn't complete sign in. Please try again."
+  }
+
+  const text = (message ?? "").toLowerCase()
+  if (text.includes("failed to fetch") || text.includes("networkrequestfailed") || text.includes("network")) {
+    return "Can't reach the server. Check your connection and try again."
+  }
+  if (text.includes("timeout") || text.includes("aborted")) {
+    return "The request took too long. Please try again."
+  }
+
+  return message || "Something went wrong. Please try again."
+}
+
 export default function SignInPage() {
   const router = useRouter()
   const [email, setEmail] = React.useState("")
@@ -20,15 +50,25 @@ export default function SignInPage() {
     setError(null)
     setPending(true)
 
-    const { error } = await authClient.signIn.email({ email, password })
+    try {
+      const { error } = await authClient.signIn.email({ email, password })
 
-    setPending(false)
-    if (error) {
-      setError(error.message ?? "Invalid email or password.")
-      return
+      if (error) {
+        setError(friendlyError(error))
+        setPending(false)
+        return
+      }
+
+      router.push("/dashboard")
+      router.refresh()
+    } catch (err) {
+      setError(
+        err instanceof Error && err.message
+          ? friendlyError(err)
+          : "Something went wrong. Please try again."
+      )
+      setPending(false)
     }
-    router.push("/dashboard")
-    router.refresh()
   }
 
   return (
