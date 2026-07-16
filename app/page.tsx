@@ -38,6 +38,7 @@ import { SiteHeader } from "@/components/site-header"
 import { GithubIcon } from "@/components/icons"
 import { Brand } from "@/components/brand"
 import { Reveal } from "@/components/reveal"
+import { JsonLd } from "@/components/structured-data"
 import { ProductMockup } from "@/components/landing/product-mockup"
 import { AnalyticsShowcase } from "@/components/landing/analytics-showcase"
 import { NotifyForm } from "@/components/landing/notify-form"
@@ -45,6 +46,7 @@ import { MigrationSnippet } from "@/components/landing/migration-snippet"
 import { DiscordCommands } from "@/components/landing/discord-commands"
 import { StatValue } from "@/components/landing/stat-value"
 import { siteConfig } from "@/lib/site"
+import { faqJsonLd, softwareAppJsonLd } from "@/lib/seo"
 
 const FEATURES = [
   {
@@ -230,6 +232,7 @@ const FAQ = [
 export default function Page() {
   return (
     <div id="top" className="flex min-h-svh flex-col bg-background">
+      <JsonLd data={[softwareAppJsonLd(), faqJsonLd(FAQ)]} />
       <SiteHeader />
 
       <main id="main" className="flex-1">

@@ -6,8 +6,10 @@ import { RootProvider } from "fumadocs-ui/provider/next"
 import "./globals.css"
 import { DevConsoleMessage } from "@/components/dev-console-message"
 import { ThemeProvider } from "@/components/theme-provider"
+import { JsonLd } from "@/components/structured-data"
 import { cn } from "@/lib/utils"
 import { siteConfig } from "@/lib/site"
+import { organizationJsonLd, websiteJsonLd } from "@/lib/seo"
 
 const geist = Geist({
   subsets: ["latin"],
@@ -29,6 +31,10 @@ export const metadata: Metadata = {
   },
   description: siteConfig.description,
   applicationName: siteConfig.name,
+  icons: {
+    icon: "/logo2.png",
+    apple: "/logo2.png",
+  },
   keywords: [
     "sxPanel",
     "txAdmin",
@@ -95,6 +101,7 @@ export default function RootLayout({
         <ThemeProvider>
           <RootProvider theme={{ enabled: false }}>{children}</RootProvider>
         </ThemeProvider>
+        <JsonLd data={[organizationJsonLd(), websiteJsonLd()]} />
         <DevConsoleMessage />
       </body>
     </html>
