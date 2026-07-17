@@ -12,17 +12,33 @@ const PARSE = /^(\D*)(\d+)(.*)$/
 export function StatValue({ value }: { value: string }) {
   const ref = React.useRef<HTMLSpanElement | null>(null)
   const [display, setDisplay] = React.useState(value)
-  const match = value.match(PARSE)
+
+  // Parse once and keep the result referentially stable. Recomputing the
+  // match on every render (as `value.match()` does) would recreate the
+  // effect, tearing down the observer + rAF and restarting the count on
+  // every animation frame — which is what made the stat flicker.
+  const parsed = React.useMemo(() => {
+    const m = value.match(PARSE)
+    if (!m) return null
+    const [, prefix, digits, suffix] = m
+    return { prefix, suffix, target: parseInt(digits, 10) }
+  }, [value])
 
   React.useEffect(() => {
+    if (!parsed) return
     const el = ref.current
-    if (!el || !match) return
+    if (!el) return
 
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches
     if (reduce) return
 
-    const [, prefix, digits, suffix] = match
-    const target = parseInt(digits, 10)
+    const { prefix, suffix, target } = parsed
+
+    // Reset to the start value up front so the final number never flashes
+    // before the count-up begins. This effect runs on mount, before the
+    // stats are scrolled into view.
+    setDisplay(`${prefix}0${suffix}`)
+
     let raf = 0
 
     const observer = new IntersectionObserver(
@@ -49,7 +65,7 @@ export function StatValue({ value }: { value: string }) {
       observer.disconnect()
       cancelAnimationFrame(raf)
     }
-  }, [match])
+  }, [parsed])
 
   return (
     <span ref={ref} className="tabular-nums">
