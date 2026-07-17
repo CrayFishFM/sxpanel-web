@@ -9,6 +9,7 @@
     "---",
     "configuration",
     "events-api",
+    "addon-api",
     "permissions",
     "whitelist",
     "troubleshooting"

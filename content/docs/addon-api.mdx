@@ -1,0 +1,416 @@
+---
+title: Addon API
+description: Build server routes, panel pages, widgets and Discord commands that run inside sxPanel.
+---
+
+Addons are self-contained packages that extend sxPanel with their own API
+routes, panel UI, in-game resources and Discord commands — without forking
+core. Each addon runs in its own process (or an isolated in-process realm on
+hosts that can't spawn Node children) and talks to the core over a narrow,
+permissioned IPC boundary.
+
+<Callout title="Fastest way to start">
+  Copy `addons/addon-starter-template` to `addons/<your-id>/`, rename `id` in
+  `addon.json`, and work from there. It wires up a server route, a panel page
+  + dashboard widget, an in-game resource and two Discord commands using the
+  same patterns documented on this page.
+</Callout>
+
+## How addons are loaded
+
+- Every folder under `addons/` with an `addon.json` is discovered on boot.
+- The manifest is validated with zod; invalid manifests are skipped (with a
+  logged reason) rather than crashing the panel.
+- A newly-discovered addon is **not** trusted automatically — an admin must
+  approve it (and the specific permissions it asks for) from **Addon
+  Manager** in the panel before its server process starts.
+- If an addon's manifest later requests new permissions, it's flagged
+  `needsReapproval` and stays stopped until an admin re-approves it.
+- Approved addon permission grants are stored in `addon-config.json`, not in
+  the addon's own folder.
+
+## The manifest (`addon.json`)
+
+```json
+{
+  "id": "addon-starter-template",
+  "name": "Shift Board (Starter)",
+  "description": "Example staff shift board.",
+  "version": "1.0.0",
+  "author": "sxPanel Community",
+  "license": "MIT",
+  "sxpanel": { "minVersion": "0.4.0-Beta" },
+  "permissions": {
+    "required": ["storage"],
+    "optional": ["ws.push", "players.read", "players.write", "deferral"]
+  },
+  "adminPermissions": [
+    {
+      "id": "addon-starter-template.view-duty-hours",
+      "label": "View Duty Hours",
+      "description": "See cumulative on-duty time for all staff"
+    }
+  ],
+  "server": { "entry": "server/index.js" },
+  "panel": {
+    "entry": "panel/index.js",
+    "pages": [
+      { "path": "/shift", "title": "Shift Board", "icon": "Radio", "sidebar": true, "component": "StarterPage" }
+    ],
+    "widgets": [
+      { "slot": "dashboard.main", "component": "StarterWidget", "title": "Server pulse", "defaultSize": "half" }
+    ]
+  },
+  "discordBot": { "commands": "discord-bot/commands" },
+  "resource": {
+    "server_scripts": ["resource/sv_shift.lua"],
+    "client_scripts": ["resource/cl_shift.lua"]
+  }
+}
+```
+
+### Top-level fields
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `id` | string | 3–64 chars, lowercase alphanumeric + hyphens. Used in routes (`/addons/<id>/api/*`), storage namespacing and permission IDs. |
+| `name`, `description` | string | Shown in Addon Manager. |
+| `version` | string | Must be semver. |
+| `author` | string | — |
+| `homepage`, `license` | string | Optional. |
+| `sxpanel.minVersion` / `sxpanel.maxVersion` | string | Compared against the running sxPanel version; incompatible addons are skipped. |
+| `dependencies` | string[] | Other addon IDs that must be running. |
+| `publicRoutes` | boolean | Allow this addon to register unauthenticated routes via `registerPublicRoute`. |
+| `publicServer.defaultPort` | number | Optional dedicated public HTTP port for the addon. |
+
+<Callout title="Legacy key">
+  Manifests from before the host rename can use `fxpanel` instead of
+  `sxpanel` — it's accepted transparently as an alias.
+</Callout>
+
+### `permissions`
+
+```json
+"permissions": {
+  "required": ["storage"],
+  "optional": ["ws.push", "players.read", "players.write", "tickets.read", "deferral"]
+}
+```
+
+`required` permissions must all be granted for the addon to run at all;
+`optional` ones can be denied individually and the addon should degrade
+gracefully (check `addon.permissions.includes(...)` at runtime). These are
+the only permissions the SDK enforces — see the [permission reference](#permission-reference)
+below for what each one gates.
+
+### `adminPermissions`
+
+Addons can register their own fine-grained admin permissions (shown in
+Admin Manager → Roles alongside the built-in ones). Each entry needs `id`
+(lowercase, dot/hyphen/underscore separated — conventionally
+`<addon-id>.<permission>`), `label` and `description`. Check them in route
+handlers with `req.admin.hasPermission(id)`.
+
+### `server`, `panel`, `nui`, `discordBot`, `resource`
+
+| Section | Field | Purpose |
+| --- | --- | --- |
+| `server.entry` | path | Server-side entry point, run with the [Server SDK](#server-sdk). |
+| `panel.entry` | path | Panel JS bundle. `panel.styles` for a companion CSS file. |
+| `panel.pages[]` | `{ path, title, icon?, sidebar?, sidebarGroup?, permission?, component }` | Registers a full page; `component` must match a named export from the panel bundle's `pages` map. |
+| `panel.widgets[]` | `{ slot, component, title, defaultSize?, permission? }` | Registers a dashboard widget; `slot` is a dot-separated slot ID like `dashboard.main`. |
+| `panel.settingsComponent` | string | Optional component rendered in the addon's Settings tab. |
+| `nui.entry` / `nui.styles` / `nui.pages[]` | — | In-game NUI bundle, loaded inside the admin menu (WebPipe). |
+| `discordBot.commands` / `discordBot.events` | path | Folders scanned for slash commands / event handlers. At least one is required if `discordBot` is present. |
+| `discordBot.rateLimit` | `{ max, windowMs }` | Optional per-addon Discord command rate limit. |
+| `resource.server_scripts` / `resource.client_scripts` | path[] | Lua files merged into the built `monitor` resource's `fxmanifest`. |
+
+All addon-relative paths are validated to stay inside the addon's own
+directory — `..` segments and absolute paths are rejected at load time.
+
+## Permission reference
+
+Addon processes run as full Node processes, so only permissions enforced on
+an actual IPC boundary are meaningful — this is the complete list:
+
+| Permission | Gates |
+| --- | --- |
+| `storage` | The addon's scoped KV storage (`addon.storage.*`). |
+| `players.read` | Player-related events (`playerJoining`, `playerDropped`, `playerKicked`, `playerBanned`, `playerWarned`). |
+| `players.write` | `addon.players.addTag` / `removeTag`. |
+| `tickets.read` | `addon.tickets.*` calls and ticket lifecycle events (`ticketCreated`, `ticketNewMessage`, `ticketStatusChanged`, `ticketClaimChanged`, `ticketDiscordLinked`). |
+| `ws.push` | Server → panel WebSocket pushes (`addon.ws.push`). |
+| `deferral` | Dynamic deferral token resolution and `addon.deferPresent`. |
+
+<Callout>
+  Approving an addon at all still implies full trust — an approved addon can
+  run arbitrary code with the same OS-level access as the sxPanel host
+  process. These permissions gate *IPC calls into core*, not what the addon's
+  Node process can otherwise do.
+</Callout>
+
+## Server SDK
+
+```js
+import { createAddon } from 'addon-sdk';
+
+const addon = createAddon();
+
+addon.registerRoute('GET', '/stats', async (req) => {
+  return { status: 200, body: { visits: await addon.storage.getOr('visits', 0) } };
+});
+
+addon.on('playerJoining', (data) => addon.log.info(`joining: ${data.displayName}`));
+
+addon.ready();
+```
+
+`createAddon()` reads `ADDON_ID` from the environment (or an in-process
+channel on hosts without worker threads) and returns a single `addon`
+instance with everything below. Call `addon.ready()` once your routes and
+listeners are registered — it flushes the route table to core and unblocks
+incoming HTTP traffic.
+
+### Identity & permissions
+
+```js
+addon.id;            // the addon's manifest id
+addon.permissions;    // string[] of permissions actually GRANTED (a subset of required+optional)
+```
+
+### Routes
+
+```js
+addon.registerRoute(method, path, handler);
+addon.registerPublicRoute(method, path, handler); // requires manifest publicRoutes: true
+```
+
+- `method` is `'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH'` (`'ALL'` also valid for public routes).
+- `path` supports `:param` segments and a trailing `*` catch-all, e.g. `/pages/*`.
+- Handlers receive a request object and return `{ status, headers?, body? }`
+  (sync or async).
+
+```ts
+type AddonRequest = {
+  method: string;
+  path: string;
+  headers: Record<string, string>;
+  body: unknown;
+  params: Record<string, string>;
+  admin: {
+    name: string;
+    permissions: string[];
+    hasPermission: (perm: string) => boolean;
+  };
+};
+```
+
+Authenticated routes are served at `/addons/<id>/api/<path>` and carry the
+calling admin's identity/permissions. Public routes (`admin` is always
+`null`) are served unauthenticated — only enable `publicRoutes` for endpoints
+that genuinely need to be reachable without a panel session (e.g. inbound
+webhooks).
+
+### Storage
+
+Scoped, addon-private key/value storage — requires the `storage` permission.
+
+```js
+await addon.storage.set('visits', 1);
+await addon.storage.get('visits');           // -> 1 | undefined
+await addon.storage.has('visits');            // -> boolean
+await addon.storage.getOr('visits', 0);        // -> value or default
+await addon.storage.list('shift:');            // -> string[] of matching keys
+await addon.storage.delete('visits');
+```
+
+### Players
+
+Requires `players.write`.
+
+```js
+await addon.players.addTag(netid, 'donator');
+await addon.players.removeTag(netid, 'donator');
+```
+
+`tagId` must already exist in Settings → Player Tags.
+
+### Tickets
+
+Read-only access to sxPanel's ticket system — requires `tickets.read`.
+
+```js
+await addon.tickets.findOne(ticketId);
+await addon.tickets.findByDiscordThread(threadId);
+await addon.tickets.resolveReporterDiscord({ ticketId, threadId });
+```
+
+### Events
+
+```js
+addon.on('playerJoining', (data) => { /* ... */ });
+addon.on('ticketCreated', (data) => { /* ... */ });
+addon.off('playerJoining', handler); // or addon.off('playerJoining') to clear all
+```
+
+`players.*` events need `players.read` to be meaningful; `ticket*` events
+need `tickets.read`. Handlers can be async — throws are caught and logged,
+they won't crash the addon process.
+
+### WebSocket push
+
+Requires `ws.push`. Lets your server push live updates to subscribed panel
+clients without polling.
+
+```js
+addon.ws.onSubscribe((sessionId) => { /* a panel client subscribed */ });
+addon.ws.onUnsubscribe((sessionId) => { /* ... */ });
+addon.ws.push('shift:updated', { onShift });
+```
+
+On the panel side, listen with the socket handed to you via `txAddonApi`
+(see [Panel SDK](#panel-sdk) below) — events are automatically namespaced as
+`addon:<id>:<event>`.
+
+### Logging
+
+```js
+addon.log.info('message');
+addon.log.warn('message');
+addon.log.error('message');
+```
+
+### Deferral integration
+
+Requires `deferral`. Lets an addon register its own connect-time deferral
+scenarios/tokens (surfaced in Deferral Studio) and trigger a deferral card
+for a specific player.
+
+```js
+addon.registerDeferralScenario({ id: 'shift_closed', label: 'Shift board — closed', group: 'addon' });
+addon.registerDeferralToken({
+  key: 'shiftNote',
+  resolve: async (ctx) => 'Shift applications are closed right now.',
+});
+addon.deferPresent({ license, scenarioId: 'shift_closed', playerName });
+```
+
+`scenarioId` can be a short key (auto-namespaced to `<addonId>:<key>`) or a
+full `addon-id:scenario_key` id.
+
+## Panel SDK
+
+The panel bundle (`panel.entry`) is loaded as a plain ES module inside the
+already-running panel shell. **React is provided as a global — don't bundle
+your own.**
+
+```js
+/* global React, globalThis */
+const { createElement: h, useState, useEffect } = React;
+
+function StarterPage() { /* ... */ }
+function StarterWidget() { /* ... */ }
+
+export const pages = { StarterPage };
+export const widgets = { StarterWidget };
+export default { pages, widgets };
+```
+
+- Export a named `pages` map and/or `widgets` map matching the `component`
+  names declared in `addon.json` (`panel.pages[].component`,
+  `panel.widgets[].component`). A `default` export combining both also works.
+- `globalThis.txAddonApi.getHeaders()` returns headers (including CSRF) to
+  attach to `fetch` calls against your own `/addons/<id>/api/*` routes.
+- `globalThis.txAddonApi.socket.get()` returns the shared panel WebSocket —
+  `.on('addon:<id>:<event>', handler)` / `.off(...)` to receive `ws.push`
+  events in real time.
+- `globalThis.txConsts.preAuth` exposes the signed-in admin's `name` and
+  `permissions`, useful for client-side permission checks (still enforce
+  them server-side too).
+
+```js
+import { Button, Card, CardContent, Badge } from 'addon-sdk/ui';
+```
+
+`addon-sdk/ui` re-exports the panel's own shadcn/ui components (Button,
+Card, Badge, Input, Dialog, Table, Tabs, Alert, Tooltip, Skeleton,
+ScrollArea, Separator, …) at runtime via a `SxPanelUI` global, so your addon
+UI matches the rest of the panel without shipping its own copy of the
+component library.
+
+## Discord SDK
+
+Import from `addon-sdk/discord` inside files under `discordBot.commands` /
+`discordBot.events`. Slash commands are standard `discord.js` — each file
+default-exports `{ data, execute }` plus optional `autocomplete`, `buttons`
+and `modals` handler maps.
+
+```js
+import { createAddonDiscordSdk } from 'addon-sdk/discord';
+import { SlashCommandBuilder } from 'discord.js';
+
+export default {
+  data: new SlashCommandBuilder().setName('shift-status').setDescription('Show the current shift.'),
+  async execute(interaction, bridge) {
+    const discord = createAddonDiscordSdk({ addonId: 'addon-starter-template', bridge });
+    const res = await discord.addonRoute({ method: 'GET', path: '/stats', interaction });
+    await interaction.reply({ content: `On shift: ${res.body.onShiftCount}`, ephemeral: true });
+  },
+};
+```
+
+Key pieces of `AddonDiscordSdk`:
+
+| Member | Purpose |
+| --- | --- |
+| `addonRoute({ method, path, body?, interaction? })` | Calls your own `server.entry` routes from Discord, so business logic lives in one place. Resolves an `{ status, headers?, body }` response. |
+| `interactions.button(builder, action, { state, label, style, ... })` | Stamps an addon-namespaced custom ID onto a `ButtonBuilder` so click events route back to this addon. |
+| `interactions.modal(builder, action, { state, title, components })` | Same idea for `ModalBuilder`. |
+| `respondWithChoices(interaction, choices)` | Helper for `autocomplete` handlers. |
+| `getRequesterPayload(interaction)` | Extracts `{ requesterId, requesterName, memberRoles }` to forward as context to `addonRoute`. |
+| `getConfigSnapshot()` | Reads a snapshot of the bot's current config. |
+| `resolveMemberRoles(uid)` / `resolveMemberProfile(uid)` | Look up a Discord member's roles / display profile through the bot. |
+
+Buttons and modals created with `interactions.button` / `interactions.modal`
+dispatch back to the `buttons` / `modals` maps on your command's default
+export, keyed by the `action` name:
+
+```js
+export default {
+  data: /* ... */,
+  async execute(interaction, bridge) { /* ... */ },
+  buttons: {
+    async editGreeting(interaction, bridge, context) {
+      // context.state is whatever you passed as `state` when building the button
+    },
+  },
+  modals: {
+    async submitGreeting(interaction, bridge) { /* ... */ },
+  },
+};
+```
+
+## Developing addons in this repo
+
+- Addons live under `sxPanel/addons/<id>/` in the git repo. `npm run dev`
+  copies that folder into the FXServer monitor resource path — the running
+  dev server reads the copy, not your working tree directly.
+- **Panel** changes need only a browser refresh (the manifest cache-busts the
+  entry URL).
+- **Server** changes need an explicit **Addons → Reload** in the panel — the
+  addon process doesn't auto-restart on file save. `Route not found` from a
+  panel/Discord call usually means the panel updated but the server didn't.
+- **Lua/NUI** changes need a `monitor` (or full FXServer) restart the first
+  time you add new `client_scripts`, since FiveM only reads that list on
+  resource start.
+- **Discord** command/handler changes follow the same reload rule as the
+  server.
+
+## Next steps
+
+- Copy `addons/addon-starter-template` and work from its README for a
+  file-by-file walkthrough of every runtime described above.
+- Pair `ws.push` / player events with the [Events API](/docs/events-api) if
+  you also need to react from a plain FXServer Lua resource.
+- Review [access control](/docs/permissions) — `adminPermissions` you
+  register show up there automatically.
