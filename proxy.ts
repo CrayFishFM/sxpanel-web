@@ -3,8 +3,8 @@ import type { NextRequest } from "next/server"
 import { getSessionCookie } from "better-auth/cookies"
 
 // Optimistic, cookie-presence-only check — the real authorization check
-// (session validity + admin role) happens server-side in the dashboard
-// page and in GET /api/stats. This just avoids a flash of protected UI.
+// (session validity + admin role) happens server-side in each dashboard
+// page and in the admin GET routes. This just avoids a flash of protected UI.
 export function proxy(request: NextRequest) {
   const sessionCookie = getSessionCookie(request)
   const { pathname } = request.nextUrl
@@ -21,5 +21,7 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard", "/sign-in"],
+  // `:path*` so nested dashboard routes (e.g. /dashboard/reports) are
+  // covered too, not just the index.
+  matcher: ["/dashboard/:path*", "/sign-in"],
 }

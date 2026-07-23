@@ -1,10 +1,12 @@
 import { headers } from "next/headers"
+import Link from "next/link"
 import { redirect } from "next/navigation"
 
 import { auth } from "@/lib/auth"
 import { getStatsSummary } from "@/lib/stats-queries"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { SignOutButton } from "@/components/admin/sign-out-button"
 import { CreateAdminForm } from "@/components/admin/create-admin-form"
 
@@ -31,7 +33,12 @@ export default async function DashboardPage() {
           <h1 className="font-heading text-2xl font-medium">Telemetry dashboard</h1>
           <p className="text-sm text-muted-foreground">Signed in as {session.user.email}</p>
         </div>
-        <SignOutButton />
+        <div className="flex items-center gap-2">
+          <Button variant="outline" asChild>
+            <Link href="/dashboard/reports">Diagnostics reports</Link>
+          </Button>
+          <SignOutButton />
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
