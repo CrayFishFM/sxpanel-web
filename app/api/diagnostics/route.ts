@@ -75,6 +75,7 @@ async function handleReport(request: Request) {
     return fail("Report too large.", 413);
   }
   if (body.byteLength === 0) {
+    console.warn("[diagnostics] rejected: empty request body", { ip });
     return fail("Empty request body.", 400);
   }
 
@@ -85,6 +86,12 @@ async function handleReport(request: Request) {
     if (error instanceof PayloadTooLargeError) {
       return fail("Report too large once decompressed.", 413);
     }
+    console.warn("[diagnostics] rejected: could not decompress body", {
+      ip,
+      compressedBytes: body.byteLength,
+      firstBytes: `${body[0]?.toString(16)} ${body[1]?.toString(16)}`,
+      error: error instanceof Error ? error.message : String(error),
+    });
     return fail("Could not decompress request body — expected gzip.", 400);
   }
 
@@ -92,11 +99,20 @@ async function handleReport(request: Request) {
   try {
     parsed = JSON.parse(json);
   } catch {
+    console.warn("[diagnostics] rejected: decoded body was not valid JSON", {
+      ip,
+      decodedBytes: json.length,
+      preview: json.slice(0, 200),
+    });
     return fail("Request body was not valid JSON.", 400);
   }
 
   const envelope = diagnosticsEnvelopeSchema.safeParse(parsed);
   if (!envelope.success) {
+    console.warn("[diagnostics] rejected: payload failed envelope validation", {
+      ip,
+      issues: envelope.error.issues,
+    });
     return fail("Report did not match the expected diagnostics format.", 400);
   }
 

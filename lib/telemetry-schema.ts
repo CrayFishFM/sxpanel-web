@@ -62,9 +62,16 @@ export const statsPayloadSchema = z
     inventory: inventorySchema.optional(),
     dashboard: dashboardSchema.optional(),
   })
-  .refine((payload) => payload.server.currentPlayers <= payload.server.playerSlots, {
-    error: "server.currentPlayers must be <= server.playerSlots",
-    path: ["server", "currentPlayers"],
+  // A client that hasn't yet cached its slot count reports `playerSlots: 0`
+  // while players are connected — a benign "slots unknown" state, not a
+  // malformed payload. Rather than reject an otherwise-good sample, raise
+  // the slot count to the live player count (there must be at least that
+  // many slots) and keep the stored invariant playerSlots >= currentPlayers.
+  .transform((payload) => {
+    if (payload.server.currentPlayers > payload.server.playerSlots) {
+      payload.server.playerSlots = payload.server.currentPlayers;
+    }
+    return payload;
   });
 
 export type StatsPayload = z.infer<typeof statsPayloadSchema>;

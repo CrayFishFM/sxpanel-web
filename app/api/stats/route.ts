@@ -32,11 +32,19 @@ export async function POST(request: Request) {
   try {
     json = JSON.parse(rawBody);
   } catch {
+    console.warn("[stats] rejected: body was not valid JSON", {
+      ip,
+      bodyLength: rawBody.length,
+    });
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
   const parsed = statsPayloadSchema.safeParse(json);
   if (!parsed.success) {
+    console.warn("[stats] rejected: payload failed validation", {
+      ip,
+      issues: parsed.error.issues,
+    });
     return NextResponse.json(
       { error: "Invalid payload", issues: parsed.error.issues },
       { status: 400 },
