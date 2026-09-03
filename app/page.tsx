@@ -1,3 +1,4 @@
+import Image from "next/image"
 import Link from "next/link"
 import {
   ArrowRight,
@@ -40,7 +41,6 @@ import { GithubIcon } from "@/components/icons"
 import { Brand } from "@/components/brand"
 import { Reveal } from "@/components/reveal"
 import { JsonLd } from "@/components/structured-data"
-import { ProductMockup } from "@/components/landing/product-mockup"
 import { AnalyticsShowcase } from "@/components/landing/analytics-showcase"
 import { NotifyForm } from "@/components/landing/notify-form"
 import { MigrationSnippet } from "@/components/landing/migration-snippet"
@@ -48,6 +48,7 @@ import { DiscordCommands } from "@/components/landing/discord-commands"
 import { StatValue } from "@/components/landing/stat-value"
 import { siteConfig } from "@/lib/site"
 import { faqJsonLd, softwareAppJsonLd } from "@/lib/seo"
+import overviewShot from "@/public/docs/overview.png"
 
 const FEATURES = [
   {
@@ -298,7 +299,15 @@ export default function Page() {
             </p>
 
             <div className="mt-12 w-full max-w-4xl sm:mt-16">
-              <ProductMockup />
+              <div className="overflow-hidden rounded-xl border border-border bg-background text-left shadow-2xl shadow-black/40 ring-1 ring-foreground/5">
+                <Image
+                  src={overviewShot}
+                  alt="The sxPanel Overview dashboard — server controls, live player count, server stats, console and performance charts"
+                  className="h-auto w-full"
+                  sizes="(min-width: 1024px) 896px, 100vw"
+                  priority
+                />
+              </div>
             </div>
           </div>
         </section>
