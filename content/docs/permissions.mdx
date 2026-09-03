@@ -1,13 +1,16 @@
 ---
 title: Permissions
-description: 37+ granular permissions with custom presets and per-admin action logging.
+description: 40+ granular permissions with custom presets and per-admin action logging.
 ---
 
-sxPanel ships with 37+ granular permissions (plus any extra permissions
+sxPanel ships with 40+ granular permissions (plus any extra permissions
 registered by installed addons) so you can give each admin exactly the access
 they need — nothing more. Permissions can be bundled into presets for fast
 onboarding, and every privileged action is logged per-admin for full
 accountability.
+
+Admins and presets are managed in **Server → Admins** (the *Admins* and
+*Permission Presets* tabs of the Admin Manager).
 
 ## Permission presets
 
@@ -25,16 +28,24 @@ permissions.
 
 ## Permission categories
 
-- **System** — manage admins, view/change settings, view system logs, or grant
-  the root "All Permissions" permission.
-- **Server** — view/write the live console, start/stop/restart the server,
-  send announcements, manage resources, edit `server.cfg`, view server logs.
+- **System** — manage admins, view or change settings, view system/action
+  logs, view login IPs, or grant the root "All Permissions" permission.
+- **Server** — view or write the live console, start/stop/restart the server,
+  send announcements, start/stop resources, download a resource folder, edit
+  `server.cfg`, view server logs.
 - **In-Game Menu** — spawn/fix/boost/delete vehicles, reset a world area, view
   player IDs and map blips.
-- **Player Management** — direct message, whitelist, warn, kick, ban/unban,
-  freeze, heal, NoClip/God Mode/Super Jump, spectate, teleport, troll actions,
-  reports, ticket management, and permanently deleting player data.
+- **Player Management** — direct message, whitelist, warn, kick, ban (with a
+  separate "permanent ban" grant), unban, freeze, heal, NoClip/God Mode/Super
+  Jump, spectate, teleport, troll actions, manage reports, delete tickets,
+  and permanently deleting player data.
 - **Addons** — permissions registered dynamically by installed addons.
+
+<Callout>
+  The "dangerous" permissions (All Permissions, Manage Admins, Settings:
+  Change, Console: Write, Ban: Permanent, delete tickets, delete player data)
+  are flagged in the UI — grant them deliberately.
+</Callout>
 
 ## Per-admin logging
 
@@ -55,8 +66,11 @@ of truth for auditing who did what, and when.
 
 ## Logging in
 
-Admins can sign in via Discord OAuth, Cfx.re (Discourse) OAuth, or a local
-password — optionally protected with TOTP two-factor authentication.
+Admins can sign in with a **Cfx.re account** (Discourse OAuth) or a local
+**username + password** — optionally protected with TOTP two-factor
+authentication. An admin account can additionally be linked to a Cfx.re and a
+Discord identity (used by the bot's `/info`-style commands and identity
+resolution).
 
 ## Next steps
 

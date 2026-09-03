@@ -9,6 +9,9 @@ core. Each addon runs in its own process (or an isolated in-process realm on
 hosts that can't spawn Node children) and talks to the core over a narrow,
 permissioned IPC boundary.
 
+This page is the **developer reference**. For installing, approving and
+running addons from the panel, see [Addons](/docs/addons).
+
 <Callout title="Fastest way to start">
   Copy `addons/addon-starter-template` to `addons/<your-id>/`, rename `id` in
   `addon.json`, and work from there. It wires up a server route, a panel page
@@ -16,9 +19,34 @@ permissioned IPC boundary.
   same patterns documented on this page.
 </Callout>
 
+## Build & run loop
+
+<Steps>
+<Step>
+### Scaffold
+
+Copy `addons/addon-starter-template` to `addons/<your-id>/` and set a unique
+`id` in `addon.json` (3–64 chars, lowercase alphanumeric + hyphens).
+</Step>
+<Step>
+### Discover & approve
+
+In **Addons → Addon Manager**, press **Rescan Addons**, then **Approve** your
+addon and grant the permissions it requests. Its status becomes **Running**.
+</Step>
+<Step>
+### Iterate
+
+Panel changes need only a browser refresh. Server, Lua and Discord changes
+need **Addons → Reload** (Lua that adds new `client_scripts` also needs a
+`monitor` restart). See [Developing addons in this repo](#developing-addons-in-this-repo).
+</Step>
+</Steps>
+
 ## How addons are loaded
 
-- Every folder under `addons/` with an `addon.json` is discovered on boot.
+- Every folder under `addons/` with an `addon.json` is discovered on boot,
+  and again whenever an admin presses **Rescan Addons**.
 - The manifest is validated with zod; invalid manifests are skipped (with a
   logged reason) rather than crashing the panel.
 - A newly-discovered addon is **not** trusted automatically — an admin must
@@ -28,6 +56,11 @@ permissioned IPC boundary.
   `needsReapproval` and stays stopped until an admin re-approves it.
 - Approved addon permission grants are stored in `addon-config.json`, not in
   the addon's own folder.
+- A panel build runs at most **20 addons** concurrently.
+
+The full status lifecycle (Discovered → Running → Stopped → Needs
+re-approval) and the per-addon controls are documented in
+[Addons](/docs/addons#addon-manager).
 
 ## The manifest (`addon.json`)
 
@@ -39,7 +72,7 @@ permissioned IPC boundary.
   "version": "1.0.0",
   "author": "sxPanel Community",
   "license": "MIT",
-  "sxpanel": { "minVersion": "0.4.0-Beta" },
+  "sxpanel": { "minVersion": "0.6.0-beta" },
   "permissions": {
     "required": ["storage"],
     "optional": ["ws.push", "players.read", "players.write", "deferral"]
@@ -319,6 +352,10 @@ export default { pages, widgets };
 - Export a named `pages` map and/or `widgets` map matching the `component`
   names declared in `addon.json` (`panel.pages[].component`,
   `panel.widgets[].component`). A `default` export combining both also works.
+- Registered pages appear in the panel sidebar (respecting `sidebar`,
+  `sidebarGroup` and `permission` from the manifest); widgets render in their
+  declared `slot` on the Overview dashboard. Both show up automatically once
+  the addon is **Running**.
 - `globalThis.txAddonApi.getHeaders()` returns headers (including CSRF) to
   attach to `fetch` calls against your own `/addons/<id>/api/*` routes.
 - `globalThis.txAddonApi.socket.get()` returns the shared panel WebSocket —
@@ -327,6 +364,51 @@ export default { pages, widgets };
 - `globalThis.txConsts.preAuth` exposes the signed-in admin's `name` and
   `permissions`, useful for client-side permission checks (still enforce
   them server-side too).
+
+### A page that talks to its own route
+
+```js
+/* global React, globalThis */
+const { createElement: h, useState, useEffect, useCallback } = React;
+import { Button, Card, CardContent } from 'addon-sdk/ui';
+
+function StarterPage() {
+  const [onShift, setOnShift] = useState(0);
+
+  const refresh = useCallback(async () => {
+    const res = await fetch('/addons/addon-starter-template/api/stats', {
+      headers: globalThis.txAddonApi.getHeaders(),
+    });
+    setOnShift((await res.json()).onShiftCount);
+  }, []);
+
+  useEffect(() => {
+    refresh();
+    const socket = globalThis.txAddonApi.socket.get();
+    const handler = (data) => setOnShift(data.onShift);
+    socket.on('addon:addon-starter-template:shift:updated', handler);
+    return () => socket.off('addon:addon-starter-template:shift:updated', handler);
+  }, [refresh]);
+
+  return h(Card, null,
+    h(CardContent, null,
+      h('p', null, `On shift: ${onShift}`),
+      h(Button, { onClick: refresh }, 'Refresh'),
+    ),
+  );
+}
+
+export const pages = { StarterPage };
+```
+
+The server side of that route is a few lines with the [Server SDK](#server-sdk):
+
+```js
+addon.registerRoute('GET', '/stats', async () => ({
+  status: 200,
+  body: { onShiftCount: (await addon.storage.list('shift:')).length },
+}));
+```
 
 ```js
 import { Button, Card, CardContent, Badge } from 'addon-sdk/ui';
@@ -406,10 +488,23 @@ export default {
 - **Discord** command/handler changes follow the same reload rule as the
   server.
 
+## Troubleshooting
+
+| Symptom | Likely cause |
+| --- | --- |
+| Addon never appears in Addon Manager | No `addon.json`, or it failed zod validation — check the panel logs for the skipped-manifest reason. Press **Rescan Addons**. |
+| Stuck on **Needs re-approval** | The manifest added a permission since last approval. Re-approve it. |
+| `Route not found` from a panel/Discord call | The panel bundle updated but the server process didn't — run **Addons → Reload**. |
+| `addon.storage` throws / is undefined | The `storage` permission isn't in `required` (or was denied at approval). |
+| New Lua `client_scripts` not loading | FiveM only reads that list on resource start — restart `monitor`. |
+| Panel page/widget missing | The addon isn't **Running**, or the page declares a `permission` the current admin lacks. |
+
 ## Next steps
 
 - Copy `addons/addon-starter-template` and work from its README for a
   file-by-file walkthrough of every runtime described above.
+- See [Addons](/docs/addons) for the panel-side install, approval and
+  lifecycle workflow.
 - Pair `ws.push` / player events with the [Events API](/docs/events-api) if
   you also need to react from a plain FXServer Lua resource.
 - Review [access control](/docs/permissions) — `adminPermissions` you

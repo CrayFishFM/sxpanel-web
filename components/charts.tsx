@@ -182,7 +182,10 @@ export function DualBarList({
   return (
     <div className={cn("flex items-end gap-[3px]", className)}>
       {data.map((d, i) => (
-        <div key={i} className="flex flex-1 flex-col items-stretch justify-end">
+        <div
+          key={i}
+          className="flex h-full flex-1 flex-col items-stretch justify-end"
+        >
           <div
             className="w-full rounded-t-[2px]"
             style={{

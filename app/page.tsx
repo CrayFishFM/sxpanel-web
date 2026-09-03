@@ -2,6 +2,7 @@ import Link from "next/link"
 import {
   ArrowRight,
   BarChart3,
+  Blocks,
   Check,
   Flag,
   Gamepad2,
@@ -81,8 +82,8 @@ const FEATURES = [
     description: "Understand how your server actually performs.",
     href: "#analytics",
     points: [
-      "Player count & memory timeline up to 96h",
-      "Retention metrics — 1d / 7d / 30d",
+      "Player count, memory & retention timelines",
+      "Return rate — 1d / 7d / 30d — and active share",
       "Peak hours heatmap & playtime distribution",
       "Admin actions timeline & session stats",
       "Server uptime and disconnect reasons",
@@ -95,7 +96,7 @@ const FEATURES = [
     href: "/docs/features#player-management",
     points: [
       "Warning & Ban system with full history",
-      "Whitelist — Discord, License, Role, Admin-only",
+      "Whitelist — Discord member/role, manual review or admin-only",
       "Auto-tags + up to 20 custom tags via exports",
       "Activity heatmap, risk assessment, name history",
       "Self-contained database — no MySQL required",
@@ -125,13 +126,25 @@ const FEATURES = [
       "Whitelist alerts wired straight to your server",
     ],
   },
+  {
+    icon: Blocks,
+    title: "Addons",
+    description: "Extend the panel without forking it.",
+    href: "/docs/addons",
+    points: [
+      "Addon Manager with per-addon approval & permissions",
+      "Add sidebar pages and Overview dashboard widgets",
+      "Sandboxed IPC — storage, tags, tickets, push, deferral",
+      "Server routes, in-game Lua & Discord commands in one package",
+    ],
+  },
 ]
 
 const STATS = [
   { icon: ShieldCheck, value: "40+", label: "Granular permissions" },
   { icon: Languages, value: "30+", label: "Supported languages" },
   { icon: Timer, value: "<60s", label: "Recipe-based deploy" },
-  { icon: BarChart3, value: "96h", label: "Insights history" },
+  { icon: BarChart3, value: "30d", label: "Retention tracking" },
 ]
 
 const STEPS = [
@@ -312,7 +325,7 @@ export default function Page() {
               Built to run serious servers
             </h2>
             <p className="text-muted-foreground lg:text-right">
-              Six pillars of functionality, each designed to replace a pile of
+              Seven pillars of functionality, each designed to replace a pile of
               separate resources and dashboards.
             </p>
           </Reveal>

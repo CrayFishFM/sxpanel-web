@@ -1,16 +1,24 @@
-import { Bell, Search } from "lucide-react"
+import { BellOff, ChevronDown, RefreshCw, Search } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { BrandMark } from "@/components/brand"
 
-const NAV_TABS = ["Overview", "Players", "Server", "Analytics", "Addons", "System"]
+/** Top-nav items. Most open a dropdown in the real panel (marked below). */
+const NAV_TABS = [
+  { label: "Overview", menu: false },
+  { label: "Players", menu: true },
+  { label: "Server", menu: true },
+  { label: "Analytics", menu: true },
+  { label: "Addons", menu: false },
+  { label: "System", menu: true },
+] as const
 
 export function MockupTopBar({
   activeTab,
   serverName,
   players,
 }: {
-  activeTab: (typeof NAV_TABS)[number]
+  activeTab: (typeof NAV_TABS)[number]["label"]
   serverName: string
   players: number
 }) {
@@ -18,40 +26,46 @@ export function MockupTopBar({
     <div className="flex items-center gap-4 border-b border-border bg-card px-4 py-2.5">
       <BrandMark size="sm" />
       <div className="hidden items-center gap-1.5 border-l border-border/60 pl-4 text-xs sm:flex">
-        <span className="font-medium">{serverName}</span>
         <span className="relative flex size-1.5">
           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-60" />
           <span className="relative inline-flex size-1.5 rounded-full bg-success" />
         </span>
-        <span className="text-muted-foreground">{players} players</span>
+        <span className="font-medium">{serverName}</span>
+        <span className="text-muted-foreground tabular-nums">
+          {players} players
+        </span>
       </div>
-      <nav className="hidden items-center gap-1 text-xs font-medium sm:flex">
+      <nav className="hidden items-center gap-0.5 text-xs font-medium sm:flex">
         {NAV_TABS.map((tab) => (
           <span
-            key={tab}
+            key={tab.label}
             className={cn(
-              "relative px-2.5 py-1",
-              tab === activeTab ? "text-foreground" : "text-muted-foreground"
+              "relative flex items-center gap-0.5 px-2.5 py-1",
+              tab.label === activeTab
+                ? "text-foreground"
+                : "text-muted-foreground"
             )}
           >
-            {tab}
-            {tab === activeTab && (
+            {tab.label}
+            {tab.menu && <ChevronDown className="size-3 opacity-60" />}
+            {tab.label === activeTab && (
               <span className="absolute inset-x-2.5 -bottom-[9px] h-px bg-brand" />
             )}
           </span>
         ))}
       </nav>
-      <div className="ml-auto flex items-center gap-2">
-        <span className="hidden items-center gap-1.5 rounded-md border border-border/60 bg-muted/30 px-2 py-1 text-[10px] text-muted-foreground md:flex">
-          <Search className="size-3" />
-          Ctrl+K
+      <div className="ml-auto flex items-center gap-1.5">
+        <span className="grid size-6 place-items-center rounded-md border border-destructive/30 text-destructive/80">
+          <BellOff className="size-3.5" />
         </span>
-        <span className="relative grid size-6 place-items-center rounded-md text-muted-foreground">
-          <Bell className="size-3.5" />
-          <span className="absolute top-1 right-1 size-1.5 rounded-full bg-destructive" />
+        <span className="grid size-6 place-items-center rounded-md border border-chart-2/40 text-chart-2">
+          <RefreshCw className="size-3.5" />
         </span>
-        <span className="grid size-6 place-items-center rounded-full bg-brand text-[10px] font-semibold text-brand-foreground">
-          DN
+        <span className="grid size-6 place-items-center rounded-md text-muted-foreground">
+          <Search className="size-3.5" />
+        </span>
+        <span className="grid size-6 place-items-center rounded-md bg-gradient-to-br from-brand to-chart-2 text-[10px] font-semibold text-white">
+          SX
         </span>
       </div>
     </div>

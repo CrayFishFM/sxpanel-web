@@ -1,4 +1,4 @@
-import { Activity, BarChart3, TrendingUp, Users2 } from "lucide-react"
+import { Activity, BarChart3, CalendarRange, TrendingUp, Users2 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { AreaChart, DualBarList, Heatmap } from "@/components/charts"
@@ -36,6 +36,14 @@ const HEATMAP: number[][] = Array.from({ length: 7 }, (_, day) =>
 )
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+
+const RETENTION = [
+  { label: "After 1 day", value: "62%", color: "var(--chart-2)" },
+  { label: "After 7 days", value: "49%", color: "var(--warning)" },
+  { label: "After 30 days", value: "34%", color: "var(--warning)" },
+  { label: "Active last 7d", value: "41%", color: "var(--warning)" },
+  { label: "Active last 30d", value: "63%", color: "var(--chart-2)" },
+]
 
 const PLAYERS = [
   { name: "SilverNomad101", tag: null, stripe: null },
@@ -110,12 +118,39 @@ export function AnalyticsShowcase() {
 
           <div className="grid grid-cols-1 gap-2.5 p-3 sm:p-4 lg:grid-cols-[1fr_200px]">
             <div className="space-y-2.5">
+              {/* Player retention */}
+              <MiniCard
+                icon={Activity}
+                title="Player Retention"
+                subtitle="Do players come back?"
+                right={<>Sample: 4,921 players</>}
+              >
+                <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+                  {RETENTION.map((r) => (
+                    <div
+                      key={r.label}
+                      className="rounded-md border border-border/50 bg-background/40 px-2 py-1.5 text-center"
+                    >
+                      <div
+                        className="font-heading text-base font-semibold tabular-nums"
+                        style={{ color: r.color }}
+                      >
+                        {r.value}
+                      </div>
+                      <div className="text-[9px] text-muted-foreground">
+                        {r.label}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </MiniCard>
+
               {/* Player count & memory */}
               <MiniCard
                 icon={TrendingUp}
                 title="Player Count & Memory"
                 subtitle="Long-term population and host memory trend"
-                right={<>Peak: 97 players</>}
+                right={<>Peak: 99 players</>}
               >
                 <div className="mb-1 text-[9.5px] font-medium tracking-wide text-muted-foreground uppercase">
                   Players
@@ -164,7 +199,7 @@ export function AnalyticsShowcase() {
 
                 <MiniCard
                   icon={BarChart3}
-                  title="New Players / Day"
+                  title="New Players Per Day"
                   subtitle="First-seen players over time"
                   right={<>Total: 6,832</>}
                 >
@@ -182,6 +217,28 @@ export function AnalyticsShowcase() {
                   </div>
                 </MiniCard>
               </div>
+
+              {/* Peak hours */}
+              <MiniCard
+                icon={CalendarRange}
+                title="Peak Hours"
+                subtitle="Average players by weekday & hour"
+                right={<>UTC</>}
+              >
+                <div className="flex gap-2">
+                  <div className="flex flex-col justify-between py-px text-[8px] text-muted-foreground/70">
+                    {DAYS.map((d) => (
+                      <span key={d}>{d}</span>
+                    ))}
+                  </div>
+                  <Heatmap
+                    rows={HEATMAP}
+                    color="var(--warning)"
+                    className="flex-1 gap-[3px]"
+                    cellClassName="h-3"
+                  />
+                </div>
+              </MiniCard>
             </div>
 
             {/* Players rail */}
