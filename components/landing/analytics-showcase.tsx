@@ -25,6 +25,18 @@ const NEW_PER_DAY = [
   4, 5, 6, 5, 7, 8, 9, 8, 10, 9, 8, 7, 6, 7, 8, 9, 10, 9, 8, 7,
 ]
 
+const GROWTH = Array.from({ length: 40 }, (_, i) => 4200 + i * 40 + Math.round(Math.sin(i / 5) * 30))
+
+const SESSION_LEN = [3, 8, 14, 16, 10, 5, 2]
+
+const DISCONNECTS = [
+  { label: "Timeout", pct: 100, color: "var(--chart-1)" },
+  { label: "Resource", pct: 52, color: "var(--chart-4)" },
+  { label: "Crash", pct: 34, color: "var(--destructive)" },
+  { label: "Security", pct: 16, color: "var(--warning)" },
+  { label: "Unknown", pct: 9, color: "var(--muted-foreground)" },
+]
+
 const HEATMAP: number[][] = Array.from({ length: 7 }, (_, day) =>
   Array.from({ length: 24 }, (_, hour) => {
     const evening = Math.exp(-((hour - 20) ** 2) / 40)
@@ -218,27 +230,93 @@ export function AnalyticsShowcase() {
                 </MiniCard>
               </div>
 
-              {/* Peak hours */}
-              <MiniCard
-                icon={CalendarRange}
-                title="Peak Hours"
-                subtitle="Average players by weekday & hour"
-                right={<>UTC</>}
-              >
-                <div className="flex gap-2">
-                  <div className="flex flex-col justify-between py-px text-[8px] text-muted-foreground/70">
-                    {DAYS.map((d) => (
-                      <span key={d}>{d}</span>
+              <div className="grid gap-2.5 sm:grid-cols-2">
+                {/* Player growth */}
+                <MiniCard
+                  icon={TrendingUp}
+                  title="Player Growth"
+                  subtitle="Cumulative unique players over time"
+                  right={<>Total: 5,807</>}
+                >
+                  <AreaChart
+                    data={GROWTH}
+                    height={64}
+                    color="var(--chart-2)"
+                    showGrid={false}
+                  />
+                </MiniCard>
+
+                {/* Peak hours */}
+                <MiniCard
+                  icon={CalendarRange}
+                  title="Peak Hours"
+                  subtitle="Average players by weekday & hour"
+                  right={<>UTC</>}
+                >
+                  <div className="flex gap-2">
+                    <div className="flex flex-col justify-between py-px text-[8px] text-muted-foreground/70">
+                      {DAYS.map((d) => (
+                        <span key={d}>{d}</span>
+                      ))}
+                    </div>
+                    <Heatmap
+                      rows={HEATMAP}
+                      color="var(--warning)"
+                      className="flex-1 gap-[3px]"
+                      cellClassName="h-3"
+                    />
+                  </div>
+                </MiniCard>
+              </div>
+
+              {/* Sessions & engagement */}
+              <div className="flex items-center gap-2 pt-1 text-[9.5px] font-medium tracking-wider text-muted-foreground/70 uppercase">
+                Sessions &amp; Engagement
+                <span className="h-px flex-1 bg-border/60" />
+              </div>
+
+              <div className="grid gap-2.5 sm:grid-cols-2">
+                <MiniCard
+                  icon={Activity}
+                  title="Session Length"
+                  subtitle="How long players stay connected"
+                  right={<>Median: 1h 11m</>}
+                >
+                  <div className="flex h-14 items-end gap-1.5">
+                    {SESSION_LEN.map((v, i) => (
+                      <div
+                        key={i}
+                        className="flex-1 rounded-t-[2px] bg-warning"
+                        style={{
+                          height: `${(v / Math.max(...SESSION_LEN)) * 100}%`,
+                          minHeight: 2,
+                        }}
+                      />
                     ))}
                   </div>
-                  <Heatmap
-                    rows={HEATMAP}
-                    color="var(--warning)"
-                    className="flex-1 gap-[3px]"
-                    cellClassName="h-3"
-                  />
-                </div>
-              </MiniCard>
+                </MiniCard>
+
+                <MiniCard
+                  icon={Users2}
+                  title="Disconnect Reasons"
+                  subtitle="Last 14 days · logged disconnects"
+                  right={<>Total: 943</>}
+                >
+                  <div className="space-y-1">
+                    {DISCONNECTS.map((d) => (
+                      <div key={d.label} className="flex items-center gap-2 text-[9px]">
+                        <span className="w-12 shrink-0 text-right text-muted-foreground">
+                          {d.label}
+                        </span>
+                        <span
+                          className="h-2 rounded-sm"
+                          style={{ width: `${d.pct}%`, backgroundColor: d.color }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </MiniCard>
+              </div>
             </div>
 
             {/* Players rail */}
