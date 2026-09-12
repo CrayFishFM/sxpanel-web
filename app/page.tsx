@@ -251,63 +251,66 @@ export default function Page() {
 
       <main id="main" className="flex-1">
         {/* Hero */}
-        <section className="relative overflow-hidden">
-          <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(60%_50%_at_50%_0%,var(--brand-muted),transparent_70%)] opacity-60" />
+        <section className="relative isolate overflow-hidden">
+          {/* Full-bleed background screenshot */}
+          <div className="absolute inset-0 -z-20">
+            <Image
+              src={overviewShot}
+              alt=""
+              fill
+              priority
+              sizes="100vw"
+              className="object-cover object-top opacity-60 sm:opacity-75"
+            />
+            <div className="absolute inset-0 bg-gradient-to-b from-background/20 via-background/55 to-background" />
+            <div className="absolute inset-0 bg-[radial-gradient(60%_55%_at_50%_0%,var(--brand-muted),transparent_70%)] opacity-70" />
+          </div>
           <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
-          <div className="mx-auto flex max-w-6xl flex-col items-center px-4 pt-16 pb-12 text-center sm:px-6 sm:pt-24">
-            <Badge
-              variant="outline"
-              className="mb-6 h-7 gap-1.5 border-brand/30 bg-brand/5 px-3 text-brand"
-            >
-              <Zap className="size-3" />
-              Drop-in replacement for txAdmin
-            </Badge>
 
-            <h1 className="font-heading mx-auto max-w-3xl text-4xl font-semibold tracking-tight text-balance sm:text-5xl md:text-6xl">
-              Manage your FiveM &amp; RedM server from one{" "}
-              <span className="text-brand">powerful panel</span>
-            </h1>
+          <div className="mx-auto flex max-w-6xl flex-col items-center px-4 pt-16 pb-24 text-center sm:px-6 sm:pt-28 sm:pb-32">
+            <div className="rounded-2xl border border-border/60 bg-background/55 px-6 py-10 shadow-2xl shadow-black/30 backdrop-blur-md sm:px-14 sm:py-14">
+              <Badge
+                variant="outline"
+                className="mb-6 h-7 gap-1.5 border-brand/30 bg-brand/5 px-3 text-brand backdrop-blur-sm"
+              >
+                <Zap className="size-3" />
+                Drop-in replacement for txAdmin
+              </Badge>
 
-            <p className="font-heading mx-auto mt-6 max-w-2xl text-lg font-medium text-balance sm:text-xl">
-              Swap the folder, keep everything, get a lot more.
-            </p>
+              <h1 className="font-heading mx-auto max-w-3xl text-4xl font-semibold tracking-tight text-balance sm:text-5xl md:text-6xl">
+                Manage your FiveM &amp; RedM server from one{" "}
+                <span className="text-brand">powerful panel</span>
+              </h1>
 
-            <p className="mx-auto mt-3 max-w-2xl text-base text-pretty text-muted-foreground sm:text-lg">
-              Live console, deep insights, player management, granular
-              permissions and Discord integration — layered onto the txAdmin
-              foundation you already run, with zero migration.
-            </p>
+              <p className="font-heading mx-auto mt-6 max-w-2xl text-lg font-medium text-balance sm:text-xl">
+                Swap the folder, keep everything, get a lot more.
+              </p>
 
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Button variant="default" size="lg" asChild>
-                <a href={siteConfig.releases} target="_blank" rel="noreferrer">
-                  <ArrowRight />
-                  Download latest release
-                </a>
-              </Button>
-              <Button size="lg" variant="secondary" asChild>
-                <a href={siteConfig.github} target="_blank" rel="noreferrer">
-                  <GithubIcon />
-                  View on GitHub
-                </a>
-              </Button>
-            </div>
+              <p className="mx-auto mt-3 max-w-2xl text-base text-pretty text-muted-foreground sm:text-lg">
+                Live console, deep insights, player management, granular
+                permissions and Discord integration — layered onto the txAdmin
+                foundation you already run, with zero migration.
+              </p>
 
-            <p className="mt-4 text-xs text-muted-foreground">
-              MIT licensed · Existing txData directories work without
-              modification
-            </p>
-
-            <div className="mt-12 w-full max-w-4xl sm:mt-16">
-              <div className="overflow-hidden rounded-xl border border-border bg-background text-left shadow-2xl shadow-black/40 ring-1 ring-foreground/5">
-                <Image
-                  src={overviewShot}
-                  alt="The sxPanel Overview dashboard — server controls, live player count, server stats, console and performance charts"
-                  className="h-auto w-full"
-                  sizes="(min-width: 1024px) 896px, 100vw"
-                  priority
-                />
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
+                <Button variant="default" size="lg" asChild>
+                  <a href={siteConfig.releases} target="_blank" rel="noreferrer">
+                    <ArrowRight />
+                    Download latest release
+                  </a>
+                </Button>
+                <Button size="lg" variant="secondary" asChild>
+                  <a href={siteConfig.github} target="_blank" rel="noreferrer">
+                    <GithubIcon />
+                    View on GitHub
+                  </a>
+                </Button>
               </div>
+
+              <p className="mt-4 text-xs text-muted-foreground">
+                MIT licensed · Existing txData directories work without
+                modification
+              </p>
             </div>
           </div>
         </section>
