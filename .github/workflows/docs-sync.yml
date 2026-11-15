@@ -1,0 +1,260 @@
+name: Docs sync
+
+# Keeps content/docs in step with sxPanel/sxpanel main. When main has commits
+# the docs have not seen, Claude reads them against the source and edits the
+# pages they affect, and the result is opened as (or added to) one pull request.
+# Agent instructions: .github/docs-sync/prompt.md
+
+on:
+  schedule:
+    - cron: "7,37 * * * *"
+  repository_dispatch:
+    types: [sxpanel-main-push]
+  workflow_dispatch:
+    inputs:
+      base_sha:
+        description: "Re-read sxpanel main starting after this commit (default: where the last sync stopped)"
+        required: false
+      force:
+        description: "Run even if this main commit was already evaluated"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: docs-sync
+  cancel-in-progress: false
+
+env:
+  SOURCE_REPO: sxPanel/sxpanel
+  SOURCE_BRANCH: main
+  SYNC_BRANCH: docs/auto-sync
+  STATE_FILE: .github/docs-sync/state.json
+  WORK: .docs-sync-work
+  MODEL: ${{ vars.DOCS_SYNC_MODEL || 'claude-sonnet-5-5' }}
+  # Set the repository variable DOCS_SYNC_DIRECT_PUSH to "true" to commit
+  # straight to the default branch instead of opening a pull request.
+  DIRECT_PUSH: ${{ vars.DOCS_SYNC_DIRECT_PUSH || 'false' }}
+  DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+  GH_TOKEN: ${{ github.token }}
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      # An open sync PR is continued rather than replaced, so unmerged edits
+      # and the commit they were synced to carry forward.
+      - name: Continue the open sync PR, if any
+        id: pr
+        run: |
+          number=$(gh pr list --head "$SYNC_BRANCH" --state open --json number --jq '.[0].number // empty')
+          if [ -n "$number" ]; then
+            git fetch --depth=1 origin "$SYNC_BRANCH"
+            git checkout -B "$SYNC_BRANCH" FETCH_HEAD
+          fi
+          echo "number=$number" >> "$GITHUB_OUTPUT"
+
+      - name: Compare with sxpanel main
+        id: range
+        run: |
+          head=$(git ls-remote "https://github.com/$SOURCE_REPO.git" "refs/heads/$SOURCE_BRANCH" | cut -f1)
+          if [ -z "$head" ]; then
+            echo "::error::Could not read $SOURCE_REPO@$SOURCE_BRANCH"
+            exit 1
+          fi
+          synced=$(jq -r .lastSyncedSha "$STATE_FILE")
+          echo "head=$head" >> "$GITHUB_OUTPUT"
+          echo "synced=$synced" >> "$GITHUB_OUTPUT"
+          if [ "$head" = "$synced" ]; then
+            echo "Docs are already synced to ${head:0:7}."
+            echo "behind=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "behind=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Remembers the last main commit that was evaluated, including the ones
+      # that needed no docs change, so they are not re-read every run.
+      - name: Restore evaluation marker
+        if: steps.range.outputs.behind == 'true'
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.docs-sync
+          key: docs-sync-evaluated-${{ steps.range.outputs.head }}
+          restore-keys: docs-sync-evaluated-
+
+      - name: Collect new commits
+        id: plan
+        if: steps.range.outputs.behind == 'true'
+        env:
+          HEAD_SHA: ${{ steps.range.outputs.head }}
+          SYNCED_SHA: ${{ steps.range.outputs.synced }}
+          BASE_INPUT: ${{ inputs.base_sha }}
+          FORCE: ${{ inputs.force }}
+        run: |
+          evaluated=$(cat ~/.docs-sync/evaluated 2>/dev/null || true)
+          if [ "$FORCE" != "true" ] && [ -z "$BASE_INPUT" ] && [ "$evaluated" = "$HEAD_SHA" ]; then
+            echo "${HEAD_SHA:0:7} was already evaluated."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          mkdir -p "$WORK"
+          git clone --quiet --filter=blob:none --branch "$SOURCE_BRANCH" \
+            "https://github.com/$SOURCE_REPO.git" "$WORK/src"
+          src() { git -C "$WORK/src" "$@"; }
+          src checkout --quiet --detach "$HEAD_SHA"
+
+          base="$SYNCED_SHA"
+          if [ -n "$BASE_INPUT" ]; then
+            base=$(src rev-parse --verify "$BASE_INPUT^{commit}")
+          elif [ -n "$evaluated" ] \
+            && src merge-base --is-ancestor "$SYNCED_SHA" "$evaluated" 2>/dev/null \
+            && src merge-base --is-ancestor "$evaluated" "$HEAD_SHA" 2>/dev/null; then
+            base="$evaluated"
+          fi
+          if ! src merge-base --is-ancestor "$base" "$HEAD_SHA"; then
+            echo "::error::$base is not an ancestor of $SOURCE_BRANCH (history rewritten?). Run this workflow manually with base_sha set."
+            exit 1
+          fi
+
+          count=$(bash .github/docs-sync/prepare.sh "$WORK/src" "$base" "$HEAD_SHA" "$WORK")
+          echo "$count commit(s) in ${base:0:7}..${HEAD_SHA:0:7}"
+          echo "base=$base" >> "$GITHUB_OUTPUT"
+          if [ "$count" -gt 0 ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check Claude credentials
+        if: steps.plan.outputs.run == 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          if [ -z "$ANTHROPIC_API_KEY" ] && [ -z "$CLAUDE_CODE_OAUTH_TOKEN" ]; then
+            echo "::error::Set the ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN repository secret."
+            exit 1
+          fi
+
+      - uses: pnpm/action-setup@v4
+        if: steps.plan.outputs.run == 'true'
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        if: steps.plan.outputs.run == 'true'
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        if: steps.plan.outputs.run == 'true'
+        run: |
+          pnpm install --frozen-lockfile
+          npm install --global @anthropic-ai/claude-code
+
+      # The agent can read, search and edit files and run the docs check.
+      # It has no shell, no network tools and no GitHub token.
+      - name: Update the docs
+        if: steps.plan.outputs.run == 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          GH_TOKEN: ""
+        run: |
+          [ -n "$ANTHROPIC_API_KEY" ] || unset ANTHROPIC_API_KEY
+          [ -n "$CLAUDE_CODE_OAUTH_TOKEN" ] || unset CLAUDE_CODE_OAUTH_TOKEN
+          claude --print "$(cat .github/docs-sync/prompt.md)" \
+            --model "$MODEL" \
+            --max-turns 150 \
+            --allowedTools "Read" "Glob" "Grep" "Edit" "Write" "Bash(node scripts/check-docs.mjs)"
+
+      - name: Keep only docs edits
+        id: result
+        if: steps.plan.outputs.run == 'true'
+        run: |
+          git add -A content/docs .github/docs-sync/source-map.md
+          git checkout -- .
+          if git diff --cached --quiet; then
+            echo "No docs changes needed."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            git diff --cached --stat
+            node scripts/check-docs.mjs
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish
+        if: steps.result.outputs.changed == 'true'
+        env:
+          HEAD_SHA: ${{ steps.range.outputs.head }}
+          BASE_SHA: ${{ steps.plan.outputs.base }}
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+        run: |
+          jq --arg sha "$HEAD_SHA" '.lastSyncedSha = $sha' "$STATE_FILE" > "$STATE_FILE.tmp"
+          mv "$STATE_FILE.tmp" "$STATE_FILE"
+          git add "$STATE_FILE"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit --quiet -m "docs: sync with sxpanel@${HEAD_SHA:0:7}"
+          gh auth setup-git
+
+          if [ "$DIRECT_PUSH" = "true" ]; then
+            git push origin "HEAD:refs/heads/$DEFAULT_BRANCH"
+            exit 0
+          fi
+
+          compare="https://github.com/$SOURCE_REPO/compare/${BASE_SHA:0:7}...${HEAD_SHA:0:7}"
+          {
+            echo "### sxpanel [\`${BASE_SHA:0:7}...${HEAD_SHA:0:7}\`]($compare)"
+            echo
+            cat "$WORK/summary.md" 2>/dev/null || echo "_The agent did not write a summary; review the diff._"
+          } > "$RUNNER_TEMP/section.md"
+
+          if [ -n "$PR_NUMBER" ]; then
+            git push origin "HEAD:refs/heads/$SYNC_BRANCH"
+            {
+              gh pr view "$PR_NUMBER" --json body --jq .body
+              printf '\n---\n\n'
+              cat "$RUNNER_TEMP/section.md"
+            } > "$RUNNER_TEMP/body.md"
+            gh pr edit "$PR_NUMBER" --body-file "$RUNNER_TEMP/body.md"
+          else
+            git push --force origin "HEAD:refs/heads/$SYNC_BRANCH"
+            {
+              echo "Automated docs update for new commits on [$SOURCE_REPO](https://github.com/$SOURCE_REPO) \`$SOURCE_BRANCH\`. Further commits are added to this PR until it is merged."
+              echo
+              cat "$RUNNER_TEMP/section.md"
+            } > "$RUNNER_TEMP/body.md"
+            gh pr create --base "$DEFAULT_BRANCH" --head "$SYNC_BRANCH" \
+              --title "docs: sync with sxpanel main" --body-file "$RUNNER_TEMP/body.md"
+          fi
+
+      - name: Write evaluation marker
+        if: steps.plan.outputs.run == 'true'
+        env:
+          HEAD_SHA: ${{ steps.range.outputs.head }}
+        run: |
+          mkdir -p ~/.docs-sync
+          echo "$HEAD_SHA" > ~/.docs-sync/evaluated
+          {
+            echo "## Docs sync: sxpanel ${HEAD_SHA:0:7}"
+            echo
+            cat "$WORK/summary.md" 2>/dev/null || echo "No summary written."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Save evaluation marker
+        if: steps.plan.outputs.run == 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.docs-sync
+          key: docs-sync-evaluated-${{ steps.range.outputs.head }}
