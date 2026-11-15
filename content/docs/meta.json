@@ -1,18 +1,21 @@
 {
   "title": "Documentation",
   "pages": [
+    "---Getting Started---",
     "index",
     "quick-start",
-    "---",
     "features",
+    "---Web Panel---",
+    "permissions",
+    "whitelist",
+    "---Discord---",
     "discord",
-    "---",
+    "---Developers---",
     "configuration",
     "events-api",
     "addons",
     "addon-api",
-    "permissions",
-    "whitelist",
+    "---Help---",
     "troubleshooting"
   ]
 }

@@ -5,8 +5,8 @@
 //   - meta.json and the files on disk agree
 // Usage: node scripts/check-docs.mjs
 
-import { existsSync, readdirSync, readFileSync } from "node:fs"
-import { join } from "node:path"
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs"
+import { join, relative } from "node:path"
 import { compile } from "@mdx-js/mdx"
 
 const DOCS_DIR = "content/docs"
@@ -17,8 +17,29 @@ const COMPONENTS = new Set(["Callout", "Card", "Cards", "Step", "Steps"])
 const errors = []
 const fail = (file, message) => errors.push(`${file}: ${message}`)
 
-const files = readdirSync(DOCS_DIR).filter((name) => name.endsWith(".mdx"))
-const slugs = new Set(files.map((name) => name.replace(/\.mdx$/, "")))
+// Paths relative to DOCS_DIR, with forward slashes: "players.mdx", "settings/game.mdx"
+const files = []
+const folders = [""]
+function collect(dir) {
+  for (const name of readdirSync(dir)) {
+    const full = join(dir, name)
+    const rel = relative(DOCS_DIR, full).replaceAll("\\", "/")
+    if (statSync(full).isDirectory()) {
+      folders.push(rel)
+      collect(full)
+    } else if (name.endsWith(".mdx")) {
+      files.push(rel)
+    }
+  }
+}
+collect(DOCS_DIR)
+// Every URL slug a page answers to: "players", "settings/game", and "settings" for settings/index.
+const slugs = new Set()
+for (const rel of files) {
+  const slug = rel.replace(/\.mdx$/, "")
+  slugs.add(slug)
+  if (slug.endsWith("/index")) slugs.add(slug.slice(0, -"/index".length))
+}
 
 function walk(node, visit) {
   visit(node)
@@ -40,8 +61,8 @@ function checkTarget(file, target, line) {
   if (!slugs.has(slug)) fail(file, `broken link ${target}${where}`)
 }
 
-for (const name of files) {
-  const file = `${DOCS_DIR}/${name}`
+for (const rel of files) {
+  const file = `${DOCS_DIR}/${rel}`
   const raw = readFileSync(file, "utf8")
 
   const frontmatter = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n/)
@@ -88,18 +109,46 @@ for (const name of files) {
   }
 }
 
-const metaFile = `${DOCS_DIR}/meta.json`
-try {
-  const meta = JSON.parse(readFileSync(metaFile, "utf8"))
-  const listed = new Set(meta.pages.filter((page) => !page.startsWith("---")))
-  for (const page of listed) {
-    if (!slugs.has(page)) fail(metaFile, `lists "${page}" but ${page}.mdx does not exist`)
+// Each folder's meta.json must list exactly the pages and sub-folders in it,
+// unless it uses "..." (rest). Separators ("---Label---") and links are skipped.
+for (const folder of folders) {
+  const dir = folder ? join(DOCS_DIR, folder) : DOCS_DIR
+  const metaFile = `${DOCS_DIR}/${folder ? `${folder}/` : ""}meta.json`
+  if (!existsSync(metaFile)) {
+    if (!folder) fail(metaFile, "missing")
+    continue
   }
-  for (const slug of slugs) {
-    if (!listed.has(slug)) fail(metaFile, `${slug}.mdx is not listed in "pages"`)
+  let meta
+  try {
+    meta = JSON.parse(readFileSync(metaFile, "utf8"))
+  } catch (error) {
+    fail(metaFile, `unreadable: ${error.message}`)
+    continue
   }
-} catch (error) {
-  fail(metaFile, `unreadable: ${error.message}`)
+  if (!Array.isArray(meta.pages)) continue
+  const entries = new Set(
+    readdirSync(dir)
+      .filter((name) => name.endsWith(".mdx") || statSync(join(dir, name)).isDirectory())
+      .map((name) => name.replace(/\.mdx$/, "")),
+  )
+  const listed = new Set()
+  let rest = false
+  for (const page of meta.pages) {
+    if (page.startsWith("---") || page.startsWith("[")) continue
+    if (page.startsWith("...")) {
+      rest = true
+      continue
+    }
+    const name = page.startsWith("!") ? page.slice(1) : page
+    if (listed.has(name)) fail(metaFile, `lists "${name}" twice`)
+    listed.add(name)
+    if (!entries.has(name)) fail(metaFile, `lists "${name}" but there is no ${name}.mdx or ${name}/ next to it`)
+  }
+  if (!rest) {
+    for (const name of entries) {
+      if (!listed.has(name)) fail(metaFile, `"${name}" is not listed in "pages"`)
+    }
+  }
 }
 
 if (errors.length > 0) {

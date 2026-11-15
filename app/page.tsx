@@ -48,7 +48,7 @@ import { DiscordCommands } from "@/components/landing/discord-commands"
 import { StatValue } from "@/components/landing/stat-value"
 import { siteConfig } from "@/lib/site"
 import { faqJsonLd, softwareAppJsonLd } from "@/lib/seo"
-import overviewShot from "@/public/docs/overview.png"
+import overviewShot from "@/public/docs/overview.webp"
 
 const FEATURES = [
   {

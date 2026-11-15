@@ -37,3 +37,6 @@ next-env.d.ts
 
 # fumadocs
 /.source
+
+# local screenshot replacements (real names)
+scripts/screenshots.local.json

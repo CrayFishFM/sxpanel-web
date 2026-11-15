@@ -4,9 +4,11 @@ menu for FiveM/RedM servers. The docs are the Fumadocs MDX pages in
 repository, and new commits have landed on its main branch since the docs were
 last brought up to date.
 
-Your job: make the docs true again for those commits. Nothing more. The people
+Your job: make the docs true and complete again for those commits. The people
 reading these pages are server owners, their admins, and addon developers; they
-come to find out how something works today.
+come to find out how something works today. `.github/docs-sync/standard.md`
+defines how deep and how accurate the docs must be. Read it first and hold
+everything you write to it.
 
 ## What you have
 
@@ -50,21 +52,16 @@ come to find out how something works today.
 - Correct or remove statements the commits made false. This matters as much
   as documenting additions. Recheck counted claims ("40+ permissions") when a
   commit changes what they count.
-- Make the smallest edit that leaves the page correct. Do not reword,
-  reorder or reformat passages the commits did not affect.
-- Match depth to the page. A new setting gets a line where its siblings are
-  listed. A new feature area gets a section on the page that owns the topic,
-  written to the same depth as the neighbouring sections: what it is for,
-  where to find it, how to use it, what to watch out for. Create a new page
-  only when no existing page owns the topic and it needs more than a section;
-  give it `title` and `description` frontmatter and add it to `meta.json`.
-- Match the existing voice: second person, concrete, short paragraphs, UI
-  labels in bold, code identifiers in backticks.
-- Available components: `Callout`, `Steps`/`Step`, `Cards`/`Card`. No imports
-  and no other components. In prose, put `{`, `}` and `<` inside backticks.
-- You cannot take screenshots. Do not add, remove or change image references.
-  If a change makes an image under `public/docs/` misleading, or a new
-  section deserves one, report it under "Needs a human".
+- Document what changed in full, to the standard: a new setting gets its
+  row in the settings table with default and limits; a new feature gets
+  everything `standard.md` lists, on the page that owns the topic (or a new
+  page in the right sidebar section when none does).
+- Do not reword, reorder or reformat passages the commits did not affect.
+  Thin pages are filled in by a separate backfill job, area by area.
+- Screenshots: use only the images listed in
+  `.github/docs-sync/screenshots.md`. You cannot take new ones. If a change
+  makes an image misleading, or a new section deserves one, report it under
+  "Needs a human".
 - Edit only files under `content/docs/`, and
   `.github/docs-sync/source-map.md` when a path in it is wrong or missing.
   Changes anywhere else are discarded.

@@ -1,6 +1,6 @@
 import Image from "next/image"
 
-import insightsShot from "@/public/docs/insights.png"
+import insightsShot from "@/public/docs/insights.webp"
 import { Reveal } from "@/components/reveal"
 
 export function AnalyticsShowcase() {
