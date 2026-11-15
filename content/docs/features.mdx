@@ -15,8 +15,10 @@ A real-time control room for your server.
 - Live console with block-based buffer, lazy-loading, saved commands & search
 - Server performance charts — players, FXServer/Node memory, and a per-thread
   tick-time histogram (`svMain`, `svNetwork`, …)
-- Resource manager with folder grouping, per-resource CPU/memory/tick stats
-  and start/stop/restart
+- Resource manager with folder grouping and start/stop/restart, plus an
+  **Edit config files** action for editing a resource's config files
+- **Chat Commands** page for turning in-game menu actions, chat messages,
+  console commands and server/client events into `/` commands
 - `server.cfg` editor with multi-file support and validation on save
 - Real-time playerlist with fuzzy search & tag filtering
 - Light/dark themes plus a full custom theme builder (per-browser)
@@ -34,6 +36,54 @@ Admin tooling that lives inside the game.
 - Live Spectate from the web panel
 - Built-in screenshot capture (replaces `screenshot-basic`)
 - Ban / Warn / DM with editable durations
+- Server Stats and Resources pages, so you can check uptime, player count and
+  resource status, or start/stop/restart/ensure resources, without leaving the
+  game
+- Staff tools: staff-only chat, a coordinates HUD and entity inspector,
+  invisibility, unoccupied-vehicle cleanup, and returning or disarming players
+- Mouse-wheel speed control while in NoClip freecam
+- Every menu action is also available as a chat command — see
+  [Chat commands](#chat-commands)
+
+## Chat commands
+
+Every `/tx` menu action is available as a chat command by default (for example
+`/heal`, `/noclip` or `/sc` for staff chat). The **Chat Commands** page under
+**Server** in the panel lists each built-in command and its status, and lets
+you add your own.
+
+A custom command has a name, up to 5 aliases, a description, an optional
+permission and an optional cooldown (0–3600 seconds). Its action is one of:
+a menu action, a chat message, a console command, a server event or a client
+event. Names use lowercase letters, numbers, `-` and `_` (up to 32 characters),
+and you can create up to 100 commands. Names that sxPanel or FXServer already
+use (such as `tx`, `ban` or `restart`) are reserved.
+
+- A custom command with the same name as a built-in command takes its place.
+  Create a disabled custom command with that name to turn the built-in off.
+- Console command and server event actions are privileged: you need the
+  **Console: Write** permission to add, change or remove them.
+- Saving needs the **Settings: Change** permission. Changes are loaded into a
+  running server without a restart.
+
+## Combat logging
+
+When **Combat Log** is enabled in the **Game** settings, sxPanel tracks
+player-versus-player damage. Kills are logged with hits, headshots, damage and
+distance. Fights that don't end in a kill are logged as one summary once both
+players stop hitting each other.
+
+- **Damage Summaries** can be turned off to log only kills.
+- **Engagement Window (seconds)** sets how long players must stop hitting each
+  other before a fight counts as over. It ranges from 3 to 60 and defaults to
+  10.
+- Combat Log is off by default and requires OneSync. Only the master admin can
+  change these settings.
+- Hit details are reported by the attacker's game client, so treat them as
+  evidence to review, not proof.
+
+Entries appear in the **Server Log** and can be sent to Discord with the
+**Combat Logs** route (see [Discord](/docs/discord)).
 
 ## Insights & Analytics
 
@@ -58,6 +108,8 @@ disconnect causes and ticket volume in more detail.
 Everything you need to keep the peace.
 
 - Warning & Ban system with full history
+- Player-report tickets automatically record nearby players, and reporters and
+  targets show their Discord ID
 - Configurable [whitelist](/docs/whitelist) — Admin Only, Discord Member,
   Discord Role, Manual Review or an external allowlist
 - Auto-tags + up to 20 custom tags, settable from other resources via exports
