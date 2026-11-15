@@ -171,8 +171,13 @@ jobs:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           GH_TOKEN: ""
         run: |
-          [ -n "$ANTHROPIC_API_KEY" ] || unset ANTHROPIC_API_KEY
-          [ -n "$CLAUDE_CODE_OAUTH_TOKEN" ] || unset CLAUDE_CODE_OAUTH_TOKEN
+          # Prefer the subscription token when both are set; Claude Code
+          # would otherwise bill the API key.
+          if [ -n "$CLAUDE_CODE_OAUTH_TOKEN" ]; then
+            unset ANTHROPIC_API_KEY
+          else
+            unset CLAUDE_CODE_OAUTH_TOKEN
+          fi
           claude --print "$(cat .github/docs-sync/prompt.md)" \
             --model "$MODEL" \
             --max-turns 150 \
