@@ -1,62 +1,334 @@
 ---
-title: Quick Start
-description: Install sxPanel and open your panel in under a minute.
+title: Installation
+description: Requirements, downloading the right archive, replacing the monitor folder, first start, finding the panel URL and PIN, ports, and running on Windows and Linux.
 ---
 
-sxPanel ships as a replacement for the `monitor/` folder inside your FXServer
-artifacts. If you already run txAdmin, migrating takes a single folder swap.
+sxPanel is installed by replacing the `monitor` resource that ships inside your
+FXServer artifacts. FXServer boots that resource first, and sxPanel then starts
+and supervises your game server. If you already run txAdmin, installing is a
+single folder swap and your existing data keeps working.
 
-## Steps
+## Requirements
+
+| Requirement | Details |
+| --- | --- |
+| Operating system | Windows or Linux. Any other OS stops the boot with `OS type not supported`. |
+| FXServer (standard, "gen8") | Build `5894` or newer. Older builds stop with error `E1002`. |
+| FXServer (FiveM Enhanced, "gen9") | Supported, but experimental. sxPanel prints a warning at boot and skips the build-number check. |
+| JavaScript runtime | The Node.js embedded in FXServer must be version 18 or newer (the resource declares Node 22). Older builds stop with error `E1009`. |
+| Game | FiveM or RedM. |
+| Paths | The FXServer path and the data path (`txData`) must not contain non-ASCII characters such as `ç`, `ñ` or `警`. |
+| Database | None. Player data lives in a local JSON database inside the data folder. |
+
+<Callout>
+  Do not run FXServer from inside an archiver's temporary folder (for example
+  WinRAR's `Temp\Rar$...`). Extract it to a normal folder first, or boot stops
+  with error `E1012`.
+</Callout>
+
+## Download the right archive
+
+Every release on [GitHub Releases](https://github.com/Snipzil/sxpanel/releases)
+contains two archives built from the same code, each with a `.sha256` checksum
+file next to it:
+
+| Archive | Use it for | Folder name |
+| --- | --- | --- |
+| `monitor.zip` | Standard (gen8) FXServer | `monitor` |
+| `txadmin.zip` | FiveM Enhanced (gen9) servers | `txadmin` |
+
+The folder name is not a preference. sxPanel expects itself at a fixed path:
+`citizen/system_resources/monitor` on gen8 and `system_resources/txadmin` on
+gen9. Using the wrong archive, or renaming the folder, means FXServer does not
+load sxPanel as its monitor.
+
+To verify a download, compare the SHA-256 of the archive with the contents of
+the matching `.sha256` file (`<hash>  <archive name>`).
+
+## Install
 
 <Steps>
 <Step>
 
-### Download the latest release
+### Stop FXServer
 
-Grab the newest build from the
-[GitHub Releases](https://github.com/Snipzil/sxpanel/releases) page.
+Stop the server (and txAdmin, if that is what is running) before touching
+files.
 
 </Step>
 <Step>
 
-### Replace the `monitor/` folder
+### Find the monitor folder
 
-Swap the `monitor/` folder in your FXServer artifacts with the sxPanel build.
+Inside your FXServer artifacts, the folder to replace is:
 
-<Callout>
-  Each release ships two archives built from the same source: `monitor.zip` for
-  standard (gen8) servers and `txadmin.zip` for FiveM Enhanced (gen9) servers,
-  where the folder is named `txadmin/`. Gen9 support is experimental.
-</Callout>
+| Server | Path |
+| --- | --- |
+| Gen8, Windows | `<artifacts>\citizen\system_resources\monitor` |
+| Gen8, Linux | `<artifacts>/alpine/opt/cfx-server/citizen/system_resources/monitor` |
+| Gen9 | `system_resources/txadmin`, next to the `cfx-server` binary |
+
+</Step>
+<Step>
+
+### Replace it
+
+Delete the old folder and put the contents of the archive in its place. The
+archive has no top-level folder, so extract it *into* a folder with the right
+name. On Linux:
 
 ```bash
-# in your FXServer artifacts directory
-rm -rf monitor/
-unzip sxpanel-latest.zip -d monitor/
+cd alpine/opt/cfx-server/citizen/system_resources
+rm -rf monitor
+unzip /path/to/monitor.zip -d monitor
 ```
 
+On Windows, delete the `monitor` folder and extract `monitor.zip` into a new
+folder named `monitor` in the same place.
+
+Replace the whole folder rather than copying over it, so no files from the
+previous version are left behind. The result must contain `fxmanifest.lua`,
+`entrypoint.js`, `core/index.js` and `resource/sv_main.lua` directly inside it.
+
 <Callout>
-  Existing `txData` directories work without modification — no migration needed.
+  Existing `txData` directories work without modification. You do not need to
+  migrate anything.
 </Callout>
 
 </Step>
 <Step>
 
-### Start FXServer
+### Start FXServer without `+exec server.cfg`
 
-Start FXServer **without** `+exec server.cfg`. FXServer detects the `monitor`
-resource and boots sxPanel first; sxPanel then launches the actual game server
-(and its `server.cfg`) for you.
+Start FXServer on its own, without `+exec server.cfg`. FXServer loads the
+`monitor` resource, which starts the panel, and sxPanel then launches the real
+game server and runs your `server.cfg` for you.
 
 </Step>
+<Step>
+
+### Wait for the "All ready!" box
+
+The console prints a box with the panel address, and a PIN if no admin exists
+yet. See [First start](#first-start).
+
+</Step>
+</Steps>
+
+## First start
+
+On every boot sxPanel prints `Starting sxPanel v<version>/b<build>...`. If the
+data folder or profile folder does not exist, it creates them. A new profile
+also gets an empty `config.json`, and sxPanel prints
+`Server data will be saved in <path>`.
+
+### Where data is stored
+
+By default the data folder is `txData` and the profile inside it is `default`,
+so your files live in `txData/default/` (`config.json`, `data/`, `logs/`).
+
+| Platform | Default `txData` location |
+| --- | --- |
+| Windows | Next to your FXServer artifacts folder (in its parent folder) |
+| Linux | In the artifacts root, the folder that contains `alpine` |
+
+Set the `TXHOST_DATA_PATH` environment variable to an absolute path to put it
+somewhere else. See [Configuration](/docs/configuration).
+
+### The panel URL and PIN
+
+When the web server, the admin store and the database are all ready, the
+console shows a box like this:
+
+```text
+All ready! Please access:
+ http://your-public-ip:40120/
+ http://203.0.113.10:40120/
+
+Use the PIN below to register:
+ 1234
+```
+
+- **URLs.** sxPanel lists the addresses it detected. On Linux the first one is
+  the literal text `your-public-ip` (replace it with your server's address);
+  on Windows it is `localhost`. Next come your public IPv4 and IPv6 addresses,
+  looked up from external services when they respond. If you set
+  `TXHOST_INTERFACE`, only that address is shown. If you set `TXHOST_TXA_URL`,
+  only that URL is shown.
+- **PIN.** The PIN lines appear only while no admin account exists.
+- **Windows.** When a PIN is shown, sxPanel opens your browser straight on the
+  registration page with the PIN filled in.
+- **Firewall note.** Unless `TXHOST_INTERFACE` is set, a second box reminds you
+  to open the panel port in your OS firewall and with your hosting company. On
+  a Windows desktop it instead warns that home hosting is not recommended and
+  that you need to open the game port (usually 30120) and forward it on your
+  router.
+
+<Callout>
+  If the web server, admin store or database takes more than about 15 seconds
+  to start, the console prints `The <module> is taking too long to start`
+  warnings every few seconds while it keeps waiting.
+</Callout>
+
+### Create the master account
+
+<Steps>
 <Step>
 
 ### Open the panel URL
 
-Open the URL shown in the console to set up your account and server.
+Open the address from the console in your browser. With no admins configured,
+the login page redirects to registration.
+
+</Step>
+<Step>
+
+### Enter the PIN
+
+On the **No Cfx.re account linked** screen, type in the PIN from the terminal
+and click **Link Account**. When you arrive from the Windows auto-open, the
+PIN is already filled in (**Auto-filled ✔**).
+
+</Step>
+<Step>
+
+### Sign in with Cfx.re and register
+
+Authenticate with your Cfx.re account, optionally enter your Discord ID (the
+numeric user ID, not the username), choose a backup password, agree to the
+terms and click **Register**. This account becomes the master admin.
+
+</Step>
+<Step>
+
+### Complete the server setup
+
+The **Server Setup** page walks you through **Server Name**, **Type**, and the
+data folder, CFG file, template or deploy target. Pick **Popular Recipes**,
+**Existing Server Data**, **Remote URL Template** or **Custom Template**, then
+click **Save & Start Server** (or **Go to Recipe Deployer** for recipes).
 
 </Step>
 </Steps>
+
+If you lose the PIN while no admin exists, restart FXServer and a new one is
+printed.
+
+### Pre-seeding the first account
+
+Hosting providers can supply the first account and a Cfx.re key through
+`TXHOST_DEFAULT_ACCOUNT` (`username:fivemId` or `username:fivemId:bcrypt`) and
+`TXHOST_DEFAULT_CFXKEY`. Both are validated at boot: an invalid value stops
+sxPanel with `E1020` or `E1021`–`E1024`.
+
+## Ports
+
+| Port | Default | Used for |
+| --- | --- | --- |
+| Web panel (TCP) | `40120` | Set with `TXHOST_TXA_PORT`. It cannot be `30120`. |
+| Game server | Set in your `server.cfg` | Players connect here. Usually `30120`. |
+
+- sxPanel listens on all interfaces (`0.0.0.0`) unless you set
+  `TXHOST_INTERFACE` to an IPv4 address.
+- `TXHOST_FXS_PORT`, if used, cannot be in the range `40120`–`40150`, which is
+  reserved for the panel.
+- To reach the panel from the internet, open the panel port in your OS firewall
+  and your host's firewall. Players only need the game port.
+- Behind a domain or reverse proxy, set `TXHOST_TXA_URL` so the console prints
+  your public URL.
+
+## Windows and Linux
+
+| | Windows | Linux |
+| --- | --- | --- |
+| Browser | Opens on first registration | Not opened, copy the URL from the console |
+| First URL in the box | `localhost` | `your-public-ip` |
+| Default data folder | Parent of the artifacts folder | Artifacts root |
+
+### Several servers on one machine
+
+Give each server its own `TXHOST_DATA_PATH` and `TXHOST_TXA_PORT`. The
+`serverProfile` ConVar still selects a profile folder inside the data folder,
+but it is deprecated and prints a warning. Profile names keep only letters,
+numbers, `.`, `_` and `-`, and cannot end in `.base`. For a non-default profile
+on Windows, sxPanel writes `start_<build>_<profile>.bat` next to your artifacts
+folder, which starts FXServer with that profile.
+
+<Callout>
+  The `txAdminPort`, `txDataPath` and `txAdminInterface` ConVars are no longer
+  used. sxPanel prints a warning naming the `TXHOST_*` variable that replaces
+  each one.
+</Callout>
+
+### Pterodactyl
+
+On Linux with `TXADMIN_ENABLE=1` set, sxPanel recognises a Pterodactyl
+environment and tags its build string with `/Ptero`.
+
+## Updating
+
+Repeat [Install](#install) with the newer archive and keep your `txData`
+folder in place. The panel also has an **sxPanel Update** page.
+
+## Pre-release builds
+
+Pre-release builds carry an expiry date. They print a warning banner at boot,
+check every 15 minutes, print the banner again in the last 24 hours, and shut
+down with `This pre-release version has expired, please update your sxPanel.`
+once the date passes.
+
+## Problems
+
+See also [Troubleshooting](/docs/troubleshooting).
+
+### `sxPanel must be run inside FXServer in monitor mode!`
+
+`entrypoint.js` was run outside FXServer. sxPanel is not a standalone program:
+FXServer loads it as a resource.
+
+### `This resource should not be installed separately, it already comes with fxserver.`
+
+The resource is not named `monitor` (gen8) or `txadmin` (gen9). Rename the
+folder and place it in `system_resources`, not in your server's `resources`.
+
+### Nothing is printed and no URL appears
+
+You probably started FXServer with `+exec server.cfg`, which runs the game
+server directly. Start it without that argument.
+
+### `FATAL ERROR: E<code>`
+
+Fatal boot errors print the code, the failing value and a support link, then
+exit.
+
+| Code | Cause | Fix |
+| --- | --- | --- |
+| `E1002` | FXServer older than build `5894` | Update the artifacts |
+| `E1003` | sxPanel version not set | The build is broken, download a release |
+| `E1005` | `citizen_root` ConVar not set (gen8) | Start FXServer normally |
+| `E1007` | Non-ASCII characters in the FXServer or data path | Move them to a plain path such as `C:/fivemserver/` |
+| `E1009` | Embedded Node older than 18 | Update the artifacts |
+| `E1012` | FXServer run inside an archiver's temp folder | Extract it first |
+| `E1013` / `E1014` | Invalid `serverProfile` name | Use a plain name that does not end in `.base` |
+| `E1020` | Invalid `TXHOST_*` value | Fix the named variable and remove surrounding quotes |
+| `E1021`–`E1024` | Invalid `TXHOST_DEFAULT_ACCOUNT` | Use `username:fivemId[:bcrypt]` |
+| `E2001` / `E2002` / `E2004` | Cannot create the data folder, the profile folder, or its structure | Check the path exists and is writable |
+| `E2010` / `E2011` | Pre-release build expired | Install a newer build |
+
+### `Invalid value for a TXHOST environment variable.`
+
+The value failed validation (for example `TXHOST_TXA_PORT` set to `30120`) or
+is wrapped in quotes. Remove the quotes: the value is read literally.
+
+### `It looks like you are running a custom build of fxserver.`
+
+The FXServer version string could not be parsed. sxPanel keeps running, but
+nothing is guaranteed to work.
+
+### `This FXServer's embedded Node ... is affected by CVE-2026-111497`
+
+sxPanel blocks Brotli request bodies as a mitigation. Update FXServer when a
+patched build is available.
 
 ## What's next?
 

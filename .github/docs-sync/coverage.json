@@ -6,16 +6,31 @@
       "page": "quick-start",
       "section": "Getting Started",
       "title": "Installation",
-      "sources": ["docs/README.md", "fxmanifest.lua", "scripts/package-monitor.js", "core/boot/", "core/globalData.ts", "resource/sv_main.lua"],
+      "sources": [
+        "docs/README.md",
+        "fxmanifest.lua",
+        "scripts/package-monitor.js",
+        "core/boot/",
+        "core/globalData.ts",
+        "resource/sv_main.lua"
+      ],
       "notes": "Requirements, downloading the right archive (gen8 vs gen9), replacing the monitor folder, first start, finding the panel URL and PIN, ports, running on Windows and Linux.",
-      "status": "todo"
+      "status": "done",
+      "writtenAt": "2026-11-16",
+      "sourceSha": "a21e752720dac257eafa73132d5d73599ec76ff2"
     },
     {
       "id": "setup",
       "page": "setup",
       "section": "Getting Started",
       "title": "First-time setup and the server deployer",
-      "sources": ["core/routes/setup/", "panel/src/pages/SetupPage.tsx", "core/deployer/", "core/routes/deployer/", "panel/src/pages/Deployer/"],
+      "sources": [
+        "core/routes/setup/",
+        "panel/src/pages/SetupPage.tsx",
+        "core/deployer/",
+        "core/routes/deployer/",
+        "panel/src/pages/Deployer/"
+      ],
       "notes": "The setup wizard, using an existing server data folder vs deploying a recipe, every recipe in the picker, every wizard step and input, what the deployer writes. Take the first-time setup material out of configuration.mdx and link to this page instead.",
       "status": "todo"
     },
@@ -24,7 +39,12 @@
       "page": "migrating-from-txadmin",
       "section": "Getting Started",
       "title": "Migrating from txAdmin",
-      "sources": ["core/modules/ConfigStore/configMigrations.ts", "core/modules/ConfigStore/schema/oldConfig.ts", "core/modules/Database/", "core/boot/"],
+      "sources": [
+        "core/modules/ConfigStore/configMigrations.ts",
+        "core/modules/ConfigStore/schema/oldConfig.ts",
+        "core/modules/Database/",
+        "core/boot/"
+      ],
       "notes": "What carries over (admins, bans, warns, players, settings), what does not, how to migrate step by step, how to go back. Move the migration section out of configuration.mdx and link here.",
       "status": "todo"
     },
@@ -33,7 +53,16 @@
       "page": "updating",
       "section": "Getting Started",
       "title": "Updating sxPanel and FXServer",
-      "sources": ["core/modules/SelfUpdater/", "core/routes/selfUpdater/", "panel/src/pages/SelfUpdater/", "core/modules/FxUpdater/", "core/routes/fxserver/", "panel/src/pages/FxUpdater/", "core/modules/UpdateChecker/", "locale/en.json"],
+      "sources": [
+        "core/modules/SelfUpdater/",
+        "core/routes/selfUpdater/",
+        "panel/src/pages/SelfUpdater/",
+        "core/modules/FxUpdater/",
+        "core/routes/fxserver/",
+        "panel/src/pages/FxUpdater/",
+        "core/modules/UpdateChecker/",
+        "locale/en.json"
+      ],
       "notes": "System → Panel Update and System → Artifacts: update notices, patch vs feature updates, applying updates, rollback, recommended artifacts.",
       "status": "todo"
     },
@@ -42,7 +71,15 @@
       "page": "overview",
       "section": "Web Panel",
       "title": "Overview dashboard",
-      "sources": ["panel/src/pages/Dashboard/", "core/routes/perfChart.ts", "core/routes/hostStatus.ts", "core/routes/fxserver/", "core/modules/FxScheduler.ts", "core/modules/Metrics/", "panel/src/layout/"],
+      "sources": [
+        "panel/src/pages/Dashboard/",
+        "core/routes/perfChart.ts",
+        "core/routes/hostStatus.ts",
+        "core/routes/fxserver/",
+        "core/modules/FxScheduler.ts",
+        "core/modules/Metrics/",
+        "panel/src/layout/"
+      ],
       "notes": "Every dashboard card, server controls (start/stop/restart, announce, kick all, scheduled restarts), the performance chart and thread histogram, players sidebar, top bar (search, notifications, reconnect).",
       "status": "todo"
     },
@@ -51,7 +88,15 @@
       "page": "players",
       "section": "Web Panel",
       "title": "Players and the player profile",
-      "sources": ["panel/src/pages/Players/", "panel/src/layout/PlayerModal/", "panel/src/hooks/playerModal.ts", "core/routes/player/", "core/lib/player/", "core/modules/FxPlayerlist/", "panel/src/components/BanForm.tsx"],
+      "sources": [
+        "panel/src/pages/Players/",
+        "panel/src/layout/PlayerModal/",
+        "panel/src/hooks/playerModal.ts",
+        "core/routes/player/",
+        "core/lib/player/",
+        "core/modules/FxPlayerlist/",
+        "panel/src/components/BanForm.tsx"
+      ],
       "notes": "Players page search modes, filters and columns, then the player profile modal tab by tab and every action in it (DM, warn, kick, ban, notes, identifiers, history, activity, spectate). Player tags are explained here; their settings page is linked.",
       "status": "todo"
     },
@@ -60,7 +105,15 @@
       "page": "whitelist",
       "section": "Web Panel",
       "title": "Whitelist",
-      "sources": ["core/modules/Whitelist/", "core/routes/whitelist/", "panel/src/pages/Whitelist/", "panel/src/pages/Settings/tabCards/whitelist.tsx", "panel/src/pages/Settings/tabCards/whitelist-schedule-editor.tsx", "core/modules/ConfigStore/schema/whitelist.ts", "bot/commands/_sxpanel/whitelist.js"],
+      "sources": [
+        "core/modules/Whitelist/",
+        "core/routes/whitelist/",
+        "panel/src/pages/Whitelist/",
+        "panel/src/pages/Settings/tabCards/whitelist.tsx",
+        "panel/src/pages/Settings/tabCards/whitelist-schedule-editor.tsx",
+        "core/modules/ConfigStore/schema/whitelist.ts",
+        "bot/commands/_sxpanel/whitelist.js"
+      ],
       "notes": "Every whitelist mode, the requests and approvals panels, forms, schedules, webhooks, and the Whitelist settings tab in full.",
       "status": "todo"
     },
@@ -69,7 +122,16 @@
       "page": "history",
       "section": "Web Panel",
       "title": "Bans, warnings and history",
-      "sources": ["panel/src/pages/History/", "panel/src/layout/ActionModal/", "panel/src/hooks/actionModal.ts", "core/routes/history/", "panel/src/pages/BanTemplates/", "panel/src/pages/AddLegacyBanPage.tsx", "panel/src/pages/Settings/tabCards/bans.tsx", "core/modules/ConfigStore/schema/banlist.ts"],
+      "sources": [
+        "panel/src/pages/History/",
+        "panel/src/layout/ActionModal/",
+        "panel/src/hooks/actionModal.ts",
+        "core/routes/history/",
+        "panel/src/pages/BanTemplates/",
+        "panel/src/pages/AddLegacyBanPage.tsx",
+        "panel/src/pages/Settings/tabCards/bans.tsx",
+        "core/modules/ConfigStore/schema/banlist.ts"
+      ],
       "notes": "History page search and filters, the action modal (edit, revoke, identifiers), ban durations, ban templates, adding legacy bans, ban appeals messaging, and the Bans settings tab in full.",
       "status": "todo"
     },
@@ -78,7 +140,17 @@
       "page": "reports",
       "section": "Web Panel",
       "title": "Reports and tickets",
-      "sources": ["panel/src/pages/Reports/", "core/routes/reports.ts", "resource/sv_reports.lua", "resource/sv_tickets.lua", "resource/cl_tickets.lua", "nui/src/components/ReportPage/", "nui/src/components/ReportsTab/", "panel/src/pages/Settings/tabCards/gameReports.tsx", "core/modules/DiscordBot/ticketCommandHandlers.ts"],
+      "sources": [
+        "panel/src/pages/Reports/",
+        "core/routes/reports.ts",
+        "resource/sv_reports.lua",
+        "resource/sv_tickets.lua",
+        "resource/cl_tickets.lua",
+        "nui/src/components/ReportPage/",
+        "nui/src/components/ReportsTab/",
+        "panel/src/pages/Settings/tabCards/gameReports.tsx",
+        "core/modules/DiscordBot/ticketCommandHandlers.ts"
+      ],
       "notes": "How players file reports in game, the ticket lifecycle, the Reports page and ticket detail modal, Report Analytics, Discord ticket handling, report settings.",
       "status": "todo"
     },
@@ -87,7 +159,12 @@
       "page": "live-console",
       "section": "Web Panel",
       "title": "Live console",
-      "sources": ["panel/src/pages/LiveConsole/", "core/lib/console.ts", "core/routes/fxserver/", "core/modules/Logger/"],
+      "sources": [
+        "panel/src/pages/LiveConsole/",
+        "core/lib/console.ts",
+        "core/routes/fxserver/",
+        "core/modules/Logger/"
+      ],
       "notes": "Sending commands, saved commands, search, filters, markers, download, options, buffer size, what needs Console: Write.",
       "status": "todo"
     },
@@ -96,7 +173,14 @@
       "page": "resources",
       "section": "Web Panel",
       "title": "Resources and resource config files",
-      "sources": ["panel/src/pages/ResourcesPage/", "core/routes/resources.ts", "core/routes/resources/", "core/modules/FxResources.ts", "resource/sv_resources.lua", "nui/src/components/ResourcesPage/"],
+      "sources": [
+        "panel/src/pages/ResourcesPage/",
+        "core/routes/resources.ts",
+        "core/routes/resources/",
+        "core/modules/FxResources.ts",
+        "resource/sv_resources.lua",
+        "nui/src/components/ResourcesPage/"
+      ],
       "notes": "Resource list and grouping, start/stop/restart/ensure, downloading a resource, the config file editor (which files are editable, size limit, backups), and the in-game Resources page.",
       "status": "todo"
     },
@@ -105,7 +189,13 @@
       "page": "chat-commands",
       "section": "Web Panel",
       "title": "Chat commands",
-      "sources": ["panel/src/pages/CustomCommands/", "shared/customCommands.ts", "core/routes/customCommands.ts", "resource/sv_custom_commands.lua", "resource/cl_custom_commands.lua"],
+      "sources": [
+        "panel/src/pages/CustomCommands/",
+        "shared/customCommands.ts",
+        "core/routes/customCommands.ts",
+        "resource/sv_custom_commands.lua",
+        "resource/cl_custom_commands.lua"
+      ],
       "notes": "Built-in commands (list every one with what it does and its permission), custom commands and every field in the editor, overriding and disabling built-ins. Move the Chat commands section out of features.mdx into this page and leave a short summary with a link.",
       "status": "todo"
     },
@@ -114,7 +204,11 @@
       "page": "cfg-editor",
       "section": "Web Panel",
       "title": "CFG editor",
-      "sources": ["panel/src/pages/CfgEditorPage.tsx", "core/routes/cfgEditor/", "core/lib/fxserver/fxsConfigHelper.ts"],
+      "sources": [
+        "panel/src/pages/CfgEditorPage.tsx",
+        "core/routes/cfgEditor/",
+        "core/lib/fxserver/fxsConfigHelper.ts"
+      ],
       "notes": "Editing server.cfg and included files, validation, saving and restarting, backups, what is blocked. Never show a real license key in examples.",
       "status": "todo"
     },
@@ -123,7 +217,16 @@
       "page": "server-log",
       "section": "Web Panel",
       "title": "Server log and combat log",
-      "sources": ["panel/src/pages/ServerLog/", "core/routes/serverLogs.ts", "core/modules/Logger/", "resource/sv_logger.lua", "resource/cl_logger.lua", "resource/sv_combatlog.lua", "core/lib/combatLog.ts", "panel/src/pages/Settings/tabCards/gameCombatLog.tsx"],
+      "sources": [
+        "panel/src/pages/ServerLog/",
+        "core/routes/serverLogs.ts",
+        "core/modules/Logger/",
+        "resource/sv_logger.lua",
+        "resource/cl_logger.lua",
+        "resource/sv_combatlog.lua",
+        "core/lib/combatLog.ts",
+        "panel/src/pages/Settings/tabCards/gameCombatLog.tsx"
+      ],
       "notes": "Every event type in the server log, filters, sessions, downloads, retention. Move the Combat logging section out of features.mdx into this page and leave a short summary with a link.",
       "status": "todo"
     },
@@ -132,7 +235,15 @@
       "page": "permissions",
       "section": "Web Panel",
       "title": "Admins and permissions",
-      "sources": ["shared/permissions.ts", "core/modules/AdminStore/", "core/routes/adminManager/", "panel/src/pages/AdminManager/", "core/routes/authentication/", "core/lib/totp.ts", "core/lib/adminPassword.ts"],
+      "sources": [
+        "shared/permissions.ts",
+        "core/modules/AdminStore/",
+        "core/routes/adminManager/",
+        "panel/src/pages/AdminManager/",
+        "core/routes/authentication/",
+        "core/lib/totp.ts",
+        "core/lib/adminPassword.ts"
+      ],
       "notes": "A table of every permission (label, id, what it allows, flagged dangerous or not), presets, adding and editing admins, login methods, two-factor, password resets, the master admin, admin stats.",
       "status": "todo"
     },
@@ -141,7 +252,14 @@
       "page": "insights",
       "section": "Web Panel",
       "title": "Insights, player drops and analytics",
-      "sources": ["panel/src/pages/InsightsPage/", "core/routes/insights.ts", "panel/src/pages/PlayerDropsPage/", "core/routes/playerDrops.ts", "core/modules/Metrics/", "shared/insightsApiTypes.ts"],
+      "sources": [
+        "panel/src/pages/InsightsPage/",
+        "core/routes/insights.ts",
+        "panel/src/pages/PlayerDropsPage/",
+        "core/routes/playerDrops.ts",
+        "core/modules/Metrics/",
+        "shared/insightsApiTypes.ts"
+      ],
       "notes": "Every Insights chart and how each number is calculated, time ranges, the Player Drops timeline and drill-down, data retention.",
       "status": "todo"
     },
@@ -150,7 +268,17 @@
       "page": "system",
       "section": "Web Panel",
       "title": "System pages: logs, diagnostics and advanced",
-      "sources": ["panel/src/pages/ActionLog/", "panel/src/pages/SystemLogPage.tsx", "core/routes/systemLogs.ts", "core/routes/systemLogSessions.ts", "panel/src/pages/Diagnostics/", "core/routes/diagnostics/", "core/lib/diagnostics.ts", "panel/src/pages/AdvancedPage.tsx", "core/routes/advanced/"],
+      "sources": [
+        "panel/src/pages/ActionLog/",
+        "panel/src/pages/SystemLogPage.tsx",
+        "core/routes/systemLogs.ts",
+        "core/routes/systemLogSessions.ts",
+        "panel/src/pages/Diagnostics/",
+        "core/routes/diagnostics/",
+        "core/lib/diagnostics.ts",
+        "panel/src/pages/AdvancedPage.tsx",
+        "core/routes/advanced/"
+      ],
       "notes": "Action Log, Console Log, Diagnostics (including the diagnostics report and what it contains), and the Advanced page. Leave out development-only toggles.",
       "status": "todo"
     },
@@ -159,7 +287,15 @@
       "page": "in-game-menu",
       "section": "In-Game Menu",
       "title": "In-game menu",
-      "sources": ["resource/menu/", "nui/src/", "resource/cl_main.lua", "resource/sv_admins.lua", "panel/src/pages/Settings/tabCards/gameMenu.tsx", "panel/src/pages/Settings/tabCards/gameNotifications.tsx", "locale/en.json"],
+      "sources": [
+        "resource/menu/",
+        "nui/src/",
+        "resource/cl_main.lua",
+        "resource/sv_admins.lua",
+        "panel/src/pages/Settings/tabCards/gameMenu.tsx",
+        "panel/src/pages/Settings/tabCards/gameNotifications.tsx",
+        "locale/en.json"
+      ],
       "notes": "Opening the menu (command, keybind), every page and tab, every player action (heal, freeze, spectate, teleport, troll actions), NoClip/freecam controls, vehicle and world actions, map blips and player IDs, the Stats and Resources pages, warnings as seen by the player, and the menu and notification settings.",
       "status": "todo"
     },
@@ -168,7 +304,12 @@
       "page": "staff-tools",
       "section": "In-Game Menu",
       "title": "Staff tools",
-      "sources": ["resource/menu/client/cl_staff_tools.lua", "resource/menu/server/sv_staff_tools.lua", "nui/src/components/StaffHud/", "shared/hudColors.ts"],
+      "sources": [
+        "resource/menu/client/cl_staff_tools.lua",
+        "resource/menu/server/sv_staff_tools.lua",
+        "nui/src/components/StaffHud/",
+        "shared/hudColors.ts"
+      ],
       "notes": "Staff chat, the coordinates HUD, entity inspector, invisibility, cleanup, disarm and return, and their permissions.",
       "status": "todo"
     },
@@ -177,7 +318,15 @@
       "page": "settings/index",
       "section": "Settings",
       "title": "Settings overview, panel features and danger zone",
-      "sources": ["panel/src/pages/Settings/", "core/routes/settings/", "core/modules/ConfigStore/", "panel/src/pages/Settings/tabCards/panelFeatures.tsx", "core/modules/ConfigStore/schema/panelFeatures.ts", "panel/src/pages/Settings/DangerZoneTab.tsx", "panel/src/pages/Settings/TelemetryOptOutCard.tsx"],
+      "sources": [
+        "panel/src/pages/Settings/",
+        "core/routes/settings/",
+        "core/modules/ConfigStore/",
+        "panel/src/pages/Settings/tabCards/panelFeatures.tsx",
+        "core/modules/ConfigStore/schema/panelFeatures.ts",
+        "panel/src/pages/Settings/DangerZoneTab.tsx",
+        "panel/src/pages/Settings/TelemetryOptOutCard.tsx"
+      ],
       "notes": "Create the settings/ folder with its own meta.json. How the settings page works (tabs, saving per card, who can change settings), a table of all tabs linking to the page that documents each, then Panel Features, telemetry opt-out and Danger Zone in full.",
       "status": "todo"
     },
@@ -186,7 +335,16 @@
       "page": "settings/server",
       "section": "Settings",
       "title": "General and FXServer settings",
-      "sources": ["panel/src/pages/Settings/tabCards/general.tsx", "panel/src/pages/Settings/tabCards/fxserver.tsx", "core/modules/ConfigStore/schema/general.ts", "core/modules/ConfigStore/schema/server.ts", "core/modules/ConfigStore/schema/restarter.ts", "core/modules/ConfigStore/schema/logger.ts", "core/modules/FxRunner/", "core/modules/FxMonitor/"],
+      "sources": [
+        "panel/src/pages/Settings/tabCards/general.tsx",
+        "panel/src/pages/Settings/tabCards/fxserver.tsx",
+        "core/modules/ConfigStore/schema/general.ts",
+        "core/modules/ConfigStore/schema/server.ts",
+        "core/modules/ConfigStore/schema/restarter.ts",
+        "core/modules/ConfigStore/schema/logger.ts",
+        "core/modules/FxRunner/",
+        "core/modules/FxMonitor/"
+      ],
       "notes": "Every field on the General and FXServer tabs, scheduled restarts, crash detection and auto-restart behaviour.",
       "status": "todo"
     },
@@ -195,7 +353,11 @@
       "page": "settings/queue",
       "section": "Settings",
       "title": "Queue",
-      "sources": ["core/modules/Queue/", "panel/src/pages/Settings/tabCards/queue.tsx", "core/modules/ConfigStore/schema/queue.ts"],
+      "sources": [
+        "core/modules/Queue/",
+        "panel/src/pages/Settings/tabCards/queue.tsx",
+        "core/modules/ConfigStore/schema/queue.ts"
+      ],
       "notes": "How the connection queue works, priorities, every setting.",
       "status": "todo"
     },
@@ -204,7 +366,12 @@
       "page": "settings/game",
       "section": "Settings",
       "title": "Game settings and player tags",
-      "sources": ["panel/src/pages/Settings/tabCards/game.tsx", "panel/src/pages/Settings/tabCards/gamePlayerTags.tsx", "core/modules/ConfigStore/schema/gameFeatures.ts", "locale/en.json"],
+      "sources": [
+        "panel/src/pages/Settings/tabCards/game.tsx",
+        "panel/src/pages/Settings/tabCards/gamePlayerTags.tsx",
+        "core/modules/ConfigStore/schema/gameFeatures.ts",
+        "locale/en.json"
+      ],
       "notes": "Every field on the Game and Player Tags tabs. Link to the in-game menu, reports and server log pages for the cards they own instead of repeating them.",
       "status": "todo"
     },
@@ -213,7 +380,12 @@
       "page": "settings/appearance",
       "section": "Settings",
       "title": "Appearance and custom themes",
-      "sources": ["panel/src/pages/Settings/tabCards/appearance.tsx", "panel/src/pages/Settings/ThemeStudioPage.tsx", "panel/src/pages/Settings/theme/", "core/modules/ConfigStore/schema/appearance.ts"],
+      "sources": [
+        "panel/src/pages/Settings/tabCards/appearance.tsx",
+        "panel/src/pages/Settings/ThemeStudioPage.tsx",
+        "panel/src/pages/Settings/theme/",
+        "core/modules/ConfigStore/schema/appearance.ts"
+      ],
       "notes": "Light and dark mode, the theme studio, every token you can change, sharing and applying themes.",
       "status": "todo"
     },
@@ -222,7 +394,16 @@
       "page": "settings/deferral-cards",
       "section": "Settings",
       "title": "Deferral cards",
-      "sources": ["panel/src/pages/Settings/DeferralStudioPage.tsx", "panel/src/pages/Settings/deferral/", "panel/src/pages/Settings/tabCards/deferralCards.tsx", "shared/deferralCardTypes.ts", "shared/deferralCardDefaultLayouts.ts", "shared/deferralScenarioAccess.ts", "core/modules/Whitelist/deferralCard.ts", "core/modules/AddonManager/deferralAddon.ts"],
+      "sources": [
+        "panel/src/pages/Settings/DeferralStudioPage.tsx",
+        "panel/src/pages/Settings/deferral/",
+        "panel/src/pages/Settings/tabCards/deferralCards.tsx",
+        "shared/deferralCardTypes.ts",
+        "shared/deferralCardDefaultLayouts.ts",
+        "shared/deferralScenarioAccess.ts",
+        "core/modules/Whitelist/deferralCard.ts",
+        "core/modules/AddonManager/deferralAddon.ts"
+      ],
       "notes": "What deferral cards are, every scenario, the studio editor (elements, layout, images, buttons, preview), exporting, and how addons extend them.",
       "status": "todo"
     },
@@ -231,7 +412,16 @@
       "page": "discord",
       "section": "Discord",
       "title": "Discord bot setup and embeds",
-      "sources": ["core/modules/DiscordBot/", "panel/src/pages/Settings/tabCards/discord.tsx", "core/modules/ConfigStore/schema/discordBot.ts", "panel/src/pages/Settings/EmbedEditorPage.tsx", "shared/discordEmbedDraft/", "core/modules/DiscordBot/statusMessage.ts", "core/modules/DiscordBot/adminRoleSync.ts", "core/modules/DiscordBot/rolePermissions.ts"],
+      "sources": [
+        "core/modules/DiscordBot/",
+        "panel/src/pages/Settings/tabCards/discord.tsx",
+        "core/modules/ConfigStore/schema/discordBot.ts",
+        "panel/src/pages/Settings/EmbedEditorPage.tsx",
+        "shared/discordEmbedDraft/",
+        "core/modules/DiscordBot/statusMessage.ts",
+        "core/modules/DiscordBot/adminRoleSync.ts",
+        "core/modules/DiscordBot/rolePermissions.ts"
+      ],
       "notes": "Creating the bot and inviting it, every Discord setting, the status and player list embeds and the embed editor, admin role sync and role-based permissions.",
       "status": "todo"
     },
@@ -240,7 +430,16 @@
       "page": "discord-commands",
       "section": "Discord",
       "title": "Discord slash commands",
-      "sources": ["bot/commands/_sxpanel/", "bot/events/", "core/modules/DiscordBot/moderationCommands.ts", "core/modules/DiscordBot/bridgePermissions.ts", "core/modules/DiscordBot/playerLookupCommand.ts", "core/modules/DiscordBot/whitelistCommandHandlers.ts", "core/modules/DiscordBot/ticketCommandHandlers.ts", "core/modules/DiscordBot/persistentEmbedCommandHandlers.ts"],
+      "sources": [
+        "bot/commands/_sxpanel/",
+        "bot/events/",
+        "core/modules/DiscordBot/moderationCommands.ts",
+        "core/modules/DiscordBot/bridgePermissions.ts",
+        "core/modules/DiscordBot/playerLookupCommand.ts",
+        "core/modules/DiscordBot/whitelistCommandHandlers.ts",
+        "core/modules/DiscordBot/ticketCommandHandlers.ts",
+        "core/modules/DiscordBot/persistentEmbedCommandHandlers.ts"
+      ],
       "notes": "Every slash command: options, who can run it, what it replies with, and the panel permission it maps to.",
       "status": "todo"
     },
@@ -249,7 +448,12 @@
       "page": "discord-logs",
       "section": "Discord",
       "title": "Discord log routes",
-      "sources": ["shared/discordLogRoutes.ts", "panel/src/pages/Settings/DiscordLogRoutesEditorPage.tsx", "core/modules/DiscordBot/logRouting.ts", "core/modules/DiscordBot/logBatcher.ts"],
+      "sources": [
+        "shared/discordLogRoutes.ts",
+        "panel/src/pages/Settings/DiscordLogRoutesEditorPage.tsx",
+        "core/modules/DiscordBot/logRouting.ts",
+        "core/modules/DiscordBot/logBatcher.ts"
+      ],
       "notes": "Every log route and what it sends, the routes editor, batching and rate limits.",
       "status": "todo"
     },
@@ -258,7 +462,15 @@
       "page": "configuration",
       "section": "Developers",
       "title": "Host configuration, environment variables and convars",
-      "sources": ["core/boot/getHostVars.ts", "core/boot/getNativeVars.ts", "core/boot/setup.ts", "core/modules/ConfigStore/schema/webServer.ts", "core/lib/panelPublicUrl.ts", "core/modules/WebServer/", "core/globalData.ts"],
+      "sources": [
+        "core/boot/getHostVars.ts",
+        "core/boot/getNativeVars.ts",
+        "core/boot/setup.ts",
+        "core/modules/ConfigStore/schema/webServer.ts",
+        "core/lib/panelPublicUrl.ts",
+        "core/modules/WebServer/",
+        "core/globalData.ts"
+      ],
       "notes": "Every environment variable and convar with default and effect, ports and interfaces, reverse proxies and HTTPS, data folder layout, running several servers. Setup and migration material moves to their own pages.",
       "status": "todo"
     },
@@ -267,7 +479,18 @@
       "page": "events-api",
       "section": "Developers",
       "title": "Events API and exports",
-      "sources": ["resource/shared.lua", "resource/sv_main.lua", "resource/sv_ctx.lua", "resource/sv_admins.lua", "resource/sv_playerlist.lua", "core/modules/FxScheduler.ts", "core/modules/FxMonitor/", "core/routes/player/actions.ts", "core/routes/history/actions.ts", "core/routes/fxserver/commands.ts"],
+      "sources": [
+        "resource/shared.lua",
+        "resource/sv_main.lua",
+        "resource/sv_ctx.lua",
+        "resource/sv_admins.lua",
+        "resource/sv_playerlist.lua",
+        "core/modules/FxScheduler.ts",
+        "core/modules/FxMonitor/",
+        "core/routes/player/actions.ts",
+        "core/routes/history/actions.ts",
+        "core/routes/fxserver/commands.ts"
+      ],
       "notes": "Every event with its payload fields and when it fires, every export with parameters and return values, with Lua and JS examples.",
       "status": "todo"
     },
@@ -276,7 +499,12 @@
       "page": "addons",
       "section": "Developers",
       "title": "Installing and managing addons",
-      "sources": ["core/modules/AddonManager/", "core/routes/addons.ts", "panel/src/pages/AddonsManagerPage.tsx", "panel/src/pages/AddonsPage.tsx"],
+      "sources": [
+        "core/modules/AddonManager/",
+        "core/routes/addons.ts",
+        "panel/src/pages/AddonsManagerPage.tsx",
+        "panel/src/pages/AddonsPage.tsx"
+      ],
       "notes": "Addon Manager in full: discovery, approval and re-approval, permission review, lifecycle controls, limits, where addon pages appear.",
       "status": "todo"
     },
@@ -285,7 +513,15 @@
       "page": "addon-api",
       "section": "Developers",
       "title": "Addon API",
-      "sources": ["addon-sdk/src/", "shared/addonTypes.ts", "shared/deferralAddonTypes.ts", "addons/addon-starter-template/", "core/modules/AddonManager/", "core/lib/addonEvents.ts", "bot/addonRuntime.js"],
+      "sources": [
+        "addon-sdk/src/",
+        "shared/addonTypes.ts",
+        "shared/deferralAddonTypes.ts",
+        "addons/addon-starter-template/",
+        "core/modules/AddonManager/",
+        "core/lib/addonEvents.ts",
+        "bot/addonRuntime.js"
+      ],
       "notes": "Every manifest field, every SDK method with signature and example, every addon permission. Check the existing page against the SDK typings and fill gaps.",
       "status": "todo"
     },
@@ -294,7 +530,10 @@
       "page": "features",
       "section": "Getting Started",
       "title": "Introduction, features and troubleshooting",
-      "sources": ["docs/README.md", "panel/src/layout/sidebarConfig.ts"],
+      "sources": [
+        "docs/README.md",
+        "panel/src/layout/sidebarConfig.ts"
+      ],
       "notes": "Last pass. Rewrite index.mdx and features.mdx as short overviews that link to every page written so far, and expand troubleshooting.mdx with the problems documented across the other pages, linking to each. Check every page is in meta.json in the right section.",
       "status": "todo"
     }
