@@ -1,0 +1,344 @@
+---
+title: Players and the player profile
+description: The Players roster, its search and filters, and the player profile with every moderation action — DM, warn, kick, ban, notes, whitelist, tags, identifiers, history, activity, screenshot and live spectate.
+---
+
+The **Players** page is the roster of every player who has ever joined your server. You use it to find someone by name, note or identifier, and to open their **player profile**: a window with their history, identifiers and playtime, and the buttons to warn, kick, ban or message them. Every admin can browse it; individual actions depend on your permissions.
+
+![Players roster with search bar, filters, tags, online state, joined, last seen and playtime](/docs/players.webp)
+
+## Where to find it
+
+- **Players → Players** in the navigation, at `/players`.
+- The players sidebar on the right of every page lists who is online right now (see [Players sidebar](/docs/overview#players-sidebar)). Click a row to open that player's profile.
+- Other pages and addons can open the same profile (addons through `txAddonApi.openPlayerModal`).
+- The open profile is part of the URL as `?playerModal=<license>` (or `?playerModal=<mutex>#<netid>` when opened from a live row). Copy the address bar to link a colleague to a profile; the page opens it on load.
+
+## Who can use it
+
+The Players page and the profile's read-only tabs need no permission. Actions are greyed out, or hidden, when you lack the permission.
+
+| Control | Permission | Without it |
+| --- | --- | --- |
+| **DM** | **Direct Message** (`players.direct_message`) | Button disabled. |
+| **Warn** | **Warn** (`players.warn`) | Button disabled. |
+| **Kick** | **Kick** (`players.kick`) | Button disabled. |
+| **Ban** tab | **Ban** (`players.ban`) | The tab shows "You don't have permission to ban players." |
+| Permanent bans | **Ban: Permanent** (`players.ban.permanent`) | **Permanent** is missing from the duration list. |
+| **Add WL** / **Remove** whitelist button | **Whitelist** (`players.whitelist`) | Button disabled. |
+| **Heal** | **Heal** (`players.heal`) | Menu item disabled. |
+| **Screenshot**, **Watch Live** | **Spectate** (`players.spectate`) | Menu items disabled. |
+| **Give Admin** | **Manage Admins** (`manage.admins`) | Menu item disabled. |
+| **Delete Player**, wiping IDs and HWIDs | **Remove Player Data** (`players.delete`) | Menu item disabled; the wipe buttons on the **IDs** tab are not shown. |
+| **Custom Tags → Edit** | `players.write` | Row not shown. |
+| Saving **Notes** | none | Every admin can write notes. |
+
+<Callout type="warn">
+`players.write` is not in the Admin Manager's permission list. Only the master account and admins with **All Permissions** (`all_permissions`) can edit a player's custom tags from the profile. Addons can be granted it separately; see the [Addon API](/docs/addon-api).
+</Callout>
+
+See [Permissions](/docs/permissions) for how permissions are granted. Every action below is written to the admin's action log.
+
+## The Players page
+
+### Header counters
+
+Four counters sit at the top of the page. They count the whole database, not the current search.
+
+| Counter | Counts |
+| --- | --- |
+| **Total** | Every player in the database. |
+| **Active 24h** | Players whose last connection was within the last 24 hours. |
+| **New 24h** | Players who joined for the first time within the last 24 hours (shown with `+`). |
+| **New 7d** | Players who joined for the first time within the last 7 days (shown with `+`). |
+
+A counter shows `—` while it loads or if the request fails.
+
+### Search
+
+Type in the search box to search. Typing searches after a short pause (about 1.25 seconds after you stop). **Enter** searches immediately, **Escape** clears the box, and the **×** inside the box clears it too. The list always returns to the top when the search, filters or sorting change.
+
+The first dropdown picks what to search. Its entries are shown with their internal names.
+
+| Search type | What it matches |
+| --- | --- |
+| `playerName` | A fuzzy match against the player's name with special characters and emoji removed, so small typos still find the player. If your input has nothing searchable after cleaning, the list shows "This player name is unsearchable (pureName is empty)." |
+| `playerNotes` | A fuzzy match against the text of the admin notes. |
+| `playerIds` | Exact identifiers. Separate several with commas, spaces or new lines. Players matching **any** of the identifiers are listed. Hardware IDs (starting with a digit and a colon, such as `2:abc…`) are matched the same way. |
+
+For `playerIds`, prefix each identifier with its type, such as `fivem:123456`. Bare values are guessed only when they look like a Discord ID, FiveM ID, license or Steam ID. If something cannot be parsed the list shows "Invalid identifiers (…). Prefix any identifier with their type, like 'fivem:123456' instead of just '123456'."
+
+The dropdown also has **Remember option**. When it is ticked, your browser remembers the search type for your next visit.
+
+An empty search box lists everyone, newest first.
+
+### Filters
+
+The filter dropdown shows **No filters**, or the number of active filters (**1 Filter**, **2 Filters**). Filters combine with the search and with each other: a player must match **all** the ticked filters. **Clear filters** unticks them all.
+
+| Filter | Keeps players who |
+| --- | --- |
+| `isAdmin` | Share an identifier with an sxPanel admin account. |
+| `isOnline` | Are connected to the server right now. |
+| `isBanned` | Have a ban that is not revoked and has not expired (including permanent bans). |
+| `hasPreviousBan` | Have ever been banned, including bans that were revoked or have expired. |
+| `isWhitelisted` | Are on the whitelist. |
+| `hasNote` | Have an admin note. |
+
+Bans and warnings are matched through every identifier and hardware ID the player has used, not only their license.
+
+### Roster columns
+
+The roster loads 100 players at a time and loads more as you scroll. When you reach the bottom it shows **End of list** and the count. With no results it shows **No players match** and a hint to widen the search or clear filters.
+
+| Column | Shows |
+| --- | --- |
+| **Player** | The name, the highest-priority tag (if any), an **Online** or **Offline** badge, and a shortened license under the name. |
+| **Joined** | The date the player first connected. Sortable. |
+| **Last seen** | How long ago they last connected, such as "3 hours ago". Sortable. |
+| **Playtime** | Total time played. Sortable. |
+
+Click a column heading to sort by it. The first click sorts descending; click again to flip. The default is **Joined**, newest first. Click a row to open the profile.
+
+Only one tag is shown in the roster: the one with the lowest priority number among the player's tags. All tags show in the profile.
+
+If loading fails the list shows **Could not load players**, the reason and a **Try again** link.
+
+### Share a search
+
+The page address stores your search, so you can bookmark or share it. It uses `searchType`, `searchQuery` and `filters` (comma-separated filter names), for example `/players?searchType=playerName&searchQuery=snipz&filters=isOnline`.
+
+### More menu
+
+The **More** dropdown links to related tools:
+
+- **Ban identifiers** opens `/ban-identifiers`, to ban identifiers that are not tied to a known player.
+- **Prune players / HWIDs** opens the **Danger Zone** at the bottom of the settings, where old players and HWIDs can be bulk-removed.
+
+## Player tags
+
+Tags are small coloured labels on a player, shown in the roster, the players sidebar, the profile and (as a name prefix and colour) in game. There are two kinds.
+
+**Built-in tags** are assigned automatically and can be switched off or restyled but not deleted.
+
+| Tag | Shown when | Priority |
+| --- | --- | --- |
+| **Staff** (`staff`) | The player shares an identifier with an sxPanel admin account. | 10 |
+| **Problematic** (`problematic`) | The player has any ban or warning that has not been revoked, even an expired ban. | 20 |
+| **Newcomer** (`newplayer`) | The player's total playtime is under the **New Player Threshold**. | 30 |
+
+**Custom tags** are defined by you, up to 20. A custom tag is given to a player in one of three ways:
+
+- By an admin from the profile (**Custom Tags → Edit**, see the permission note above).
+- By a resource, with the `addPlayerTag` and `removePlayerTag` exports ([Events API](/docs/events-api)), or by an [addon](/docs/addon-api) with the `players.write` permission.
+- Automatically from Discord roles. A tag with **Discord Roles** mapped is managed by Discord: it is applied when a player with one of those roles joins and is kept in sync when roles change. Such tags cannot be toggled by hand and show a small **Discord** marker in the profile.
+
+Define tags, colours, priorities, prefixes, Discord roles and the newcomer threshold in **Settings → Player Tags**; see [Configuration](/docs/configuration). A tag that is removed from the configuration or disabled stops being shown, but the player keeps the assignment in the database.
+
+## The player profile
+
+Click a row, or a name anywhere else in the panel, to open the profile. The header shows the player's name, a green `#<id>` badge with their server ID if they are online or **Offline** if not, red and amber counters for active bans and warnings, and the license.
+
+The footer holds the actions (see [Actions](#actions)). The tabs are described below. The profile loads its data when it opens and again after every change you make in it.
+
+If the player cannot be found the window shows an error, for example when you open a link to a live player (`#12`) that disconnected long ago.
+
+### Info
+
+- A yellow banner when the player is banned: "This player is permanently banned." or "This player is banned until [date]".
+- The player's tags.
+- **Session Time**, for online players: how long the current session has lasted.
+- **Play Time**, **Join Date** and, for offline players, **Last Connection**. A dash means the data is missing.
+- **ID Whitelisted** with the date, or "not yet". The **Add WL** / **Remove** button adds or removes the player from the whitelist (needs **Whitelist**). See [Whitelist](/docs/whitelist).
+- **Sanctions**: counters for active bans and warnings, and a **View** button that jumps to the **History** tab. Revoked ones are not counted.
+- **Custom Tags** with an **Edit** menu, when custom tags exist that are not Discord-managed.
+- **Notes**: a free-text box for admins. On desktop, press **Enter** to save and **Shift+Enter** for a new line; on mobile use **Save Note**. The label next to **Notes:** shows "Press enter to save." as you type, then "Saving…", and after saving the line "Last modified by [admin] at [date]". Notes can only be written for players who are in the database ("Cannot set notes for players that are not registered."). Notes are searchable from the Players page with `playerNotes`.
+
+### Insights
+
+A quick read on how risky a player looks. For players not in the database it shows "Player is not registered in the database yet."
+
+**Risk Assessment** adds up points and shows a level:
+
+| Signal | Points |
+| --- | --- |
+| Each active ban | 30 |
+| Each revoked ban | 10 |
+| Each active warning | 10 |
+| Each revoked warning | 3 |
+| Each kick | 5 |
+| Each identifier change (see below) | 15 |
+| Discord account under 30 days old | 20 |
+| Discord account 30–89 days old | 10 |
+| Under 60 minutes of playtime and at least one active ban or warning | 10 |
+
+| Total points | Level |
+| --- | --- |
+| Under 15 | low |
+| 15–29 | medium |
+| 30–49 | high |
+| 50 or more | critical |
+
+The reasons are listed under the level, or "No risk signals detected." The score is a hint for a human, not an automatic action.
+
+Also on this tab:
+
+- **Account Ages**: the Discord account age (from the Discord ID), a link to the **Steam** profile if the player has a Steam identifier, and how long ago they joined this **Server**.
+- **Identifier Changes**: Discord, Steam, Live, Xbox or FiveM identifiers the player used before but no longer has, while they now have another of the same type. Often a sign of an account swap.
+- **Name History**: every name the player has used, with the latest highlighted. Shown when there is more than one.
+
+### Activity
+
+How and when the player plays, from hourly playtime records kept for the last 120 days. Times are shown in your browser's time zone. With no data it shows "No activity data available."
+
+- **Active Days** out of the last 28, **Avg / Day** (total of the last 28 days divided by 28) and **Peak Hour**.
+- **Most Active Hours**: the three hours of the day with the most total playtime.
+- **Last 28 Days**: a calendar heatmap, one square per day, darker for less time and brighter for more. Hover a square for the exact time.
+- **Today's Hourly Breakdown**: shown when the player has played today.
+
+### History
+
+Every warning, ban and kick recorded against any of the player's identifiers, newest first. Each entry shows who issued it ("BANNED by …", "WARNED by …", "KICKED by …"), the ID, the time, the reason and its state: "Expires in …", "Expired on …" or "Revoked by … on …" with the revocation reason. Click an entry to open its details, where bans and warnings can be revoked, ban durations changed or the entry deleted. The empty state is "No bans/warns found."
+
+### IDs
+
+Two lists: **Player Identifiers** and **Hardware IDs**. Identifiers the player currently has are bold; ones used in earlier sessions are dimmed. The icons on each list:
+
+- **Wipe** (trash can, needs **Remove Player Data**): removes all identifiers except the license, or all hardware IDs, from the database record, after a confirmation. It cannot be undone, and it does not remove bans already issued against those identifiers.
+- **Compare**: paste a list of identifiers to highlight which ones this player has. "No matching ID found." appears if none match. Nothing is saved.
+- **Copy**: copies the list to the clipboard.
+
+### Ban
+
+The ban form, see [Banning a player](#banning-a-player).
+
+### Addon tabs
+
+Addons can add their own tabs after **Ban**, and their own actions at the bottom of the **More** menu. See [Addons](/docs/addons). A failing addon tab shows "Addon tab error: [title]" and does not affect the rest of the profile.
+
+## Actions
+
+The footer has **DM**, **Kick** and **Warn**, and a **More** menu. After a successful action the profile usually closes and a toast confirms it.
+
+| Action | Needs | What it does |
+| --- | --- | --- |
+| **DM** | **Direct Message**, player online | Opens a prompt (**Direct Message** followed by the name); the message cannot be empty. The player sees it in game. |
+| **Kick** | **Kick**, player online | Prompts for a reason; leaving it blank uses a default reason. Disconnects the player, shows them the kick message and adds a kick to their history. |
+| **Warn** | **Warn** | Prompts for a reason (required). Adds a warning to the player's history. Online players see a full-screen warning in game. Offline players receive it the next time they connect: the prompt says "Offline players will receive the warning when they come back online." |
+| **Give Admin** | **Manage Admins** | Opens the Admin Manager with the **Add Admin** form pre-filled with the player's name, Discord ID and FiveM ID. |
+| **Heal** | **Heal**, player online | Heals the player in game. |
+| **Screenshot** | **Spectate**, player online | Captures the player's screen and shows it in a window with a **Save** button. |
+| **Watch Live** | **Spectate**, player online | Streams the player's screen as live frames. Press **Stop** or close the window to end it. |
+| **Delete Player** | **Remove Player Data**, player in the database | Permanently deletes the player's record (playtime, join date, notes, identifier history) after a confirmation. Their bans and warnings stay in the action history. |
+| Whitelist toggle, notes, tags | see [Info](#info) | |
+
+Kick, DM, Heal, Screenshot and Watch Live all need the game server to be running and the player connected, otherwise you get "The server is not running." or "This player is not connected to the server."
+
+### Banning a player
+
+<Steps>
+<Step>
+
+Open the profile and go to the **Ban** tab.
+
+</Step>
+<Step>
+
+Type a **Reason**. It must be at least 3 characters, otherwise you get "The reason must be at least 3 characters long." The clipboard button next to it opens your ban templates; picking one fills in the reason and duration. **Add Ban Template** at the bottom of that list takes you to `/settings/ban-templates`.
+
+</Step>
+<Step>
+
+Pick a **Duration**: **2 HOURS**, **8 HOURS**, **1 DAY**, **2 DAYS** (default), **1 WEEK**, **2 WEEKS**, **Permanent** (only with **Ban: Permanent**), or **Custom (set below)**. For custom, enter a number of at least 1 and a unit of **HOURS**, **DAYS**, **WEEKS** or **MONTHS** (a month is 30 days).
+
+</Step>
+<Step>
+
+Click **Apply Ban**. The ban is saved, the player is kicked if they are online, and the profile closes.
+
+</Step>
+</Steps>
+
+A ban applies to every identifier and hardware ID the player has used (current and past), so it also catches them when they reconnect on another account that shares one. It is shown in **History** and can be revoked there. Bans are enforced when a player connects only while **Ban Checking Enabled** is on in the **Bans** settings (see [Configuration](/docs/configuration)). A ban for a player who is offline is saved and applies when they next join; the kick is only sent if the server is running.
+
+If you try a template with a permanent duration without **Ban: Permanent**, you get "You don't have permission to apply permanent bans."
+
+### Warning an offline player
+
+<Steps>
+<Step>
+
+Search for the player on the Players page and open the profile.
+
+</Step>
+<Step>
+
+Click **Warn**, write the reason and send. The warning is saved immediately.
+
+</Step>
+<Step>
+
+The next time the player joins, sxPanel sends their oldest unacknowledged warning to the game.
+
+</Step>
+</Steps>
+
+### Watching a player live
+
+<Steps>
+<Step>
+
+Open the profile of an online player, then **More → Watch Live**.
+
+</Step>
+<Step>
+
+The window shows "Connecting to live stream…" until the first frame arrives. If no frames arrive within 20 seconds it shows "Connection timed out — no frames received from the player."
+
+</Step>
+<Step>
+
+Click **Stop** or close the window. Capture on the player's side stops when no admin is watching them.
+
+</Step>
+</Steps>
+
+You can only stop your own session. Starting a live spectate and taking a screenshot are recorded in your action log. A screenshot request times out after 15 seconds.
+
+## How it connects
+
+- **Events.** Warn, ban and kick fire `txAdmin:events:playerWarned`, `playerBanned` and `playerKicked`; DMs fire `playerDirectMessage`; whitelist changes fire `whitelistPlayer`. Addons receive `playerWarned`, `playerBanned` and `playerKicked` too. See [Events API](/docs/events-api) and [Addon API](/docs/addon-api).
+- **Discord.** The bot has `/warn`, `/kick`, `/ban` and `/admininfo` commands. See [Discord](/docs/discord).
+- **Settings.** **Settings → Player Tags** (tags, threshold) and **Settings → Bans** and ban templates (`/settings/ban-templates`) feed this page. See [Configuration](/docs/configuration).
+- **Whitelist.** The whitelist button here edits the same list as the [Whitelist](/docs/whitelist) page.
+- **Players sidebar.** Uses the same tags and opens the same profile; see the [Overview](/docs/overview#players-sidebar).
+
+## Limits and edge cases
+
+- Notes, tags and whitelisting need the player to be in the database. For a player who is not, notes are disabled and the **Insights** tab shows "Player is not registered in the database yet."
+- Name search is fuzzy; for exact matching use `playerIds`.
+- The roster loads 100 players per request.
+- Activity is based on the last 120 days of hourly records, and the heatmap shows 28 days.
+- Playtime counts one minute at a time while a player is connected.
+- Several simultaneous connections with the same license share one database record, so notes and tags apply to all of them.
+- Offline profiles opened from the Server Log use a cache of the last 50,000 disconnected players. Older entries cannot be resolved by server ID, but can still be opened by license.
+- A player's tags in game update when you change them in the profile, without a restart.
+- Screenshot and Watch Live need the in-game resource running on the server. Frames from an unknown or stopped session are ignored.
+
+## Problems
+
+| Message | Cause and fix |
+| --- | --- |
+| "You don't have permission to execute this action." | Your admin account lacks the permission in [Who can use it](#who-can-use-it). Ask for it in the Admin Manager. |
+| "The server is not running." | The action needs the game server. Start it first. |
+| "This player is not connected to the server." | The player left. DM, Kick, Heal, Screenshot and Watch Live only work on online players. |
+| "Cannot warn a player with no identifiers." / "Cannot ban a player with no identifiers." | The profile has no identifiers to attach the action to. |
+| "Warn saved, but likely failed to send the warn in game (stdin error)." | The warning is stored but the live notification could not reach the server. The player gets it when they next join. |
+| "Player banned, but likely failed to kick player (stdin error)." | The ban is stored; kick the player manually if they are still online. |
+| "Invalid ban duration. Supported units: hours, days, weeks, months" / "The duration number must be at least 1." | Fix the custom duration. |
+| "Unknown custom tag: [id]" | The tag no longer exists in **Settings → Player Tags**. |
+| "Tag '[id]' is managed by Discord roles." | The tag comes from Discord roles. Change the player's role in Discord instead. |
+| "Screenshot request timed out." | The player's game did not answer within 15 seconds. They may be loading or the resource is not running. |
+| "Failed to read screenshot file." / "No screenshot data received." | The screenshot did not reach the panel. Try again. |
+| "Player not found in database" | The player was deleted or never registered. |
+| "Request failed: …" or "Could not load players" | The roster could not be loaded. Click **Try again**; if it persists, check the console. |

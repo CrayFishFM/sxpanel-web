@@ -106,7 +106,9 @@
         "panel/src/components/BanForm.tsx"
       ],
       "notes": "Players page search modes, filters and columns, then the player profile modal tab by tab and every action in it (DM, warn, kick, ban, notes, identifiers, history, activity, spectate). Player tags are explained here; their settings page is linked.",
-      "status": "todo"
+      "status": "done",
+      "writtenAt": "2026-11-17",
+      "sourceSha": "a21e752720dac257eafa73132d5d73599ec76ff2"
     },
     {
       "id": "whitelist",
