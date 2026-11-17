@@ -12,7 +12,7 @@ import { compile } from "@mdx-js/mdx"
 const DOCS_DIR = "content/docs"
 const PUBLIC_DIR = "public"
 // Keep in sync with mdx-components.tsx
-const COMPONENTS = new Set(["Callout", "Card", "Cards", "Step", "Steps"])
+const COMPONENTS = new Set(["Callout", "Card", "Cards", "Step", "Steps", "Tab", "Tabs"])
 
 const errors = []
 const fail = (file, message) => errors.push(`${file}: ${message}`)

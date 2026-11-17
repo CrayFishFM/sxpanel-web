@@ -1,62 +1,145 @@
 ---
 title: Quick Start
-description: Install sxPanel and open your panel in under a minute.
+description: Install sxPanel on FiveM or FiveM Enhanced and open your panel in under a minute.
 ---
 
-sxPanel ships as a replacement for the `monitor/` folder inside your FXServer
-artifacts. If you already run txAdmin, migrating takes a single folder swap.
+sxPanel replaces txAdmin inside your server files. It runs on standard FiveM
+and RedM servers, and on FiveM Enhanced (gen9) servers. Pick the tab for your
+server; the steps differ in which file you download and where it goes.
 
-## Steps
+## Install
+
+<Tabs groupId="fivem-edition" persist items={["FiveM", "FiveM Enhanced"]}>
+<Tab value="FiveM">
 
 <Steps>
 <Step>
 
-### Download the latest release
+### Download `monitor.zip` [!toc]
 
-Grab the newest build from the
+Download `monitor.zip` from the latest release on the
 [GitHub Releases](https://github.com/Snipzil/sxpanel/releases) page.
 
 </Step>
 <Step>
 
-### Replace the `monitor/` folder
+### Replace the `monitor` folder [!toc]
 
-Swap the `monitor/` folder in your FXServer artifacts with the sxPanel build.
+txAdmin lives in the `monitor` folder of your FXServer artifacts:
 
-<Callout>
-  Each release ships two archives built from the same source: `monitor.zip` for
-  standard (gen8) servers and `txadmin.zip` for FiveM Enhanced (gen9) servers,
-  where the folder is named `txadmin/`. Gen9 support is experimental.
-</Callout>
+- **Windows:** `citizen/system_resources/monitor`, in the folder that holds
+  `FXServer.exe`
+- **Linux:** `alpine/opt/cfx-server/citizen/system_resources/monitor`
+
+Delete that folder's contents and extract `monitor.zip` into it. The folder
+must stay named `monitor`.
 
 ```bash
-# in your FXServer artifacts directory
-rm -rf monitor/
-unzip sxpanel-latest.zip -d monitor/
+# in your FXServer artifacts folder (Linux path shown)
+cd alpine/opt/cfx-server/citizen/system_resources
+rm -rf monitor
+unzip ~/monitor.zip -d monitor
 ```
 
-<Callout>
-  Existing `txData` directories work without modification — no migration needed.
-</Callout>
+</Step>
+<Step>
+
+### Start FXServer [!toc]
+
+Start FXServer **without** `+exec server.cfg`. FXServer loads the `monitor`
+resource first, which starts sxPanel; sxPanel then starts the game server and
+its `server.cfg` for you.
 
 </Step>
 <Step>
 
-### Start FXServer
+### Open the panel URL [!toc]
 
-Start FXServer **without** `+exec server.cfg`. FXServer detects the `monitor`
-resource and boots sxPanel first; sxPanel then launches the actual game server
-(and its `server.cfg`) for you.
-
-</Step>
-<Step>
-
-### Open the panel URL
-
-Open the URL shown in the console to set up your account and server.
+Open the URL shown in the console to create your account and set up your
+server.
 
 </Step>
 </Steps>
+
+</Tab>
+<Tab value="FiveM Enhanced">
+
+<Callout type="warn">
+  FiveM Enhanced support is experimental and has had limited testing, mostly
+  on Windows. Please report any problems on
+  [GitHub](https://github.com/Snipzil/sxpanel/issues).
+</Callout>
+
+<Steps>
+<Step>
+
+### Download `txadmin.zip` [!toc]
+
+Download `txadmin.zip` from the latest release on the
+[GitHub Releases](https://github.com/Snipzil/sxpanel/releases) page. It holds
+the same build as `monitor.zip`, packaged under the folder name FiveM
+Enhanced expects.
+
+</Step>
+<Step>
+
+### Replace the `txadmin` folder [!toc]
+
+On FiveM Enhanced, txAdmin lives in `system_resources/txadmin`, in the folder
+that holds `cfx-server.exe` (`cfx-server` on Linux).
+
+Delete that folder's contents and extract `txadmin.zip` into it. The folder
+must stay named `txadmin`.
+
+```bash
+# in the folder that holds cfx-server
+cd system_resources
+rm -rf txadmin
+unzip ~/txadmin.zip -d txadmin
+```
+
+</Step>
+<Step>
+
+### Start the server [!toc]
+
+Start `cfx-server` **without** `+exec server.cfg`. sxPanel starts first, then
+starts the game server and its `server.cfg` for you.
+
+The console shows a warning that FiveM Enhanced support is experimental. That
+is expected and doesn't stop anything from working.
+
+</Step>
+<Step>
+
+### Open the panel URL [!toc]
+
+Open the URL shown in the console to create your account and set up your
+server.
+
+</Step>
+</Steps>
+
+</Tab>
+</Tabs>
+
+<Callout>
+  Existing `txData` folders from txAdmin work without changes, so there's
+  nothing to migrate.
+</Callout>
+
+## FiveM Enhanced differences
+
+sxPanel works the same on FiveM Enhanced, apart from these:
+
+- **Server deployer:** recipes come from the FiveM Enhanced recipe list. The
+  extra framework recipes sxPanel adds to the standard FiveM list aren't
+  offered.
+- **FXServer updates:** sxPanel doesn't tell you when a newer FiveM Enhanced
+  server build is out, so check for updates yourself.
+- **Resource name:** sxPanel runs as the `txadmin` resource instead of
+  `monitor`. Scripts that refer to sxPanel by resource name need to use
+  `txadmin` (see [Events API](/docs/events-api)).
 
 ## What's next?
 

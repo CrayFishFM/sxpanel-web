@@ -58,7 +58,11 @@ it truly does not apply.
   backticks for identifiers, commands, paths and config keys.
 - Tables for settings and permission lists, `<Callout>` for warnings and
   things that are easy to get wrong, `<Steps>`/`<Step>` for procedures.
-  Components available: `Callout`, `Steps`, `Step`, `Cards`, `Card`. No
+  Where FiveM and FiveM Enhanced (gen9) differ, put the two versions in
+  `<Tabs groupId="fivem-edition" persist items={["FiveM", "FiveM Enhanced"]}>`
+  with one `<Tab value="FiveM">` and one `<Tab value="FiveM Enhanced">`.
+  Components available: `Callout`, `Steps`, `Step`, `Cards`, `Card`, `Tabs`,
+  `Tab`. No
   imports, no other components. In prose, put `{`, `}` and `<` in backticks.
 - Use `##` for the parts above and `###` inside them. Headings are short
   nouns ("Filters", "Ban templates"), not sentences.

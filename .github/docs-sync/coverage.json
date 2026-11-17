@@ -6,8 +6,8 @@
       "page": "quick-start",
       "section": "Getting Started",
       "title": "Installation",
-      "sources": ["docs/README.md", "fxmanifest.lua", "scripts/package-monitor.js", "core/boot/", "core/globalData.ts", "resource/sv_main.lua"],
-      "notes": "Requirements, downloading the right archive (gen8 vs gen9), replacing the monitor folder, first start, finding the panel URL and PIN, ports, running on Windows and Linux.",
+      "sources": ["docs/README.md", "fxmanifest.lua", "scripts/package-monitor.js", "core/boot/", "core/globalData.ts", "core/modules/FxRunner/utils.ts", "core/lib/fxserver/fxsVersionParser.ts", "panel/src/pages/Deployer/txAdminRecipeIndex.ts", "resource/sv_main.lua"],
+      "notes": "Requirements, downloading the right archive, replacing the monitor folder, first start, finding the panel URL and PIN, ports, running on Windows and Linux. Keep the existing FiveM / FiveM Enhanced tabs (one full set of steps per edition, step headings marked [!toc]) and the 'FiveM Enhanced differences' section; expand them rather than merging the editions back together.",
       "status": "todo"
     },
     {
