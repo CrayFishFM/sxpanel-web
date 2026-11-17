@@ -145,7 +145,9 @@
         "core/modules/ConfigStore/schema/banlist.ts"
       ],
       "notes": "History page search and filters, the action modal (edit, revoke, identifiers), ban durations, ban templates, adding legacy bans, ban appeals messaging, and the Bans settings tab in full.",
-      "status": "todo"
+      "status": "done",
+      "writtenAt": "2026-11-17",
+      "sourceSha": "a21e752720dac257eafa73132d5d73599ec76ff2"
     },
     {
       "id": "reports",

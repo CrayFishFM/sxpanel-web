@@ -1,0 +1,302 @@
+---
+title: Bans, warnings and history
+description: The History page and its search and filters, the action window (details, identifiers, change duration, revoke, delete), ban durations, ban templates, banning raw identifiers, and the Bans settings.
+---
+
+Every warning, ban and kick sxPanel records is kept in one list. The **History** page lets you audit that list, open any entry to change or undo it, and manage the tools around bans: ban templates, banning raw identifiers, and the **Bans** settings that control how bans are enforced when a player joins.
+
+![History page with action search, type and admin filters and a warning row](/docs/history.webp)
+
+## Where to find it
+
+| What | Where |
+| --- | --- |
+| History page | **Players → History**, at `/history` |
+| Action window | Click any row on the History page, any entry on a player profile's **History** tab, or an action in the Admin Manager's stats. The address bar gets `?actionModal=<action id>`; opening that link opens the window on load. |
+| Ban templates | `/settings/ban-templates`, from **More → Ban templates** on the History page, from **Settings → Bans → Edit Ban Templates**, or from the template list in a ban form |
+| Ban identifiers | `/ban-identifiers`, from **More → Ban identifiers** on the [Players](/docs/players) page |
+| Bans settings | **Settings → Bans** |
+
+The History page can be hidden with the **History** switch in **Settings → Panel Features**. When it is off, the page leaves the navigation and `/history` redirects to the dashboard. This only hides the page; the API stays available.
+
+## Who can use it
+
+Anyone who can log in can open the History page and read the details of an entry. Changing entries needs permissions, granted in the [Admin Manager](/docs/permissions).
+
+| Control | Permission | Without it |
+| --- | --- | --- |
+| **Change Duration** | **Ban** (`players.ban`) | The button reads **Change Duration (no permission)** and is disabled. |
+| Setting a ban to **Permanent** | **Ban: Permanent** (`players.ban.permanent`) | **Permanent** is missing from the duration list. The server also refuses it with "You don't have permission to apply permanent bans." |
+| **Revoke** a ban | **Unban** (`players.unban`) | The button reads **Revoke (no permission)** and the reason box is disabled. |
+| **Revoke** a warning | **Warn** (`players.warn`) | Same as above. |
+| **Delete** a ban or warning | **Remove Player Data** (`players.delete`) | The button reads **Delete (no permission)** and is disabled. |
+| Ban identifiers page | **Ban** (`players.ban`) | A notice explains the permission is needed and the form is disabled. |
+| Edit ban templates | **Settings: Change** (`settings.write`) | The list is read-only and a notice says you need the permission. |
+| **Settings → Bans** | **Settings: Change** (`settings.write`) | The tab is read-only. |
+
+Creating bans from a player profile is covered in [Players](/docs/players#banning-a-player).
+
+## The History page
+
+The page has a header with four counters, a search bar and the list.
+
+### Header counters
+
+The counters cover the whole database, not the current search. Revoked and expired entries are included.
+
+| Counter | Counts |
+| --- | --- |
+| **Warns** | All warnings ever recorded. |
+| **New warns 7d** | Warnings recorded in the last 7 days, shown with `+`. |
+| **Bans** | All bans ever recorded. |
+| **New bans 7d** | Bans recorded in the last 7 days, shown with `+`. |
+
+A counter shows `—` while it loads. Kicks are not counted here.
+
+### Search and filters
+
+Searching starts about 1.25 seconds after you stop typing. **Enter** searches immediately, **Escape** clears the box, and the **×** inside the box clears it too. The list returns to the top whenever the search or a filter changes.
+
+The first dropdown, **Search by …**, picks what the text is matched against. Entries are shown with their internal names.
+
+| Search type | What it matches |
+| --- | --- |
+| `actionId` | The action ID, such as `XXXX-XXXX`, ignoring case. It is a fuzzy match, so a mistyped character can still find the entry. |
+| `reason` | The reason text, as a fuzzy match. |
+| `identifiers` | Identifiers of the target player. Separate several with commas, spaces or new lines. Hardware IDs are accepted too. Entries that contain **any** of the given identifiers are listed. |
+
+For `identifiers`, prefix each value with its type, such as `fivem:123456`. A value that cannot be parsed shows "Invalid identifiers (…). Prefix any identifier with their type, like 'fivem:123456' instead of just '123456'."
+
+Two filters combine with the search and with each other:
+
+| Filter | Options |
+| --- | --- |
+| **Filter by type** | **Any type**, **Bans**, **Warns**, **Kicks**. |
+| **Filter by admin** | **Any admin**, then your own name first, then every other admin alphabetically. Each shows how many entries (of all types) that admin has issued. Admins with none are listed with `(0)`, and names of admins who no longer exist remain while they have entries. |
+
+The **More** menu has two links:
+
+- **Bulk remove** opens the **Danger Zone** at the bottom of **Settings**, where old players and HWIDs can be bulk-removed.
+- **Ban templates** opens the [ban templates](#ban-templates) page.
+
+The address bar stores the search so you can bookmark or share it: `searchType`, `searchQuery`, `filterbyType` (`ban`, `warn` or `kick`) and `filterbyAdmin` (the admin's name). For example `/history?searchType=reason&searchQuery=cheating&filterbyType=ban`.
+
+### The list
+
+The list loads 100 entries at a time and loads more as you scroll.
+
+| Column | Shows |
+| --- | --- |
+| **Action** | A badge for the type (**Ban**, **Warn**, **Kick**), the action ID, and a status icon (see below). |
+| **Player** | The player's name at the time, or *unknown* for entries created from raw identifiers. |
+| **Reason** | The reason, cut to two lines. |
+| **Author** | The admin who issued it. |
+| **Date** | When it was issued. Click the heading to sort; the first click sorts newest first and the next flips it. |
+
+The status icon has a tooltip. A revoked entry shows **Revoked** and the whole row is dimmed.
+
+| Icon tooltip | Meaning |
+| --- | --- |
+| **Revoked** | The ban or warning was revoked. |
+| **Permanent ban** | A ban that never expires. |
+| **Active ban** | A timed ban that has not expired yet. |
+| **Warn not acknowledged** | The player has not yet seen the warning (for example, they were offline). |
+
+An expired ban has no icon. A kick never has one.
+
+At the end of the list you see **End of list** and "Showing N actions." With no results the page shows **No actions match** and "Try widening your search or clearing filters." If loading fails you get **Could not load history**, the reason and a **Try again** link.
+
+## The action window
+
+Click a row to open the window. Its header shows the type badge, the action ID, a **Revoked** badge when it applies, and the player's name (or **Unknown player**) with the author. Tabs: **Info**, **IDs**, **Edit** (bans only) and **Revoke**.
+
+### Info
+
+| Field | Shows |
+| --- | --- |
+| **Date/Time** | When the action was issued. Hover for the exact time. |
+| **Expiration** | Bans only: **Never** for permanent bans, `In …` while active, or the expiry date once it has passed. |
+| **Player Accepted** | Warnings only: **Yes**, or **Not yet** until the player has seen it. |
+| **Revoked** | **No**, or "By [admin] on [date]" with the revocation reason. |
+| **Admin** | Who issued it. |
+| **Player** | The name, with a **View** button that opens the [player profile](/docs/players#the-player-profile). The button is disabled when the entry does not point to exactly one license, such as bans created from raw identifiers. |
+| **Reason:** | The full reason, read-only. |
+
+### IDs
+
+Two lists: the identifiers and the hardware IDs the action is attached to. The action matches a player on any of them. Hardware IDs are recorded for bans issued from a player profile, not for bans on raw identifiers.
+
+### Edit
+
+Only bans have this tab. It changes how long the ban lasts.
+
+- Choose a duration: **Custom (set below)**, **2 HOURS**, **8 HOURS**, **1 DAY**, **2 DAYS** (the default), **1 WEEK**, **2 WEEKS**, or **Permanent** (needs **Ban: Permanent**). For custom, enter a number from 1 to 99 and a unit: **HOURS**, **DAYS**, **WEEKS** or **MONTHS** (a month is 30 days).
+- The new expiration is counted **from now**, not from the original ban date. Extending an expired ban this way makes it active again.
+- A revoked ban shows "This ban has been revoked. The duration cannot be changed."
+
+Click **Change Duration**. A toast says "Ban duration changed." The player is not notified and is not kicked if online. The change is written to the action log as **Change Ban Duration**.
+
+### Revoke
+
+The tab has two sections.
+
+**Revoke Ban** or **Revoke Warn** undoes the entry. The tab lists what it does:
+
+- For a ban, the player can rejoin the server.
+- The player is not notified.
+- The entry stays in the player's history, marked as revoked.
+- It cannot be undone.
+
+Type an optional reason (up to 512 characters) and click **Revoke Ban** or **Revoke Warn**. Revoking is normally done when a player's appeal succeeds or the admin regrets the action. It is logged as **Revoke Action** and the game server receives the `txAdmin:events:actionRevoked` event (see [Events API](/docs/events-api)). Once revoked, the button reads **Ban revoked** or **Warn revoked** and is disabled.
+
+**Delete Ban** or **Delete Warn** (not shown for kicks) removes the entry from the database for good. A confirmation dialog asks "Are you sure you want to permanently delete this ban?" and warns it cannot be undone. The window closes afterwards, and the deletion is logged as **Delete Action History Entry**. Prefer revoking: delete only entries made by mistake.
+
+## Ban durations
+
+Every place that sets a ban length, the player profile's **Ban** tab, **Ban Identifiers**, the **Edit** tab and ban templates, uses the same choices.
+
+| Choice | Length |
+| --- | --- |
+| **2 HOURS**, **8 HOURS** | 2 or 8 hours. |
+| **1 DAY**, **2 DAYS** | 1 or 2 days. **2 DAYS** is preselected. |
+| **1 WEEK**, **2 WEEKS** | 7 or 14 days. |
+| **Permanent** | Never expires. Needs **Ban: Permanent**. |
+| **Custom (set below)** | A number of at least 1 and a unit of **HOURS**, **DAYS**, **WEEKS** or **MONTHS** (30 days each). |
+
+An invalid custom duration is refused with "The duration number must be at least 1." or "Invalid ban duration. Supported units: hours, days, weeks, months".
+
+## Ban templates
+
+A ban template is a saved reason and duration. In any ban form, the clipboard button next to **Reason** lists the templates, with the duration in front of the reason, and picking one fills both fields. Picking a permanent template without **Ban: Permanent** shows "You don't have permission to apply permanent bans." and changes nothing.
+
+The page header shows counters for **Reasons**, **Permanent** and **Timed**, and a status that reads **Saving**, **Loading**, or a saved confirmation. Each row shows the reason, a duration chip, an edit button and a remove button. Drag the handle to reorder, and the order is the order in ban forms.
+
+Changes save immediately, with no save button: every add, edit, remove or reorder writes the whole list to the configuration, and the new list is pushed to every open panel. If saving fails the page shows "Error saving: …" with **Try again**; if loading fails it shows "Error loading templates: …" with **Try again**.
+
+### Add or edit a template
+
+<Steps>
+<Step>
+
+Open `/settings/ban-templates` and click **Add new reason**, or the edit button on a row.
+
+</Step>
+<Step>
+
+Write the **Reason**. It needs at least 3 characters ("Reason must be at least 3 characters long"). Line breaks are turned into spaces, and the stored limit is 2048 characters.
+
+</Step>
+<Step>
+
+Pick the **Duration**: the choices from [Ban durations](#ban-durations). For custom, the number must be between 1 and 99.
+
+</Step>
+<Step>
+
+Click **Save changes**. The dialog closes and the list saves.
+
+</Step>
+</Steps>
+
+To remove one, click the remove button and confirm **Remove Template** ("Are you sure you want to remove this ban template?"). Templates are stored as `banlist.templates`. An id is generated for each template, and duplicate ids are replaced by new ones.
+
+## Ban identifiers
+
+**Ban Identifiers** bans raw identifiers without needing a registered player. Use it for someone who has never joined, or to ban an identifier you got from a report. It creates a ban with no player name and no hardware IDs.
+
+<Steps>
+<Step>
+
+Open **Players → More → Ban identifiers** (`/ban-identifiers`).
+
+</Step>
+<Step>
+
+Paste the identifiers into **Identifiers**, separated by commas, semicolons, spaces or new lines. Text is lowercased and duplicates are removed.
+
+</Step>
+<Step>
+
+Fill in the **Reason** (at least 3 characters) and the **Duration**. The template button works here too.
+
+</Step>
+<Step>
+
+Click **Apply Ban**. You get "Identifiers banned." and the identifier box clears. **Clear** resets the reason and duration only.
+
+</Step>
+</Steps>
+
+Accepted identifier types, with their exact format:
+
+| Type | Format |
+| --- | --- |
+| `discord` | `discord:` and 17 to 20 digits |
+| `fivem` | `fivem:` and 1 to 8 digits |
+| `license`, `license2` | `license:` or `license2:` and 40 hex characters |
+| `live`, `xbl` | `live:` or `xbl:` and 14 to 20 digits |
+| `steam` | `steam:1100001` and 8 hex characters |
+
+Anything else is refused with "Invalid IDs: …". Hardware IDs cannot be entered. The ban is checked on the next connection: nobody is kicked when you apply it, even if the player is online. A ban without a `license` identifier is a *legacy ban*; the page recommends avoiding them because a player can change other identifiers. The ban is logged as **Ban Identifiers** and the `txAdmin:events:playerBanned` event fires with the target name `identifiers`.
+
+## Bans settings
+
+**Settings → Bans** needs **Settings: Change** (`settings.write`) to save. Defaults and limits come from the configuration schema (`banlist`).
+
+| Setting | What it does | Default | Limits / values |
+| --- | --- | --- | --- |
+| **Ban Checking** (`banlist.enabled`) | Checks every connecting player against active bans. When **Disabled**, sxPanel bans do not work: banned players can join. Bans are still recorded. | **Enabled** | Enabled or Disabled. |
+| **Edit Ban Templates** | Opens the [ban templates](#ban-templates) page. | n/a | n/a |
+| **Ban Rejection Message** (`banlist.rejectionMessage`) | Optional text shown to a banned player on the rejection screen, usually how to appeal. Line breaks are kept. | `You can join http://discord.gg/example to appeal this ban.` | Up to 512 characters. Longer text is refused with "The Ban Rejection Message is too big." and "The message must be 512 characters or less." Leave empty to show nothing. |
+| **Required Ban HWID Matches** (`banlist.requiredHwidMatches`), Advanced | How many of a player's hardware ID tokens must match a ban's for them to be blocked. | `1 - recommended` | `1 - recommended`, `2 - lax`, `3 - very lax`, `4 - virtually disabled`, `Disable HWID Bans` (0). Most players have 3 to 6 tokens. |
+
+**Required Ban HWID Matches** only appears after you click **Advanced** on the card.
+
+### What a banned player sees
+
+On connect, the player is checked against every active ban (not revoked, not expired) that shares one of their identifiers, or enough hardware IDs. They are refused with a card that shows the title (permanently or temporarily banned), the time left for temporary bans, the ban date, the author, the **Ban Reason**, the **Ban ID** and your rejection message. The ban ID is the same as in History, so a player quoting it in an appeal lets you find the entry with `actionId` search.
+
+- The author is hidden when **Hide Admin Name In Punishments** is on (see [Configuration](/docs/configuration)).
+- A note appears when the player has more than one active ban, or when the matching ban belongs to another `license` (some of their IDs or HWIDs match).
+- The look of the card is set in **Settings → Deferral Cards** (the `ban_temporary` and `ban_permanent` scenarios), and its wording comes from the language files.
+
+## Appeals
+
+sxPanel has no appeal system. The **Ban Rejection Message** tells the player where to go, such as a Discord invite, and the ban ID is on their screen. To grant an appeal, find the entry by ID in History and use **Revoke**. To shorten it, use **Edit**.
+
+## How it connects
+
+- **Events.** Bans fire `txAdmin:events:playerBanned`, and revoking fires `txAdmin:events:actionRevoked`. See [Events API](/docs/events-api) and [Addon API](/docs/addon-api).
+- **Action log.** Entries: **Change Ban Duration**, **Ban Identifiers**, **Delete Action History Entry** and **Revoke Action**.
+- **Discord.** The bot's `/ban`, `/unban` and `/history` commands work with the same entries. See [Discord](/docs/discord).
+- **Players.** The profile's **History** tab lists the same entries, and its **Ban** tab uses the same form. See [Players](/docs/players).
+- **Whitelist.** Bans are checked in addition to the whitelist. See [Whitelist](/docs/whitelist).
+- **Migration.** [Migrating from txAdmin](/docs/migrating-from-txadmin) maps the old ban settings and templates.
+
+## Limits and edge cases
+
+- Searches load 100 entries per request and sort only by date.
+- Counters and admin counts include revoked entries.
+- Mutating requests (revoke, delete, change duration, ban identifiers, saving templates) are limited to 30 per minute.
+- Bans never delete themselves: an expired ban stays in History. It stops blocking the player once it has expired.
+- Ban checking happens when a player connects. Banning a player does not remove them from the server unless the ban is made from their profile while they are online.
+- Kicks show in History and the action window, but they cannot be revoked or deleted from it.
+- Turning **Ban Checking** off also stops the join check for bans only. The whitelist check is separate.
+
+## Problems
+
+| Message | Cause and fix |
+| --- | --- |
+| "You don't have permission to execute this action." | Your account lacks the permission in [Who can use it](#who-can-use-it). |
+| "You don't have permission to apply permanent bans." | You chose **Permanent** without **Ban: Permanent**. |
+| "Failed to revoke action: you do not have permission to revoke this action" | Revoking a ban needs **Unban**, a warning needs **Warn**. Kicks cannot be revoked. |
+| "Failed to revoke action: action not found" and similar | The entry was deleted meanwhile. Reload the page. |
+| "Failed to change ban duration: action is already revoked" | Revoked bans cannot change duration. |
+| "Invalid IDs: …" | A value on **Ban Identifiers** does not match the formats in [Ban identifiers](#ban-identifiers). |
+| "You must enter at least one identifier." | The identifier box is empty. |
+| "The reason must be at least 3 characters long." | Reasons need at least 3 characters. |
+| "Invalid identifiers (…). Prefix any identifier with their type…" | A History `identifiers` search had a value without a type prefix. |
+| "Request failed: …", **Could not load history** | The list could not be loaded. Click **Try again**. |
+| "Too many requests. Please slow down." | You hit the rate limit. Wait a minute. |
+| "You do not have permission to change the settings." | Saving ban templates needs **Settings: Change**. |
+| Banned players can still join | **Ban Checking** is disabled, or **Required Ban HWID Matches** is too high for an HWID-only match. |
