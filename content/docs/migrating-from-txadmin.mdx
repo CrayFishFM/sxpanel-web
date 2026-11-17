@@ -1,0 +1,244 @@
+---
+title: Migrating from txAdmin
+description: What carries over from a txAdmin install, what does not, how to switch step by step and how to go back.
+---
+
+sxPanel reads the data folder txAdmin created and upgrades it in place. You
+replace the resource, start the server and everything stored on disk is
+migrated on boot. This page lists what is migrated, what changes along the way,
+and how to roll back.
+
+## What carries over
+
+All of it lives in your `txData` folder (see `TXHOST_DATA_PATH` in
+[Configuration](/docs/configuration)). sxPanel reads these files directly.
+
+| Data | File | What happens |
+| --- | --- | --- |
+| Admin accounts | `txData/admins.json` | Loaded as is. Passwords, Cfx.re and Discord links and permissions are kept. Older files are upgraded (see [Admins](#admins)). |
+| Settings | `txData/<profile>/config.json` | Converted to the current layout (see [Settings](#settings)). A backup is saved first. |
+| Players, bans, warns, notes | `txData/<profile>/data/playersDB.json` | Upgraded to the current database version. A backup is saved first. |
+| Whitelist entries and requests | `playersDB.json` | Converted to the current whitelist storage. |
+| Server data folder and `server.cfg` | paths in `config.json` | Kept. Nothing in your server data folder is touched. |
+
+`<profile>` is `default` unless you started txAdmin with a `serverProfile`
+ConVar, in which case it is that profile's name.
+
+### Admins
+
+`admins.json` must contain at least one admin, exactly one of them must be the
+master account, and every password hash must be a bcrypt (`$2…`) or Argon2
+(`$argon2…`) hash. txAdmin files satisfy this.
+
+On load, sxPanel changes the file only where needed, and rewrites it once:
+
+- Admins without a stored identifier get one from their linked account
+  (`fivem:<id>` for Cfx.re, `discord:<id>` for Discord).
+- Files from older txAdmin versions get a schema marker. The old
+  `players.message` permission is split into `players.direct_message` and
+  `announcement`, and non-empty permission lists receive `server.log.view`
+  (admins with **All Permissions** are left alone).
+- Combined permissions are split into the granular ones sxPanel uses:
+  `menu.vehicle` becomes `menu.vehicle.spawn`, `menu.vehicle.fix`,
+  `menu.vehicle.boost` and `menu.vehicle.delete`; `players.playermode` becomes
+  `players.noclip`, `players.godmode` and `players.superjump`.
+- Anyone with `players.ban` also gets `players.unban` and
+  `players.ban.permanent`, so no admin loses something they could do before.
+  Review these in the Admin Manager afterwards; see [Permissions](/docs/permissions).
+
+Bcrypt passwords keep working. An admin's hash is converted to Argon2 the next
+time they sign in.
+
+### Settings
+
+If `config.json` has no `version` field and contains the txAdmin `global` and
+`fxRunner` sections, it is converted, and only the values that differ from the
+defaults are written back. The renames are:
+
+| txAdmin | sxPanel |
+| --- | --- |
+| `global.serverName`, `global.language` | `general.serverName`, `general.language` |
+| `fxRunner.serverDataPath`, `cfgPath` | `server.dataPath`, `server.cfgPath` |
+| `fxRunner.commandLine` | `server.startupArgs` (split into an argument list) |
+| `fxRunner.autostart`, `quiet`, `onesync` | `server.autoStart`, `server.quiet`, `server.onesync` |
+| `fxRunner.shutdownNoticeDelay` (seconds) | `server.shutdownNoticeDelayMs` (milliseconds) |
+| `fxRunner.restartDelay` | `server.restartSpawnDelayMs` |
+| `monitor.restarterSchedule`, `cooldown`, `resourceStartingTolerance` | `restarter.schedule`, `restarter.bootGracePeriod`, `restarter.resourceStartingTolerance` |
+| `playerDatabase.onJoinCheckBan`, `banRejectionMessage`, `requiredBanHwidMatches` | `banlist.enabled`, `banlist.rejectionMessage`, `banlist.requiredHwidMatches` |
+| `banTemplates` | `banlist.templates` |
+| `playerDatabase.whitelistMode`, `whitelistRejectionMessage`, `whitelistedDiscordRoles` | `whitelist.mode`, `whitelist.rejectionMessage`, `whitelist.discordRoles` |
+| `discordBot.announceChannel` | `discordBot.warningsChannel` |
+| `global.menu*`, `global.hide*` | `gameFeatures.*` |
+| `webServer.*`, `discordBot.*`, `logger.*` | same names |
+
+Values are adjusted where the meaning or the default changed:
+
+- Language `pt_PT` and `pt_BR` become `pt`.
+- A non-numeric `resourceStartingTolerance` becomes `120`.
+- A boot grace period of `60` becomes `45`; other values are rounded.
+- A restart spawn delay of `750` becomes `500`.
+- Whitelist mode `guildMember` becomes `discordMember` and `guildRoles` becomes `discordRoles`.
+- The server name is cut to 18 characters.
+- Each ban template gets a new id.
+- A `+set txAdmin-menuPtfxDisable` entry in the startup arguments is removed
+  and turned into the player mode PTFX game setting. If you set that ConVar in
+  `server.cfg` instead, sxPanel cannot see it; set the option in the panel.
+
+The file is then upgraded through the newer layouts: the whitelist mode becomes
+whitelist workflows, and tiers become queue rules with reserved slot pools. The
+settings file version after migration is `6`.
+
+### Players and the database
+
+`playersDB.json` is upgraded step by step, from whatever version it is on up to
+the current one (`10`). Every step logs a notice in the console. In summary:
+
+- Duplicate action ids are made unique, and warn ids use the `W` prefix.
+- Player names are cleaned for search, and players keep their old identifiers,
+  HWIDs and a name history.
+- Warns can be issued to offline players.
+- Whitelist approvals and requests are rebuilt as whitelist entries and
+  applications. Pending requests stay pending.
+- Reports become tickets, and Discord bot command history storage is added.
+
+<Callout type="warn">
+  A players database older than version 1 is wiped and started empty. txAdmin
+  has not written files that old for a long time, but if you are coming from a
+  very old install, keep your own copy of `playersDB.json` first.
+</Callout>
+
+## What does not carry over
+
+- **Settings that no longer exist.** Only the keys in the table above are
+  read. Anything else in an old `config.json` is not converted.
+- **The `txAdmin-menuPtfxDisable` ConVar in `server.cfg`.** It is not read; use
+  the panel setting.
+- **Deprecated ConVars.** `txAdminPort`, `txDataPath` and `txAdminInterface`
+  still work but print a warning naming the `TXHOST_*` variable to use instead.
+  `serverProfile` is also deprecated. See [Configuration](/docs/configuration).
+
+Event names (`txAdmin:events:*`) and the resource name (`monitor`, or `txadmin`
+on FiveM Enhanced) are unchanged, so your scripts keep working. See the
+[Events API](/docs/events-api).
+
+## Migrate step by step
+
+<Steps>
+<Step>
+
+### Back up
+
+Stop FXServer and txAdmin, then copy your whole `txData` folder somewhere
+safe. The automatic backups below are a safety net, not a replacement for your
+own copy.
+
+</Step>
+<Step>
+
+### Replace the resource
+
+Follow the [Quick Start](/docs/quick-start) to replace the `monitor` folder (or
+`txadmin` on FiveM Enhanced) with the sxPanel build. Leave `txData` where it is.
+
+</Step>
+<Step>
+
+### Start the server
+
+Start FXServer. The console prints each migration it runs, for example
+`Updating your sxPanel config.json from v1 to v2.`, and
+`Database migrated successfully` when the database is done. A line like
+`A backup of your config file was saved as: config.backup.v1.json` confirms the
+settings backup.
+
+</Step>
+<Step>
+
+### Sign in with your existing account
+
+Open the panel and sign in with the account you used in txAdmin. You do not
+need to run [First-Time Setup](/docs/setup) again, because the admin account,
+server data path and settings already exist.
+
+</Step>
+<Step>
+
+### Check the result
+
+- Open the settings and check the server name, language, restart schedule and
+  Discord bot.
+- Open the Admin Manager and review permissions (see above).
+- Check the players and history pages for your players and bans.
+- Start the server and watch the live console.
+
+</Step>
+</Steps>
+
+## Backups the migration makes
+
+| File | Created when | Contents |
+| --- | --- | --- |
+| `txData/<profile>/config.backup.v<N>.json` | `config.json` is migrated; `<N>` is the version it was on (`1` for a txAdmin file) | The settings file as it was |
+| `txData/<profile>/data/playersDB.backup.v<N>.json` | The database is migrated; `<N>` is its old version | The database as it was |
+| `txData/<profile>/data/playersDB.backup.json` | Every five minutes while running | The latest copy of the database, restored automatically if the main file cannot be read |
+
+`admins.json` is rewritten in place and has no migration backup, which is why
+the manual copy in step 1 matters.
+
+## Going back to txAdmin
+
+<Steps>
+<Step>
+
+### Stop the server
+
+Stop FXServer so nothing writes to the files.
+
+</Step>
+<Step>
+
+### Restore your copy
+
+Put your backed-up `txData` folder back. If you did not make one, copy
+`config.backup.v1.json` over `config.json` and the `playersDB.backup.v<N>.json`
+file over `playersDB.json`. Without a copy of `admins.json`, the file stays in
+the sxPanel format, which includes the extra permissions described above.
+
+</Step>
+<Step>
+
+### Put txAdmin's `monitor` folder back
+
+Restore the original resource folder in your artifacts and start the server.
+
+</Step>
+</Steps>
+
+<Callout type="warn">
+  Do not point txAdmin at a migrated `config.json` or `playersDB.json`. It does
+  not understand the newer versions. Always restore the backups.
+</Callout>
+
+## Limits and edge cases
+
+- Migration runs on the first start after the switch. After that the files are
+  on the current version and nothing is migrated again.
+- If the files are newer than the installed sxPanel (for example after
+  downgrading), startup stops and tells you to update sxPanel or restore a
+  backup.
+- Only one sxPanel can use a profile at a time. A `config.lock` file holds the
+  process id; a stale lock from a crashed process is overwritten.
+
+## Problems
+
+| Message | Cause and fix |
+| --- | --- |
+| `Unable to migrate configuration file.` | The settings file could not be converted. The message lists the file's version. Restore the backup, fix the file, and start again. |
+| `Unable to parse configuration file (invalid JSON).` | `config.json` is corrupt. Restore it from a backup. |
+| `Another instance is already using this config file.` | Another process is running on the same profile. Stop it. If none is, delete `config.lock`. |
+| `Unable to load admins.json` with `no admins`, `empty file`, `json parse error` or `not an array` | The file is damaged. Restore it from your copy. |
+| `Unable to load admins.json` with `invalid data in the admins file` | An admin has a short name, an invalid password hash or an invalid provider entry. Fix or restore the file. |
+| `Unable to load admins.json` with `must have exactly 1 master account` | The file has no master or more than one. Edit `master` so exactly one admin is `true`. |
+| `Your sxPanel player/actions database could not be loaded.` | The database is unreadable. If the automatic backup loads, sxPanel restores it and you lose up to five minutes of data. If not, boot stops; restore a copy manually. |
+| `Your players database is on v…, and this sxPanel supports up to v….` | The database is newer than sxPanel. Update sxPanel or restore the matching backup. |
+| `Your sxPanel player/actions database is corrupted!` | A required list is missing from `playersDB.json`. Restore it from backup. |

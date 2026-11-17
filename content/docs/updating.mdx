@@ -1,0 +1,400 @@
+---
+title: Updating sxPanel and FXServer
+description: How update notices work, how to update sxPanel and your FXServer artifacts from the panel, what happens on disk, and how to recover from a failed update.
+---
+
+sxPanel tells you when a newer sxPanel release or a newer FXServer artifact
+(build) is available, and can download and install both from the panel. Server
+owners use this to keep the panel and the game server current without
+replacing files by hand.
+
+There are two separate pages, because they replace different things:
+
+| Page | Replaces | Source of updates |
+| --- | --- | --- |
+| **System → Panel Update** | The sxPanel resource folder (`monitor`) | sxPanel releases on GitHub |
+| **System → Artifacts** | The FXServer artifact (the game server itself) | The official FiveM changelog and `runtime.fivem.net` |
+
+<Callout>
+  Both updates stop the game server and restart the whole FXServer process.
+  Players are disconnected. Warn them first.
+</Callout>
+
+## Where to find it
+
+| Page | Panel navigation | URL path |
+| --- | --- | --- |
+| Panel Update | **System → Panel Update** | `/system/panel-update` |
+| Artifacts | **System → Artifacts** | `/system/artifacts` |
+
+Update notices appear as a bar at the top of every panel page, described in
+[Update notices](#update-notices).
+
+## Who can use it
+
+Both pages, and every request behind them, need **All Permissions**
+(`all_permissions`). An admin without it cannot open either route and
+receives `Only admins with all permissions can manage sxPanel updates.` (panel
+update) or `Only admins with all permissions can manage artifacts.` /
+`Only admins with all permissions can manage updates.` (artifacts) if they
+call the API directly. See [Permissions](/docs/permissions).
+
+The update notice bar is not tied to that permission in the code. It is part
+of the panel shell.
+
+## Update notices
+
+sxPanel checks for updates when it boots and then every 15 minutes. The result
+is pushed to every open panel, and also baked into the page on load.
+
+### sxPanel notices
+
+The check asks `https://www.sxpanel.org/api/version` for the latest version
+and compares it with the version you run. The difference decides how the
+notice looks:
+
+| Difference | Treated as | Banner |
+| --- | --- | --- |
+| Major or minor (`1.2.0` → `1.3.0`) | Important | Red: **This version of sxPanel is outdated.** with `Version v… has been released bringing new features, bug fixes and improvements.` |
+| Patch (`1.2.0` → `1.2.1`) | Not important | Blue: **A patch (bug fix) update is available for sxPanel.** with `If you are experiencing any kind of issue, please update to v….` |
+
+When a notice becomes visible, sxPanel also prints a matching warning in the
+server console, including a link to the Discord server.
+
+#### Staggered rollout
+
+To avoid every server updating on the same day, sxPanel can delay the notice
+for major and minor releases. The first time it sees a new release it rolls a
+random number from 0 to 100 and keeps it until the notice is shown. The number
+decides how many days the notice is held back:
+
+| Release | Share of servers | Notice delayed by |
+| --- | --- | --- |
+| Patch | All | None |
+| Minor | About 10% | None |
+|  | About 30% | 2 days |
+|  | About 60% | 4 days |
+| Major | About 5% | None |
+|  | About 15% | 2 days |
+|  | About 80% | 7 days |
+
+If the version you are running is a pre-release (its version contains a `-`,
+such as a beta), the notice is never delayed.
+
+The delay only affects the notice. The **Panel Update** page checks GitHub
+directly and offers the update as soon as the release exists, so you never
+have to wait for the notice.
+
+### FXServer notices
+
+The check also asks the FiveM changelog API (`changelogs-live.fivem.net`) for
+the artifact tiers of your operating system and compares your build number:
+
+| Your build is… | Notice |
+| --- | --- |
+| Older than **Critical** or **Recommended** | Red: **This version of FXServer is outdated.** Offers whichever of the two is higher. |
+| Older than **Optional** (but at least **Recommended**) | Blue: **An update is available for FXServer.** |
+| At or above **Optional** | No notice. The **Latest** tier never triggers one. |
+
+The description reads `Please update FXServer to artifact <build>.` There is
+no rollout delay for FXServer notices. FXServer notices are skipped entirely
+on gen9 (FiveM Enhanced), because its build numbers are on an unrelated scheme.
+
+### The notice bar
+
+The bar sits at the top of the page. Hover it to expand the description and
+buttons.
+
+| Button | What it does |
+| --- | --- |
+| **Postpone** | Hides the bar in your browser. Important notices come back after 12 hours, the others after 48 hours. The time is kept in your browser's local storage, so it is per browser and shared by the sxPanel and FXServer notices. |
+| **Download** | Opens the sxPanel releases page on GitHub (`github.com/Snipzil/sxpanel/releases`). |
+| **Support** | Opens the Discord server. |
+
+Only one notice shows at a time, in this order: connection lost, sxPanel
+update, FXServer update. The connection-lost bar cannot be postponed.
+
+To hide FXServer notices for every admin, turn on **Hide FxServer Update**
+(shown as **Hidden** / **Visible**) in **Settings → FXServer**. It is the
+`hideFxsUpdateNotification` setting and defaults to off (**Visible**). It
+affects only the FXServer notice, not the sxPanel one.
+
+## Updating sxPanel
+
+**System → Panel Update** installs a new sxPanel release over the running one.
+
+### The screen
+
+![sxPanel Update page with the current version and the available release](/docs/panel-update.webp)
+
+| Control | What it does |
+| --- | --- |
+| **Current** pill | The sxPanel version you are running. |
+| **Ready** / **Updating** pill | **Updating** while a download, extraction or apply is in progress. |
+| Refresh button | Reloads the status and asks GitHub again. The page also refreshes itself every 30 seconds, or every 2 seconds while an update is in progress. |
+| **Available Update** card | The newest non-draft GitHub release, with a **Prerelease** badge when it is one, and either **Current** (same version as yours) or **Update available**. Prereleases are included, so if the newest release is a beta, that is what is offered. |
+| **Download & Verify** | Downloads and checks the release. Disabled while an update is in progress or when the release is not newer than your version. |
+| **View release notes** | Opens the release on GitHub. |
+| **Update Progress** card | Appears once an update has started. Shows the phase: **Downloading update** (with a percentage bar), **Extracting archive**, **Ready to apply**, **Applying update**, or **Update failed**. |
+| **Apply & Restart** | Appears when the phase is **Ready to apply**. Asks for confirmation, then installs. |
+| **Dismiss** | Appears with an error. Clears the error from your screen. See [Problems](#problems). |
+
+If GitHub cannot be reached, the card shows **Could not fetch release
+information** and `Try refreshing, or check your connection to GitHub.` If the
+page itself cannot load its data it shows **Failed to load update data** with
+a **Retry** button.
+
+### Update sxPanel
+
+<Steps>
+<Step>
+
+Open **System → Panel Update** and check that the **Available Update** card
+says **Update available**. Use the refresh button if you expect a release that
+is not listed.
+
+</Step>
+<Step>
+
+Read the release notes through **View release notes**.
+
+</Step>
+<Step>
+
+Click **Download & Verify**. sxPanel downloads `monitor.zip` and its
+`monitor.zip.sha256` from the release, compares the SHA-256 checksum, extracts
+the archive and checks it contains `fxmanifest.lua`, `entrypoint.js`,
+`core/index.js` and `resource/sv_main.lua`. Downloads time out after 30
+minutes. When it finishes, the phase becomes **Ready to apply** and the new
+files wait in a staging folder; nothing has changed yet.
+
+</Step>
+<Step>
+
+Warn your players, then click **Apply & Restart** and confirm the **Apply
+sxPanel Update** dialog. It says: `This will stop the game server, replace the
+sxPanel files, and restart the entire process. Make sure you have warned your
+players. Continue?`
+
+</Step>
+<Step>
+
+The page becomes unresponsive while sxPanel shuts down, swaps the files and
+starts FXServer again with the same command line. Reload the panel after a
+minute or two and sign in again if asked.
+
+</Step>
+</Steps>
+
+Download and apply are each recorded as an admin command in the
+Action Log as **Download sxPanel Update** and **Apply sxPanel
+Update**.
+
+### What happens on disk
+
+The temporary files live next to the `monitor` folder (in its parent folder),
+not inside it:
+
+| Path | Purpose |
+| --- | --- |
+| `sxpanel_update_temp/` | The downloaded archive. Deleted after extraction. |
+| `sxpanel_update_staging/` | The extracted new version, waiting to be applied. |
+| `sxpanel_update_failure.txt` | The last error message, kept so a failure survives the restart. |
+| `sxpanel_update_swap.bat` (Windows) / `sxpanel_update_swap.sh` and `sxpanel_update_swap.log` (Linux) | The swap script and its log. |
+
+On apply, sxPanel stops the game server immediately, without the usual
+in-game notice delay, starts a detached swap script, and exits the process.
+The script waits for the process to end and then:
+
+- **Windows:** deletes the old `monitor` folder, moves the staged folder in, and falls back to copying with `robocopy` if the folder is locked. After a failure it writes the reason to `sxpanel_update_failure.txt` and restarts FXServer with the files it has.
+- **Linux:** renames the old folder to `monitor.bak`, moves the staged folder in, and deletes the backup on success. If the move fails it puts `monitor.bak` back (`Rolled back to previous sxPanel files.`).
+
+Both scripts then restart FXServer using the command line the process was
+started with. If sxPanel cannot read that command line, the script prints
+`Could not determine restart command. Please restart FXServer manually.` and
+you must start the server yourself.
+
+### Rolling back
+
+There is no **Rollback** button. After a successful apply the previous folder
+is deleted, and the **Download & Verify** button only works for releases newer
+than the one you run. To go back to an older version, install it by hand: stop
+the server and replace the `monitor` folder with the older release's files, as
+described under [Updating in Quick Start](/docs/quick-start#updating). Keep a
+copy of the `monitor` folder before updating if you want that option.
+
+Your `txData` folder is not touched by an update.
+
+## Updating FXServer
+
+**System → Artifacts** installs a different FXServer build (an *artifact*),
+newer or older, without opening a browser or SSH session.
+
+### The screen
+
+![Artifacts page with the current build, update state and available build tiers](/docs/artifacts.webp)
+
+| Control | What it does |
+| --- | --- |
+| **Current** pill and **Current Build** card | Your build number. A badge shows the full build tag (for example `…/Win` or `…/Lin`, with a `g9-` prefix on gen9). A second badge names the tier your build matches, if it matches one. |
+| **Ready** / **Updating** pill, **Update State** card | The updater phase: `idle`, `downloading`, `extracting`, `extracted`, `applying` or `error`. |
+| Refresh button | Reloads the status and the tier list. The page also refreshes itself every 30 seconds, or every 2 seconds while an update is in progress. |
+| **Update Progress** card | Appears once an update has started, with the same phases and **Dismiss** button as the Panel Update page. |
+| **Available Builds** card | One row per tier with its build number and a **Download** button. |
+| **Custom URL** card | An input for a direct download link and a **Download from URL** button, plus links to the FiveM artifact listings for Windows and Linux. Hidden when the host disables it. |
+
+If the build list cannot be fetched, the card shows **Could not fetch
+available builds** and `Try refreshing the page.`
+
+### Build tiers
+
+| Tier | Meaning shown in the panel |
+| --- | --- |
+| **Latest** | Newest available build |
+| **Recommended** | Stable and tested |
+| **Optional** | Minor fixes and improvements |
+| **Critical** | Minimum safe version |
+
+A row is marked **Current** if it is your build. A row marked **Incompatible**
+is below the minimum build sxPanel supports (`#5894`); its button is disabled,
+and the server refuses it too with `Build … is not compatible with sxPanel
+(minimum: 5894). Downgrading below it would prevent sxPanel from booting.`
+
+### Update the artifact
+
+<Steps>
+<Step>
+
+Open **System → Artifacts**. Compare **Current Build** with the tiers. The
+**Recommended** tier is the safe choice for production.
+
+</Step>
+<Step>
+
+Warn your players. There is no confirmation dialog on this page, so the next
+click starts the process.
+
+</Step>
+<Step>
+
+Click **Download** on the tier you want, or paste a link into **Custom URL**
+and click **Download from URL**.
+
+</Step>
+<Step>
+
+Watch **Update Progress**: **Downloading artifact** (with a percentage),
+**Extracting archive**, then **Applying update**. Once the build is extracted,
+sxPanel applies it automatically: it stops the game server, swaps the files
+and restarts FXServer. The page then becomes unresponsive until the server is
+back.
+
+</Step>
+<Step>
+
+Reload the page and check that **Current Build** shows the new number.
+
+</Step>
+</Steps>
+
+<Callout>
+  Apply starts on its own right after extraction. The **Apply & Restart**
+  button and its **Apply Artifact Update** confirmation exist, but only appear
+  if the page is open while the update is in the **Ready to apply** state,
+  which normally does not last. Do not click **Download** unless you are ready
+  for the restart.
+</Callout>
+
+### Custom URL
+
+A custom URL must start with `https://` and point at the host
+`runtime.fivem.net`. The page shows `Please enter a valid https URL from an
+allowed domain (runtime.fivem.net)` otherwise, and the server checks it again.
+The minimum build check applies only to the built-in tiers, because a custom
+link carries no version, so make sure the build is at least `5894`.
+
+Use the **FiveM Artifacts** and **FiveM Linux Artifacts** links on the card to
+find one. The archive must be the one for your operating system.
+
+A host can turn the custom URL off with the environment variable
+`TXHOST_ARTIFACT_CUSTOM_DOWNLOAD`. It is on when the variable is not set and
+only the exact value `true` turns it on when set. When it is off, the **Custom
+URL** card is replaced by a notice reading `<source>: Custom artifact URLs are
+disabled by the host.` and the server refuses custom links with `Custom
+artifact download URLs are disabled by the host.` The tier **Download**
+buttons keep working.
+
+### What happens on disk
+
+The artifact folder is the FXServer folder on Windows, and the `alpine` folder
+on Linux. Temporary files go next to it, in its parent folder:
+
+| Path | Purpose |
+| --- | --- |
+| `fxserver_update_temp/` | The downloaded archive (`server.zip` on Windows, `fx.tar.xz` on Linux). Deleted after extraction. |
+| `fxserver_update_staging/` | The extracted build. |
+| `fxserver_update_failure.txt` | The last error message, kept across the restart. |
+| `fxs_update_swap.bat` (Windows) / `fxs_update_swap.sh` and `fxs_update_swap.log` (Linux) | The swap script and its log. |
+
+Downloads time out after 60 minutes. Linux archives are extracted with the
+system `tar` command, which must be installed and able to read `.tar.xz`.
+
+After extraction, sxPanel checks the layout: `FXServer.exe` on Windows, or
+`opt/cfx-server/FXServer` and `opt/cfx-server/ld-musl-x86_64.so.1` on Linux.
+An archive for another platform fails here.
+
+The swap itself works like the sxPanel one: the game server is stopped at
+once, a detached script waits for the process to exit, replaces the artifact
+folder and restarts FXServer with its original command line. The `citizen`
+folder is carried over from your old install into the new one, so resources in
+`citizen/system_resources` (including `monitor`) stay as they are. Linux keeps
+the old folder as a `.bak` until the swap succeeds and restores it if the move
+fails. On Linux the script also refuses to restart if `ld-musl-x86_64.so.1` is
+missing after the swap.
+
+<Callout>
+  Everything else inside the old artifact folder is removed. Do not keep your
+  own files in it.
+</Callout>
+
+Download and apply are recorded as admin commands in the
+Action Log as **Download FXServer Artifact** (with the build
+number) and **Apply FXServer Update**.
+
+### Rolling back
+
+To go back to an older build, download an older tier or use **Custom URL**
+with the older build's link from the FiveM artifact listing. Builds below
+`5894` are refused. There is no automatic rollback after a swap that worked; if
+the new build misbehaves, install the previous one the same way.
+
+## Limits and edge cases
+
+- Only one download or apply runs at a time. Starting another while one runs fails with `A download is already in progress.` or `An update is currently being applied.`
+- Apply needs an extracted update. Otherwise you get `No downloaded update ready to apply. Please download first.`
+- If the game server cannot be stopped, the update stops with `Failed to stop game server: …` and nothing is replaced.
+- Update state is kept in memory. A restart clears it, except for a failure recorded in `sxpanel_update_failure.txt` / `fxserver_update_failure.txt`, which is shown as an error the next time sxPanel starts. Starting a new download deletes the file.
+- The minimum supported FXServer build is `5894` on gen8. Gen9 builds are numbered differently and are not compared for notices.
+- The updaters need write access to the folders above and to the folder that contains them.
+- The sxPanel update needs the GitHub API and release downloads to be reachable from the server; the artifact update needs `runtime.fivem.net`.
+
+## Problems
+
+| Message | Cause and fix |
+| --- | --- |
+| `Only admins with all permissions can manage sxPanel updates.` | Your admin account lacks **All Permissions** (`all_permissions`). Ask the Master account. |
+| `No sxPanel release available to download.` | GitHub could not be reached, or the newest release is missing `monitor.zip` or `monitor.zip.sha256`. Refresh and try again later. |
+| `Could not parse expected checksum from monitor.zip.sha256.` | The release's checksum file is malformed. Report it on Discord. |
+| `Checksum mismatch for monitor.zip (expected …, got …). Download may be corrupted.` | The download was damaged. Click **Download & Verify** again. |
+| `Extracted update is missing required files: …` | The release archive is incomplete. Report it on Discord. |
+| `Archive entry has unsafe name: …` / `Archive entry escapes staging directory: …` | The archive tries to write outside the staging folder, so sxPanel refused it. |
+| `A valid HTTPS download URL is required.` | The link is empty or not `https://`. |
+| `Download URL hostname is not allowed. Permitted: runtime.fivem.net` | Only `runtime.fivem.net` links are accepted. |
+| `Invalid artifact structure: expected … at opt/cfx-server/ but not found.` / `Invalid artifact structure: FXServer.exe not found at the expected location.` | The archive is for another platform or damaged. |
+| `Extraction produced an empty directory.` | The archive had no files. |
+| `tar exited with code …` | `tar` failed on a Linux archive. Check that `tar` with `xz` support is installed and the disk has space. |
+| `Could not stop FXServer process … in time.` | Windows only: the old process did not exit. Start FXServer again and retry. |
+| `Failed to copy staging directory into place.` | Windows only: files were locked. FXServer restarts with what it has; close whatever holds the folder and retry. |
+| `ERROR: Failed to move staging directory into place.` / `Rolled back to previous sxPanel files.` | Linux only, in `sxpanel_update_swap.log`. The old version was restored. |
+| The error comes back after **Dismiss** | **Dismiss** only clears the message in your browser. The error stays in the updater until you start another download. Click **Download & Verify** or **Download** again, or restart sxPanel after deleting the `…_update_failure.txt` file. |
+| The server did not come back after an update | Check the swap log (`sxpanel_update_swap.log`, `fxs_update_swap.log`) in the parent folder, then start FXServer manually. If the files are damaged, restore them as described in the rollback sections. |

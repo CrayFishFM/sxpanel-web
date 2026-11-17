@@ -8,14 +8,8 @@ setup. This page covers the lower-level knobs.
 
 ## First-time setup
 
-When you start FXServer with the sxPanel build in place, the console prints a
-setup URL. Open it to create your account and link your server — no manual config
-files required.
-
-<Callout>
-  Start FXServer **without** `+exec server.cfg`. sxPanel starts automatically and
-  manages the server lifecycle for you.
-</Callout>
+Creating your account, linking a server data folder and deploying a recipe are
+covered in [First-Time Setup](/docs/setup).
 
 ## Environment variables & advanced options
 
@@ -51,10 +45,5 @@ whitelist changes and other panel activity in real time.
 
 ## Migrating from txAdmin
 
-sxPanel is a drop-in replacement. To migrate:
-
-1. Replace the `monitor/` folder in your FXServer artifacts with the sxPanel build.
-2. Keep your existing `txData` directory in place — it works without modification.
-3. Restart FXServer.
-
-See the [Quick Start](/docs/quick-start) for the full walkthrough.
+Moving an existing txAdmin install over is covered in
+[Migrating from txAdmin](/docs/migrating-from-txadmin).

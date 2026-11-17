@@ -1,0 +1,366 @@
+---
+title: First-Time Setup
+description: The Server Setup wizard, using an existing server data folder or deploying a recipe, every wizard step, the recipe format and task reference, and what the deployer writes.
+---
+
+After you register the master account, sxPanel still has no game server to run. The **Server Setup** wizard fixes that: you either point sxPanel at a server data folder you already have, or you let the deployer build a new one from a *recipe* (a YAML file that downloads resources, writes files and optionally prepares a database). This page covers both paths, the deployer, and the recipe format.
+
+## Where to find it
+
+| | |
+| --- | --- |
+| Setup wizard | **Server Setup**, `/server/setup` |
+| Deployer | **Server Deployer**, `/server/deployer` |
+
+You do not need to navigate there. Until a server is configured, opening the panel's dashboard sends you to `/server/setup`, and while a deployment is in progress it sends you to `/server/deployer`. Each page redirects to the other (or to the dashboard) when it is not the right one for the current state.
+
+You can return to the wizard later with **Settings → FXServer → Reset**. This clears the server data path (it does not delete resources or databases) and opens **Server Setup** again.
+
+## Who can use it
+
+Both pages are for the master admin only.
+
+| Action | Needs |
+| --- | --- |
+| Open **Server Setup** or **Server Deployer** | The master admin account (`master`). Others see `You need to be the admin master to use the setup page.` or `You need to be the admin master to use the deployer.` |
+| Validate and save in the wizard | The master account or **All Permissions** (`all_permissions`). Others see `You need to be the admin master or have all permissions to use the setup page.` |
+| Every deployer action (confirm recipe, set variables, commit, cancel, go back) | The master account. Others are refreshed back to the panel. |
+
+The wizard is not available from the in-game menu.
+
+## Choosing a path
+
+The wizard first asks for a **Server Name** (skipped if one is already stored), then for a **Deployment Type**.
+
+| Type | Use it when | What happens at the end |
+| --- | --- | --- |
+| **Popular Recipes** (marked **RECOMMENDED**) | You have no server yet and want a ready-made framework. | Opens the deployer with the chosen community recipe, treated as trusted. |
+| **Existing Server Data** | You already have a server data folder with a `server.cfg` and `resources/` (for example from txAdmin). | Saves the paths, starts the server and opens the live console. Nothing is deployed. |
+| **Remote URL Template** | You have the URL of a recipe YAML file. | Opens the deployer with that recipe, treated as untrusted. |
+| **Custom Template** | You want to write your own recipe. | Opens the deployer with a blank placeholder recipe that you edit on the review step. |
+
+## The wizard
+
+A progress bar at the top shows four steps. For **Existing Server Data** they are **Server Name**, **Type**, **Data Folder**, **CFG File**. For the other types they are **Server Name**, **Type**, **Template**, **Deploy Target**. If a server name is already stored, the first step is hidden and the wizard starts at **Type**.
+
+Every step except the first has a back arrow beside its heading.
+
+### Server Name
+
+Choose a name for your server. You can change it later in Settings. The placeholder is `Happy Server`. **Next** unlocks at 3 characters and the box stops at 22.
+
+<Callout>
+  The saved setting `general.serverName` is limited to 18 characters, but this
+  box accepts up to 22. A name of 19 to 22 characters passes the wizard and is
+  then rejected when saving, with **Error saving the configuration file**.
+  Keep the name at 18 characters or fewer.
+</Callout>
+
+### Popular Recipes
+
+**Select a Template** shows a grid of recipe cards. Each card has the recipe name, a `by <author> · v<version>` line when known, the description, and tags (`fivem`, `redm` and others).
+
+The list is fetched by your browser, not by the server, with a 10 second timeout:
+
+- The community index at `citizenfx/txAdmin-recipes` on GitHub (`indexv4.json` on standard servers, `indexv5.json` on FiveM Enhanced gen9).
+- On standard (gen8) servers, official recipes from the framework projects' own GitHub organisations that the index does not list (see the table below). An index entry with the same URL wins.
+- If the host sets `TXHOST_GAME_NAME` to `fivem` or `redm`, only recipes tagged with that game are shown.
+
+Recipes built for a different deployer engine than the one in your sxPanel are greyed out, tagged **INCOMPATIBLE**, and cannot be selected. sxPanel's engine version is `3`.
+
+| Recipe | Game | Source |
+| --- | --- | --- |
+| QBCore Framework | FiveM | `qbcore-fivem/txAdminRecipe` |
+| Kora Framework (Alpha) | FiveM | `KoraFiveM/txAdminRecipe` (early alpha, may not deploy cleanly) |
+| ox_core | FiveM | `overextended/txAdminRecipe` |
+| ND Core | FiveM | `ND-Framework/txadmin-recipe` |
+| RSG Core | RedM | `Rexshack-RedM/txAdminRecipe` |
+| TPZ-CORE | RedM | `TPZ-CORE/TPZ_txAdmin` (requires Steam) |
+| RedEM:RP | RedM | `RedEM-RP/txAdminRecipe` |
+| RPX Framework | RedM | `RPX-RedM/txAdminRecipe` |
+| QBR Core (QBCore RedM) | RedM | `qbcore-redm/txAdminRecipe` |
+
+The upstream index adds more entries, which change independently of sxPanel. If the index cannot be loaded you see `Failed to load recipes index: <error>`, or `Request timed out while loading recipes.` after 10 seconds. The page shows `Loading recipes…` meanwhile.
+
+Clicking a card selects it and moves to **Deploy Target**.
+
+### Remote URL Template
+
+Paste the URL of a raw recipe YAML file (placeholder `https://raw.githubusercontent.com/...`) and click **Validate**. A red notice warns that a recipe is executable configuration, including SQL, and that a malicious one can compromise your server or database. Load only recipes you trust.
+
+The server downloads the file (4.5 second timeout), parses it, and shows the recipe's name on later steps. The URL is checked first:
+
+- It must be `https:`. Plain `http:` is allowed only for `localhost`, `127.0.0.1` and `::1`.
+- It cannot contain a username or password.
+- Hosts that are private, link-local, shared (CGNAT) or cloud-metadata addresses are refused.
+
+Failures read `Recipe error: <reason>`, for example `Recipe error: Invalid recipe URL`, or `invalid yaml`, or `Recipe validation failed:` followed by the failing fields.
+
+### Custom Template
+
+Explains that you will write or paste the recipe in the deployer editor on the next page. **Next** goes to **Deploy Target**. The page links to a recipe reference, which is the [Recipe format](#recipe-format) section below.
+
+### Existing Server Data: Data Folder
+
+Enter the absolute path of the folder that contains `resources/` (and usually `server.cfg`), for example `/path/to/server-data`. Click **Validate**.
+
+Paths are cleaned first: backslashes become slashes, repeated slashes collapse and a trailing slash is dropped. A path must be absolute (a drive letter like `c:/` on Windows, a leading `/` on Linux), must not use the `\\?\` extended form, and must not contain unresolved parts such as `/../`. Otherwise you see `Invalid path: <reason>`.
+
+The folder must contain a `resources` subfolder, and that folder cannot be empty. Common mistakes get a specific message:
+
+- If you entered the `resources` folder itself, sxPanel tells you to remove the `resources` part.
+- If the `resources` folder is missing or unreadable, the message names the folder.
+
+When the path is wrong but a nearby folder is right (the parent, a sibling, a child, or the path before `/resources`), a warning shows `Suggestion:` with the path and an **Accept Fix** button. It fills in the path and validates it again.
+
+On success the wizard looks for a config file in the folder, trying `server.cfg`, `server.cfg.txt`, `server.cfg.cfg`, `server.txt` and `server`, and pre-fills the next step with the first one it finds.
+
+### Existing Server Data: CFG File
+
+Enter the config file name, relative to the data folder (placeholder `server.cfg`), then **Validate**. sxPanel reads the file and every file it `exec`s, and fails with `The file path is correct, but there are error(s) in your config file(s):` followed by the errors, or `Error: <message>.` when the file cannot be read.
+
+### Deploy Target
+
+For recipe-based types, **Deploy Target** asks where the new server's files go. The field is locked. It defaults to:
+
+```text
+<data path>/<recipe name>_<timestamp>.base
+```
+
+where the recipe name is stripped to letters and digits, cut to 12 characters and lowercased (`server` if empty), and `<data path>` is your `txData` folder (see [Installation](/docs/quick-start#where-data-is-stored)). Click **Change Path** to edit it. When you use `TXHOST_DATA_PATH`, a hint says the path is based on your custom data path.
+
+**Validate & Continue** checks the path:
+
+- It must be absolute, as above (`Invalid path: <reason>`).
+- Its parent folder must be writable: `Path is not writable due to missing permissions or invalid path.`
+- The folder must not exist or must be empty: `This folder already exists and is not empty!` (a leftover `.empty` file is ignored).
+
+### Ready to Go
+
+A summary of your choices: **Server Name:**, **Type:**, then **Data Folder:** and **CFG File:** for an existing server, or **Recipe:** and **Deploy Path:** for the others.
+
+- For an existing server, **Save & Start Server** saves the settings, starts FXServer and opens **Live Console** (`/server/console`). A running server is stopped first.
+- For recipe types, **Go to Recipe Deployer** starts the deployment and opens `/server/deployer`.
+
+Saving uses a long timeout and shows `Saving…`. If saving fails you see `Save failed.` or the specific message below the toast.
+
+### What saving does
+
+| Type | Writes | Log action |
+| --- | --- | --- |
+| Existing server | `general.serverName`, `server.dataPath`, `server.cfgPath`, then starts the server | `setup.local.save` |
+| Popular and Remote | `general.serverName`, then starts the deployer | `setup.deployer.import` |
+| Custom | `general.serverName`, then starts the deployer | `setup.deployer.custom` |
+
+Entries appear in the [Action Log](/docs/features) with the text `Changing global/fxserver settings via setup stepper.` or `Changing global settings via setup stepper and started Deployer.`. For an existing server, the data folder must still contain `resources/` at save time, otherwise you see **Server Data Folder error:** with the reason. If the server fails to start, the wizard shows the start error. For recipe types, the recipe is downloaded again at save time; a failure reads `Recipe download error: <reason>`. Only one deployment can run at a time (`Deployer is already running`).
+
+## The deployer
+
+The deployer runs a recipe in four stages. The header says **Server install** and `Deployment <id>`, and a stepper shows **Review**, **Variables**, **server.cfg** and **Deploy**.
+
+<Callout>
+  The stepper lists **server.cfg** before **Deploy**, but the real order is
+  Review, Variables, Deploy, then server.cfg. You edit `server.cfg` after the
+  files have been downloaded.
+</Callout>
+
+### Review
+
+Shows the recipe name, a badge (**Trusted** for Popular Recipes, **Untrusted** for Remote URL and Custom), the author and the full `Deploy path:`. Untrusted recipes show `Untrusted source — inspect the raw recipe before continuing.`
+
+The recipe's description is rendered as Markdown. **Show raw recipe** opens a YAML editor with the full recipe. You can edit it, and what you leave in the editor is what runs. For a Custom Template this is where you write your recipe: it starts with a placeholder that only waits ten seconds and must be replaced.
+
+- **Continue** parses your recipe and creates the deploy folder. Parse errors appear as a toast: `Cannot start() deployer due to a Recipe Error: <reason>`, or `Failed to create <path> with error: <reason>`.
+- **Back** is shown, but Review is the first stage, so it fails with `Cannot go back from this step.`
+- **Cancel** discards the deployment and returns to the wizard.
+
+### Variables
+
+Fills in the values the recipe needs. The page title is **Variables & credentials**. Fields shown:
+
+| Field | Shown when | Notes |
+| --- | --- | --- |
+| **License key** (`sv_licenseKey`) | Always | Required. Placeholder `cfxk_xxxxxxxxxxxxxxxx_xxxxxxxx`. Get a key from the Cfx.re portal. Must match the new `cfxk_..._...` format or the old 32-character format, otherwise `The Server License does not appear to be valid.` Pre-filled from `TXHOST_DEFAULT_CFXKEY`. |
+| **Host**, **Port**, **Username**, **Password**, **Database** | The recipe contains a task with `database` in its action name | Defaults come from `TXHOST_DEFAULT_DBHOST`, `DBPORT`, `DBUSER`, `DBPASS`, `DBNAME`, otherwise `localhost`, `3306`, `root`, empty and the deployment id. |
+| **Delete existing database if present** | Same as above | Drops the database before creating it. Unchecked by default. |
+| **Personal access token** | The recipe sets `$requiresGithubToken` | GitHub token (`ghp_...`) used for private repositories. |
+| One field per recipe variable | The recipe has a `variables` section | Labelled with the variable name and pre-filled with its default. |
+
+A yellow line lists what is missing (`License key required.`, `Complete MySQL fields.`, `GitHub token required.`). It is a hint, not a lock: the server does the checking. If any host default was applied, an info box says `Some fields were auto-filled from your host — double-check before continuing.`
+
+When the recipe uses a database, sxPanel opens a test connection (5 second timeout) before starting. A failure reads **Database connection failed:** with the reason. `ECONNREFUSED` adds a hint to install XAMPP on Windows or MySQL/MariaDB on Linux, and reminds you if you are not using port 3306. An invalid port reads `The database port is invalid (non-integer). The default is 3306.`
+
+You can use a GitHub token typed here, or set the `TXADMIN_GITHUB_TOKEN` environment variable on the host.
+
+**Continue** starts the deployment (logged as `deployer.recipe.run`). **Back** returns to Review and **Cancel** discards.
+
+Besides your inputs, sxPanel supplies these values to the recipe automatically:
+
+| Variable | Value |
+| --- | --- |
+| `maxClients` | `TXHOST_MAX_SLOTS` if set, otherwise `48` |
+| `serverEndpoints` | `endpoint_add_tcp` and `endpoint_add_udp` lines for `0.0.0.0:30120`, or for `TXHOST_INTERFACE` and `TXHOST_FXS_PORT` (30120 if only the interface is set) with a `do not modify!` comment |
+| `addPrincipalsMaster` | `add_principal` lines giving group `admin` to your account's Cfx.re and Discord identifiers, or a comment saying none are available |
+| `dbConnectionString` | `mysql://user:password@host[:port]/database?charset=utf8mb4`, only for recipes with a database |
+| `deploymentID`, `serverName`, `recipeName`, `recipeAuthor`, `recipeDescription` | Details of this deployment |
+
+### Deploy
+
+Shows the deploy path, a status pill (**Running**, **Done** or **Failed**), a **Progress** bar and a `deployer output` log. The page polls every second. If it loses contact with the server it retries with a growing delay and gives up after 10 failures with `Lost connection to the server after multiple retries.`
+
+Tasks run one after another in order; each logs `Running [task1:download_github]...` and ends with ✔️ and its duration, or ❌. After all tasks finish, sxPanel:
+
+1. Checks that the deploy folder has a `resources` folder and a `server.cfg` file.
+2. Replaces every `{{variable}}` in `server.cfg` with its value.
+3. For recipes with `$steamRequired`, adds `set sv_enforceSteamAuth true` to `server.cfg` unless the recipe already sets that convar.
+4. On Windows, opens the deploy folder in Explorer.
+
+If a task times out or fails, or a check fails, the deployment is marked failed: a file named `_DEPLOY_FAILED_DO_NOT_USE` is written into the folder and the log shows `Task Failed: <reason>`, the task's options and a debug line. Do not use that folder. **Back** returns to Variables, clearing the log, so you can fix the inputs and run again. **Cancel** is disabled while the recipe is running. **Continue** appears when it finishes.
+
+### server.cfg
+
+The final step opens the generated `server.cfg` in an editor. An info box reminds you that the public server list no longer reads the server name, description, tags, language or banners from `server.cfg`; set them in the Cfx Portal or the server will be listed as "Missing server data".
+
+If the file is missing or empty, the editor shows a `server.cfg Not Found!` comment instead. If it is larger than 10 KB, the editor shows a notice that the recipe probably created the wrong file. Do not save those placeholders.
+
+- **Save & start server** validates the config (and the files it `exec`s), saves it with a backup, then writes `server.dataPath` (the deploy folder), `server.cfgPath` (`server.cfg`) and `server.onesync`. If the recipe declares `$onesync`, that value is used; otherwise the setting is reset to its default. A running server is stopped (`STOP SERVER`, logged `server.stop`), FXServer starts, and you land on **Live Console**. Logged as `deployer.commit`.
+- Config errors appear as `Cannot save server.cfg due to error(s) in your config file(s):` followed by the errors.
+- If the config is saved but FXServer fails to start, you see `Config file saved, but failed to start server with error:` and stay on this step.
+- **Discard** cancels the deployment.
+
+A successful deploy then triggers the post-install guided tour in the panel.
+
+## Recipe format
+
+A recipe is a YAML document. It is parsed with the JSON-compatible YAML schema and then validated.
+
+```yaml
+$engine: 3
+$minFxVersion: 5894
+$onesync: on
+name: Example
+author: you
+description: Shown on the review step (Markdown).
+variables:
+  greeting: hello
+tasks:
+  - action: download_github
+    src: https://github.com/citizenfx/cfx-server-data
+    ref: master
+    dest: ./tmp/cfx
+  - action: move_path
+    src: ./tmp/cfx/resources
+    dest: ./resources
+  - action: write_file
+    file: ./server.cfg
+    data: |
+      {{serverEndpoints}}
+      sv_licenseKey {{svLicense}}
+      sv_maxclients {{maxClients}}
+      {{addPrincipalsMaster}}
+```
+
+### Top-level keys
+
+| Key | Meaning |
+| --- | --- |
+| `$engine` | Integer. Must be at least `3`, otherwise the recipe is rejected with `unsupported '$engine' version <n>`. |
+| `$minFxVersion` | Integer FXServer build number the recipe needs. |
+| `$onesync` | `off`, `legacy` or `on`. Applied to the server's OneSync setting on **Save & start server**. |
+| `$steamRequired` | Only `true` is accepted. Adds `sv_enforceSteamAuth` to `server.cfg`. |
+| `$requiresGithubToken` | Only `true` is accepted. Shows the GitHub token field. |
+| `name`, `author`, `description` | Shown on the review step. Default to `unnamed`, `unknown` and empty. |
+| `variables` | Map of names to default values, shown as extra inputs on the Variables step. The names `licenseKey`, `dbHost`, `dbUsername`, `dbPassword`, `dbName`, `dbConnection` and `dbPort` are reserved: using one fails with `recipe variables cannot use reserved names (licenseKey, db*)`. |
+| `tasks` | List of tasks. Required. |
+
+Each task has an `action` and its own options, plus an optional `timeoutSeconds` (positive integer) that overrides the action's default time limit. Unknown actions fail with `[task<n>] unknown action '<name>'` and bad options with `[task<n>:<action>] invalid parameters`.
+
+### Paths and variables
+
+Task paths are relative to the deploy folder. Paths that contain `..` are refused, paths that escape the deploy folder are blocked (`Path traversal blocked`), and zip entries with absolute paths or that would escape the destination are rejected. Where a table says the path cannot be the root, `.` is refused.
+
+`{{name}}` placeholders are replaced by `replace_string` in `template` and `all_vars` modes and, for the whole `server.cfg`, at the end of the deployment. Any recipe variable, user input or automatic value from the Variables step can be used.
+
+### Task actions
+
+| Action | Options | Default time limit |
+| --- | --- | --- |
+| `download_file` | `url`, `path` (target file, not a folder). Follows up to 5 retries. | 180 s |
+| `download_github` | `src` (`owner/repo`, a `github.com` URL or `@owner/repo`), `dest` (not root), optional `ref` (branch, tag or commit; the repository's default branch if omitted) and `subpath`. Uses the GitHub token if one was given. | 180 s |
+| `unzip` | `src`, `dest` | 180 s |
+| `move_path` | `src`, `dest`, optional `overwrite` (`true`) | 180 s |
+| `copy_path` | `src`, `dest`, optional `overwrite` (`true`), optional `filter` (glob matched against file paths; folders are always copied) | 180 s |
+| `remove_path` | `path` (not root, cannot remove the deploy folder itself) | 15 s |
+| `ensure_dir` | `path` (not root) | 15 s |
+| `write_file` | `file`, `data` (non-empty), optional `append` (`true`) | 15 s |
+| `replace_string` | `file` (one path or a list), plus `mode` and options below | 15 s |
+| `load_vars` | `src`, a JSON file whose keys become variables | 5 s |
+| `connect_database` | none. Uses the database inputs; creates the database (dropping it first if **Delete existing database** was ticked) and selects it. | 30 s |
+| `query_database` | Either `file` (a SQL file) or `query` (a string), not both. Requires an earlier `connect_database`. | 90 s |
+
+`replace_string` modes:
+
+| `mode` | Behaviour |
+| --- | --- |
+| omitted or `template` | `search` is a regular expression; `replace` has `{{variables}}` filled in |
+| `literal` | `search` is matched as plain text |
+| `all_vars` | Replaces every `{{variable}}` in the files; `search` and `replace` are not used |
+
+Downloads (`download_file`, `download_github`) refuse any URL that is not `http` or `https`, or whose host resolves to a loopback, private, link-local, shared or cloud-metadata address.
+
+## Headless deployer
+
+The same engine can run without the panel through `core/deployer/headless.ts` in the sxPanel source. It skips the review step and has no GitHub token field (use `TXADMIN_GITHUB_TOKEN`).
+
+| Option | Meaning |
+| --- | --- |
+| `--recipe <path or URL>` | Recipe file or `https:` URL. Required. |
+| `--target <path>` | Folder to deploy into. Required. |
+| `--name <name>` | Server name. Default `headless-deploy`. |
+| `--var key=value` | Sets a variable. Repeat for several. |
+| `--trusted` | Marks the recipe as trusted. |
+
+It prints the deployment log and exits with a non-zero code if the deployment fails.
+
+## How it connects
+
+- Setup and deployer actions are written to the Action Log with the ids named above.
+- After setup, the dashboard, [Live Console](/docs/features) and the rest of the panel become available. Server settings written here (`server.dataPath`, `server.cfgPath`, `server.onesync`) can be changed later under **Settings → FXServer**.
+- `TXHOST_DATA_PATH`, `TXHOST_GAME_NAME`, `TXHOST_MAX_SLOTS`, `TXHOST_INTERFACE`, `TXHOST_FXS_PORT` and the `TXHOST_DEFAULT_*` variables change the wizard's defaults as described above. See [Configuration](/docs/configuration).
+- Creating the master account comes first: see [Installation](/docs/quick-start).
+
+## Problems
+
+### The Server Setup page shows "Setup Error"
+
+You are not signed in as the master admin. Sign in with that account.
+
+### The wizard keeps redirecting to the deployer, or the other way round
+
+A deployment is in progress. Finish it or press **Cancel** on the deployer to start again from the wizard.
+
+### `Error saving the configuration file`
+
+Usually the server name is longer than 18 characters. Shorten it.
+
+### `The provided directory does not contain a resources subdirectory.`
+
+You pointed at the wrong folder. Use the folder that contains `resources/`, not `resources` itself. Use the suggestion if one appears.
+
+### `This folder already exists and is not empty!`
+
+Pick a new deploy path or empty the folder.
+
+### `Task Failed: timed out after <n>s.`
+
+The task hit its time limit. Raise it with `timeoutSeconds` on that task in the recipe, or check your network.
+
+### `Deploy validation error: this recipe didn't create a 'resources' folder.` or `...'server.cfg' file.`
+
+The recipe finished without creating both. The recipe is incomplete or broken; contact its author.
+
+### `Recipe download error: ...`
+
+The server could not fetch the recipe. Check the URL and that the host can reach it.
+
+See also [Troubleshooting](/docs/troubleshooting).

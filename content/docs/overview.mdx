@@ -1,0 +1,343 @@
+---
+title: Overview dashboard
+description: The sxPanel home page — server controls, players, stats, console tail, performance charts, the top bar and the players sidebar.
+---
+
+The Overview dashboard is the first page you see after signing in. It shows
+whether the server is up, who is online, how healthy the server is, and gives
+you the buttons to start, stop and restart it. Every admin sees it; individual
+cards hide or disable themselves based on your permissions.
+
+![Overview dashboard with server controls, players online, server stats, mini console, thread histogram and performance chart](/docs/overview.webp)
+
+## Where to find it
+
+**Overview → Dashboard** in the navigation, at `/`.
+
+Until the server is configured, the dashboard redirects you instead of showing
+cards: to `/server/setup` on a fresh install, or to `/server/deployer` while a
+recipe deploy is in progress. See [Setup](/docs/setup).
+
+The page is built from these parts, top to bottom:
+
+1. Three cards side by side: **Server Controls**, **Players Online**, **Server Stats**.
+2. **Live Console** (mini tail).
+3. **`svMain` Performance** (thread histogram) beside **Server Performance** (timeline chart).
+4. **Recent Admin Actions** beside **Online Staff**.
+5. Cards added by [addons](/docs/addons), if any.
+
+On narrow screens the cards stack vertically. The thread histogram sits beside
+the timeline chart only on wide (`xl`) screens.
+
+## Who can use it
+
+The page itself needs no permission. Some cards do.
+
+| Card or control | Permission | Without it |
+| --- | --- | --- |
+| Start, Stop, Restart, Kick All, Schedule, Cancel | **Start / Stop / Restart Server** (`control.server`) | Buttons are greyed out. |
+| Announce | **Send Announcements** (`announcement`) | Button is greyed out. |
+| Live Console | **Console: View** (`console.view`) | The card is not shown. |
+| Recent Admin Actions | **View System Logs** (`txadmin.log.view`) | The card is not shown. |
+
+Everything else (players, stats, charts, online staff) is visible to every
+signed-in admin. See [Permissions](/docs/permissions) for how permissions are
+granted.
+
+## Server Controls
+
+The card header shows a status pill:
+
+| Pill | Meaning |
+| --- | --- |
+| **Online** (green, pulsing) | The server process is running and its health check reports `ONLINE`. |
+| **Degraded** (amber, pulsing) | The process is running but the health check does not report `ONLINE` (for example while it is booting, or the HTTP health check only partly passes). |
+| **Offline** (grey) | The server process is not running. |
+
+If the server has not been configured yet, the card shows "Server not
+configured yet." instead of controls.
+
+### Start, Stop and Restart
+
+The large left button is **Start** when the server is idle and **Stop** when it
+is running. **Restart** is next to it and is only enabled while the server
+process is alive. All three need `control.server`.
+
+- **Start** runs immediately, with no confirmation. It fails with "The server is already running. If it's not working, press RESTART." if the server is not idle.
+- **Stop** asks "Are you sure you want to stop the server?" and then kills the server. If it is already stopped you get "The server is already stopped."
+- **Restart** asks "Are you sure you want to restart the server?". When the configured restart spawn delay is longer than 10 seconds, the panel returns a warning, "The server is will restart with delay of …", and the restart continues in the background. A restart that is already waiting out its delay is rejected with "A restart is already in progress, with a delay of …".
+
+Each action is written to the Action Log as `START SERVER`, `STOP SERVER` or `RESTART SERVER`. The same buttons exist in the top bar (icon only) so you can use them from any page.
+
+### Next restart
+
+The **Next restart** row shows when the next automatic restart will happen, taken from the restart schedule and interval in **Settings → FXServer** (**Restart Schedule** and **Restart Interval**).
+
+| Shows | Meaning |
+| --- | --- |
+| **None** | Nothing is scheduled. |
+| A time such as `3h 20m` (amber) | Time left until the next scheduled restart. |
+| A time in blue | The restart comes from a temporary schedule you set with **Schedule**. |
+| **Now** | The restart is less than a minute away. **Schedule** and **Cancel** are disabled. |
+| **Skipped** (struck through) | The next restart was cancelled. |
+
+The scheduler checks once a minute, aligned to the start of the minute, so
+restarts have one-minute precision.
+
+### Announce
+
+Opens a **Send Announcement** dialog ("Type the message to broadcast to all players."). The message is required. It needs `announcement` and a running server.
+
+On submit the panel:
+
+- shows the message to all players in game and raises the `txAdmin:events:announcement` event (see [Events API](/docs/events-api));
+- posts the announcement to Discord when the Discord bot is configured (see [Discord](/docs/discord));
+- logs `Sending announcement: <message>` in the Action Log.
+
+If the server is stopped the panel answers "The server is not running."
+
+### Kick All
+
+Opens a **Kick All Players** dialog ("Type the kick reason or leave it blank (press enter)."). It needs `control.server` and a running server. There is no second confirmation, so pressing Enter with an empty reason kicks everyone straight away using the default "unknown reason" kick message.
+
+Every connected player is kicked with the *everyone* kick message and your reason, the action is logged as `Kicking all players: <reason>`, and addons receive the `playerKicked` event with target `-1`.
+
+### Schedule and Cancel
+
+**Schedule** sets a one-off restart. The dialog title is "When should the server restart?" and it accepts exactly one time:
+
+| Input | Meaning |
+| --- | --- |
+| `+15` | In 15 minutes. Any whole number from `1` to `1439`. |
+| `23:30` | At 23:30 server time. Hours `0`–`23`, minutes `0`–`59`. If that time already passed today it means tomorrow. |
+
+Quick suggestions `+5`, `+10`, `+15` and `+30` are offered in the dialog. The button reads **Schedule** when nothing is scheduled and **Edit** when a restart is already queued.
+
+Rules:
+
+- Lists such as `10:00,12:00` are rejected with "Invalid scheduled restart time. This field only accepts one restart time (for example +15 or 23:30)."
+- Anything else malformed shows "Invalid schedule time: …".
+- An absolute time in the current minute is rejected: "Due to the 1 minute precision of the restart scheduler, you cannot schedule a restart in the same minute."
+- A temporary schedule replaces the configured schedule and interval for that one restart. If it is later than the next configured restart, the configured restart is postponed.
+- Times are server time, not your browser's time zone.
+
+**Cancel** skips the next restart. It is enabled only when a restart is scheduled, not already skipped, and not due within the minute. Cancelling a temporary schedule removes it; cancelling a configured restart skips only that occurrence. The tooltip reads **No restart to cancel**, **Restart already cancelled** or **Cancel next restart** depending on state.
+Both actions need `control.server`, and are logged as **Schedule Restart** (`scheduler.restart.schedule`) and **Skip Scheduled Restart** (`scheduler.restart.skip`). The addon event `txAdmin:events:scheduledRestartSkipped` fires when a restart is cancelled.
+
+### Scheduled restart behaviour
+
+- Players receive an in-game warning, and Discord an announcement, at 30, 15, 10, 5, 4, 3, 2 and 1 minutes before the restart (`txAdmin:events:scheduledRestart`).
+- The restart is skipped, not postponed, if the server has been up for less than **Boot Grace Period** seconds (default `45`, minimum `15`).
+- When the server stops, any temporary schedule is cleared, and if the next scheduled restart is less than 2 hours away it is skipped, so a server you just stopped and started does not restart immediately.
+- Changing the schedule or interval in settings clears any temporary schedule and skip. Changing **Restart Interval** also restarts its countdown.
+- The actual restart is logged as **Scheduled Restart Triggered** (`scheduler.restart.execute`).
+
+| Setting | What it does | Default | Limits |
+| --- | --- | --- | --- |
+| **Restart Schedule** (`restarter.schedule`) | Times of day to restart. | none | `HH:MM` values; invalid entries are dropped |
+| **Restart Interval** (`restarter.intervalHours`) | Restart every N hours of uptime. If both are set, whichever comes first triggers. | `0` (off) | Whole number, `0` or more |
+| **Boot Grace Period** (`restarter.bootGracePeriod`) | Seconds after boot during which scheduled restarts are skipped. | `45` | Whole number, `15` or more |
+
+See [Configuration](/docs/configuration) for the config file keys.
+
+## Players Online
+
+A large live player count, a 24-hour sparkline, and a drop summary.
+
+- The sparkline plots player counts from the performance log (up to 120 points over the last 24 hours). With fewer than two points it shows "Not enough data yet".
+- **Drops (last 6h)** shows the total number of players who left in the last six hours, followed by a coloured count per reason: **Player**, **Resource**, **Timeout**, **Crash**, **Security** and **Unknown**. The counts update live when a player drops.
+
+Details of drops live on the Player Drops page.
+
+## Server Stats
+
+Six tiles, with a heading that says how fresh they are: **(live)**, **(minutes ago)** when the last update is more than a minute old, or a time such as `14:35` when you are hovering the performance chart.
+
+| Tile | Meaning |
+| --- | --- |
+| **Uptime** | How long the current server process has been up, in days, hours and minutes. `--` when unknown. |
+| **Availability (24h)** | Share of the last 24 hours the server was up, from the performance log. Capped at 100%. |
+| **Median Players (24h)** | Median of the player counts recorded in the performance log. |
+| **FXServer Memory** | Memory used by the FXServer process, in MB. |
+| **Node.js Memory** | Memory used by the server's Node.js runtime, in MB, with a percentage and a bar when a limit is known. Hover for exact `used / limit` values. |
+
+The Node.js tile turns amber above 70% of the limit and red above 85%. If data is older than 2.5 minutes, or the server has not reported yet, a spinner is shown instead of tiles. The availability and median tiles need the performance chart's data, so they stay `--` until at least 30 minutes of data exist (see [Limits](#limits-and-edge-cases)).
+
+## Live Console
+
+A read-only tail of the last 60 lines of the server console, without timestamps. It shows "Waiting for console output…" until output arrives. **Open console →** goes to **Server → Live Console** (`/server/console`), where you can search, filter and run commands. The card only appears with `console.view`.
+
+## Performance
+
+### Thread histogram
+
+The card is titled after the selected thread, for example **svMain Performance**, with a thread picker (`svMain`, `svSync`, `svNetwork`). It shows how the server spent its time over the last minute across 15 tick-duration buckets (for example `< 2 ms`, `6–8 ms`, `> 250 ms`). Each row has the bucket label, a bar, and the percentage of time spent in that bucket. Hover a row for the percentage and the tick count. Bars use a green-to-red scale relative to that thread's tick budget, so red means ticks that were too slow.
+
+While you hover the performance chart, the histogram freezes on the snapshot under your cursor, shows that moment's time in the header, and hides the picker.
+
+Data appears shortly after the server is online. Before that you see "Data not yet available. The thread performance chart will appear soon after the server is online."
+
+### Server Performance chart
+
+A timeline of the whole performance history, one lifespan per server run.
+
+Header controls:
+
+| Control | What it does |
+| --- | --- |
+| **Players** | Toggles the player-count line (on by default). |
+| **FXS Mem** | Toggles FXServer memory (off by default). |
+| **Node Mem** | Toggles Node.js memory (off by default). Memory series share one MB axis. |
+| Thread picker | Chooses `svMain`, `svSync` or `svNetwork` (default `svMain`). |
+
+Reading the chart:
+
+- The coloured area is the time spent on slow ticks. The legend states the thresholds for the selected thread: strained above the tick budget and severe above twice the budget. The budgets are 50 ms for `svMain`, 8 ms for `svSync` (8.3 ms rounded) and 10 ms for `svNetwork`, so the legend reads `> 50ms` / `> 100ms`, `> 8ms` / `> 16ms` and `> 10ms` / `> 20ms`.
+- Each server run is drawn from its boot, with the reason the run ended written vertically at its right edge.
+- Hover to see a vertical and horizontal cursor with the player count. The thread histogram and Server Stats update to that moment.
+- Scroll to zoom (1× to 12×), drag to pan, or click the arrows at the edges to pan by 30% of the width. The initial view shows the last 30 hours.
+- If drawing fails the card shows "Render Error: …" with a **Retry** button.
+
+The chart reloads every minute. Messages you may see instead of the chart:
+
+| Message | Cause |
+| --- | --- |
+| There is not enough data to display the chart just yet. | Fewer than 30 minutes of server runtime data. |
+| Chart data loading failed: data not yet available. | The server has not produced performance data yet. |
+| Chart data loading failed: invalid thread name. | An unknown thread was requested. |
+| Chart data loading failed: bad request. | The request had no valid thread. |
+
+## Recent Admin Actions
+
+The latest 8 entries of the system log, newest first, live. Each row shows time, admin, a description and a category label. **View log →** or any row opens the Action Log (`/system/action-log`). Empty state: "No admin actions yet." Needs `txadmin.log.view`.
+
+## Online Staff
+
+Players currently connected who carry the **Staff** tag, up to 8, with their server ID and their highest-priority other tag. Click a player to open their profile; the count button and "+N more…" go to **Players → Players**. When nobody qualifies it shows "No staff online."
+## Addon widgets
+
+[Addons](/docs/addons) can place widgets on the dashboard (`dashboard.main`, in a row of cards that can be full, half or quarter width, and `dashboard.sidebar`). A widget that throws shows `Addon widget error: <title>` in place of the widget and does not affect the rest of the page. See the [Addon API](/docs/addon-api).
+
+## The top bar
+
+The top bar is on every page at desktop widths (the **mobile header** replaces it on narrow screens).
+
+| Element | What it does |
+| --- | --- |
+| Logo | Goes to the dashboard. |
+| Server name and player count | A green pulsing dot when the server is online (**Server online** / **Server offline** tooltip), the server name, and the live player count. |
+| Section tabs | **Overview**, **Players**, **Server**, **Analytics**, **Addons** and **System**. A section with one page is a link; with several, a dropdown. Pages you lack permission for, or that are switched off in **Settings → sxPanel → Panel Features**, are omitted. Addon pages appear under **Addons**. |
+| Start/Stop and Restart icons | Same actions as the dashboard card, hidden until the server is configured. |
+| Jump to page (magnifier) | Opens a search box (**Jump to a page…**). It filters by page or section name; **Enter** opens the first match, **Escape** closes it; "No matching pages" when nothing matches. |
+| Account menu | Your name, **Your Account**, **Appearance** (**Light**, **Dark** and any custom themes), **Support** (Discord), **Logout** (browser panel only), and any addon menu entries. |
+
+Hotkeys: **Ctrl+K** focuses the players sidebar filter and **Alt+L** toggles light/dark mode. They do not work while focus is inside an iframe.
+
+### Notices and reconnecting
+
+A coloured banner slides from the top of the screen when something needs attention. Hover it to expand its description and buttons. Only one is shown at a time, in this order:
+
+| Banner | Cause | What to do |
+| --- | --- | --- |
+| **Socket connection lost.** | The live connection to sxPanel dropped for more than half a second. | "If you closed FXServer, please restart it." The panel reconnects by itself when the server is back; there is no manual reconnect button. If the server shut down or restarted for an update, you are signed out and need to sign in again. |
+| **This version of sxPanel is outdated.** / **A patch (bug fix) update is available for sxPanel.** | A newer sxPanel release exists. Red for important updates, blue for patches. | **Download** opens the releases page, **Postpone** hides it for 12 hours (important) or 48 hours (patch). See [Updating](/docs/updating). |
+| **This version of FXServer is outdated.** / **An update is available for FXServer.** | A newer FXServer artifact exists. | Same buttons. It can be hidden permanently for all admins with **Hide FxServer Update** in **Settings → FXServer**. See [Updating](/docs/updating). |
+| **Addons need attention** | Addons are awaiting approval or need re-approval. Shown to admins with all permissions. | **Go to Addons** or **Dismiss**. See [Addons](/docs/addons). |
+
+Postponing one update notice postpones update notices of both kinds, because they share one timer in your browser.
+
+### Mobile header
+
+On narrow screens the top bar is replaced by a header with a menu button, the server name and count, a **Players** button with a player-count badge (capped at `99+`) that opens the players sidebar as a sheet, and the account menu.
+
+## Players sidebar
+
+In the browser panel, on wide screens, the right side of every page shows the live players list. It is not shown in the panel embedded in the in-game menu.
+
+- **Filter by Name or ID** is a fuzzy name search; typing only digits matches IDs that start with those digits first. Press **Escape** to clear, or **Ctrl+K** to focus. While a text filter is active the tag filter is disabled.
+- The filter button opens **Filter by Tag** (check any number of tags; players with any selected tag are shown), **Clear Filter**, and **Sort by**: **Join Order** (default) or **Tag Priority**.
+- A "Showing X of Y players." notice appears while filtered. Empty states are "No players online." and "No players to show."
+- Each row shows the name, server ID (`#12`) and the highest-priority tag. Click a row, or press Enter or Space, to open the player profile.
+- The chevron collapses the sidebar to a narrow strip with the count. Drag its left edge to resize between 220 and 480 pixels (at most half the window); double-click the edge to reset. Collapse state and width are remembered in your browser.
+
+Built-in tags are **Staff** (priority 10), **Problematic** (20) and **Newcomer** (30); lower numbers rank higher. Custom tags defined by you or by addons also appear here, unless disabled.
+
+## How to
+
+### Restart the server at a specific time once
+
+<Steps>
+<Step>
+
+On the dashboard, click **Schedule** in **Server Controls**.
+
+</Step>
+<Step>
+
+Enter `+30` for 30 minutes from now, or a time such as `04:00`, and click **Schedule**.
+
+</Step>
+<Step>
+
+Confirm the **Next restart** row shows the time in blue. Players are warned at 30, 15, 10, 5, 4, 3, 2 and 1 minutes out (once the remaining time reaches one of those values).
+
+</Step>
+</Steps>
+
+To call it off, click **Cancel**.
+
+### Warn players before a manual restart
+
+<Steps>
+<Step>
+
+Click **Announce**, type the message and send it.
+
+</Step>
+<Step>
+
+Wait, then click **Restart** and confirm.
+
+</Step>
+</Steps>
+
+### Find out why the server lagged
+
+<Steps>
+<Step>
+
+Pick the thread in the **Server Performance** header (start with `svMain`).
+
+</Step>
+<Step>
+
+Hover over the bad period. The **Players Online** values, **Server Stats** memory and the thread histogram all jump to that moment.
+
+</Step>
+<Step>
+
+Turn on **FXS Mem** or **Node Mem** to check for memory growth, and zoom in with the scroll wheel.
+
+</Step>
+</Steps>
+
+## Limits and edge cases
+
+- Performance history is stored in 5-minute snapshots, merged to 15 minutes after 12 hours and to 30 minutes after 24 hours, and trimmed beyond 96 hours. The chart needs at least 30 minutes of data.
+- Dashboard data older than 2.5 minutes is treated as expired, so the stats and histogram show a spinner after the server stops.
+- The Players Online sparkline, Availability and Median Players tiles are computed from the performance chart's data and are blank until it loads.
+- Online Staff, the players sidebar and the drop counts update live; the drop counts of the last 6 hours do not age out while the server is offline.
+- **Start** and **Restart** on a server you stopped are one-click and need no confirmation; **Stop** and **Restart** always ask.
+
+## Problems
+
+| Message | Cause and fix |
+| --- | --- |
+| You don't have permission to execute this action. | The account lacks `control.server` or `announcement`. Ask for the permission in the Admin Manager. |
+| The server is not running. | Announce and Kick All need a live server process. Start it first. |
+| The server is already running. If it's not working, press RESTART. | **Start** was clicked while the server is not idle. Use **Restart**. |
+| Invalid scheduled restart time. … | You entered more than one time. Enter a single `+MM` or `HH:MM`. |
+| Invalid schedule time: … | The value is not `+1`–`+1439` or a valid `HH:MM`. |
+| Due to the 1 minute precision of the restart scheduler, you cannot schedule a restart in the same minute. | You scheduled the current minute. Choose a later time. |
+| Socket connection lost. | See [Notices and reconnecting](#notices-and-reconnecting). |
+| Unknown Config State: … | The panel could not tell whether the server is configured. Reload the page. |
