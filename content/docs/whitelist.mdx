@@ -1,71 +1,368 @@
 ---
 title: Whitelist
-description: Control exactly who can join your server with a configurable whitelist workflow.
+description: Control who can join your server — the join workflows, the Whitelist page with players, requests and approvals, the application schedule, the server browser padlock, Discord review and webhooks.
 ---
 
-sxPanel's whitelist keeps unwanted players out without the overhead of a
-separate resource. It runs on the self-contained database and can be managed
-from the web panel, Discord, or your own scripts via [webhooks](#webhooks).
+The whitelist decides who is allowed to connect. You pick one **join workflow** (admins only, Discord server member, Discord role, manual review, or an external allowlist you run yourself), and sxPanel checks every connecting player against it. For manual review, the **Whitelist** page is where staff approve requests and manage the approved list. Server owners configure the workflow; staff with the whitelist permission run the day-to-day.
 
-## Whitelist workflows
+## Where to find it
 
-Whitelisting is workflow-based: you configure one or more workflows and pick a
-single **active workflow** — only one runs at a time, there is no "stacking"
-of multiple checks.
+| What | Where |
+| --- | --- |
+| Whitelist page | **Players → Whitelist** (`/whitelist`) |
+| Workflow, schedule and server browser text | **Settings → Whitelist** |
+| Join card wording | **Settings → Deferral Cards** |
+| Single player | **Add WL** / **Remove** in the player profile (see [Players](/docs/players#info)) |
+| Discord | `/whitelist member`, `/whitelist application`, `/whitelist request` |
 
-| Workflow type | How it works | Best for |
+![Whitelist page with the Players, Requests and Approvals tabs, export and import](/docs/whitelist.webp)
+
+The Whitelist page is a panel feature. If it is missing from the sidebar, turn the Whitelist page back on in **Settings → Panel Features** (reload the panel afterwards). It is on by default, and hiding the page does not stop the whitelist from being enforced.
+
+## Who can use it
+
+| Permission | What it allows |
+| --- | --- |
+| **Whitelist** (`players.whitelist`) | Approve, deny and remove entries on the Whitelist page, export and import, pre-approve identifiers, the player profile whitelist button, the `/whitelist` Discord commands and reaction approvals, and the whitelist analytics and config endpoints |
+| **Settings: View** (`settings.view`) / **Settings: Change** (`settings.write`) | See and change the **Settings → Whitelist** tab |
+
+Anyone who can open the page sees the three lists and the search box. Without **Whitelist** the **Actions** column, **Deny all**, **Export**, **Import** and the **Add identifier** row are hidden, so the lists are read only. The copy-identifier button stays. See [Permissions](/docs/permissions).
+
+On Discord, the person using the command or reacting must be a linked sxPanel admin with **Whitelist**; otherwise the bot replies with a permission error and nothing changes.
+
+## Join workflows
+
+Only one workflow is active at a time. They do not stack. The workflow is evaluated once, when a player connects, as part of the connection deferral. Nothing is re-checked while they are playing, so a player who loses a Discord role is only affected the next time they connect.
+
+When the **Whitelist** switch is off, every player passes the whitelist check. Bans still apply.
+
+| Workflow | Who gets in | Needs |
 | --- | --- | --- |
-| **Admin Only** | Only registered sxPanel admins can join | Maintenance and staging |
-| **Discord Member** | Player must be a member of your configured Discord server | Community servers |
-| **Discord Role** | Player must hold one of the configured Discord roles | Donators, verified members |
-| **Manual Review** | Players submit an application (optionally via a custom form); an admin approves or denies it, or approves via Discord | Closed betas, curated whitelists |
-| **External Whitelist** | sxPanel does not enforce joins itself — use this with a third-party allowlist resource; it only controls the server-browser padlock icon | Servers with their own whitelist resource |
-| **Disabled** | No whitelist check | Open servers |
+| **Disabled** | Everyone. | — |
+| **Admin-only (maintenance)** | Players whose identifiers belong to an sxPanel admin. | The player has a `license` or `discord` identifier. |
+| **Discord server member** | Players who are in your Discord server. | Discord bot enabled; the player has a `discord:` identifier. |
+| **Discord server roles** | Players in your Discord server who have at least one of the roles you list. | Discord bot enabled; at least one role. |
+| **Manual review (license)** | Players you have approved. Everyone else gets a request ID and waits. | The player has a `license` identifier. |
+| **External whitelist** | Everyone. sxPanel does not block anyone. | Your own allowlist resource or service. |
 
-<Callout title="Checked once, at connect time">
-  The active workflow is evaluated when a player connects (as part of the
-  connection deferral). Discord Member/Role checks are not re-verified on a
-  schedule afterward — a player who loses the role stays whitelisted until
-  their entry is manually revoked or they reconnect after the change.
-</Callout>
+### Admin-only
+
+Use this for maintenance or staging. A player is let in when their identifiers match an admin in the Admin Manager. A player with neither a `license` nor a `discord` identifier is turned away with a "missing ID" card, and a player who matches no admin gets the "admin-only denied" card.
+
+### Discord server member and roles
+
+The bot looks up the player's `discord:` identifier in the guild you configured on the Discord settings page. The player has to be running the Discord desktop app when they connect, or FiveM will not have a Discord identifier for them.
+
+For **Discord server roles**, the player must be in the guild and hold at least one of the listed roles. A player outside the guild gets the "not in guild" card; a member without any listed role gets the "missing role" card. If the lookup itself fails, the player is refused with a **Whitelist Error** card containing the error text, so a stopped bot locks these players out.
+
+### Manual review
+
+This is the workflow for closed communities. When a player without approval connects:
+
+1. sxPanel looks for an existing approval for any of their identifiers. If there is one, they join.
+2. If the schedule is closed, the player is refused with the closed message and no request is created. See [Application schedule](#application-schedule).
+3. Otherwise sxPanel creates a **request**, or reuses the player's open one, and refuses the connection with the **Not Whitelisted** card. The card shows the **request ID** (for example `R7K2M`) so the player can quote it to staff.
+4. A staff member approves the request. The player reconnects and is let in.
+
+An approved player is first stored as a **pending approval** and becomes a **whitelisted player** the moment they next connect and are let in. That connection also clears any open request they had and marks the player as whitelisted in their profile.
 
 <Callout>
-  There is no standalone "License allow-list" mode anymore. Servers migrating
-  from the legacy `approvedLicense` mode are converted to a **Manual Review**
-  workflow instead.
+  Approvals, requests and the player list are only consulted by **Manual
+  review**. They are kept when you switch workflows, but **Admin-only**,
+  **Discord** and **External** ignore them.
 </Callout>
 
-## Manual Review: forms, deferral cards & schedules
+### External whitelist
 
-The Manual Review workflow can use a custom application form, and rejected/
-pending connections show a customizable **deferral card** (per-scenario
-title, body template and branding) instead of a generic disconnect message.
-You can also restrict when applications can be submitted with a schedule
-(timezone, open windows, and a "closed" message).
+sxPanel lets everyone through and leaves enforcement to another resource. It still turns on the server browser padlock and instructions so players know the server uses an allowlist. The schedule and deferral card options are hidden for this workflow.
 
-## Managing entries
+## The Whitelist page
 
-- **From the panel** — open the Whitelist settings to configure workflows,
-  forms, deferral cards, schedules and webhooks, or manage individual entries
-  and pending applications.
-- **From Discord** — use `/whitelist member` to pre-approve a Discord member,
-  or `/whitelist application <id>` to approve a pending application by its ID
-  (e.g. `R1234`).
-- **From scripts** — subscribe to `txAdmin:events:whitelistPlayer` (fires
-  `{ action: 'added' | 'removed', license, playerName, adminName }`) via the
-  [Events API](/docs/events-api), or configure a webhook.
+The header shows the page title and a row of counters: **Players**, **Requests** and **Pending** (the counts of the three lists), plus, when there is data, **Approved %** (approved against approved plus denied requests), **Avg wait (s)** (average seconds between request and approval), **Stale 24h+** (requests still open after a day) and **Joined 7d** (approved players who connected for the first time in the last week). The analytics cover the last 30 days of events; applications are counted over their whole lifetime.
+
+The tabs below switch between the three lists. Each has a search box with a **Clear search** button and a count such as `12 of 340 players`.
+
+### Players
+
+The people who were approved and have connected at least once, newest first.
+
+| Column | What it shows |
+| --- | --- |
+| **Player** | Name and identifier (`license:…`, `discord:…`) |
+| **Approved by** | The admin who approved them, or `unknown` |
+| **Date** | When the approval was granted |
+| **Actions** | **Copy identifier**, and **Remove whitelist** (needs **Whitelist**) |
+
+Search matches name, identifier and approver, and the list shows 25 entries per page.
+
+**Remove whitelist** asks you to confirm "Remove whitelist approval for …?". It deletes the entry, and for a `license:` identifier it also clears the whitelist flag on the player's profile. The player is refused at their next connection. It is logged to the Action Log as **Remove Whitelist Approval**, fires the `entry.revoked` webhook, and sends the `whitelistPreApproval` event to your resources.
+
+**Export** downloads `whitelist-export.json`, a list of every entry (including pending approvals) with `name`, `identifier`, `approvedBy`, `tsApproved` and `source`.
+
+**Import** takes a JSON file that is an array of those objects. Only `identifier` is required. Rows with a missing or invalid identifier, and rows already on the list, are skipped. Imported rows are recorded as manual entries with the importing admin as approver unless `approvedBy` is set, and `tsApproved` (a Unix timestamp in seconds) is kept if present. An imported `license:` row without a `tsFirstConnect` is a pending approval and appears under **Approvals** until the player connects. It is logged as **Bulk imported N whitelist entries.** A file that is not a JSON array is rejected with **Invalid whitelist JSON file**.
+
+### Requests
+
+Players who tried to connect under **Manual review** and are waiting, newest first, 15 per page.
+
+| Column | What it shows |
+| --- | --- |
+| **Player** | The name they connected with |
+| **Request ID** | The `R` ID from their connection card |
+| **Discord** | Their Discord tag, when known |
+| **Last attempt** | The last time they tried to connect |
+| **Actions** | **Approve** and **Deny** |
+
+Search matches request ID, player name and Discord tag.
+
+- **Approve** turns the request into a pending approval for the player's license, marks the request approved, sends `whitelistRequest` with `action: 'approved'`, and fires the `application.approved` webhook. The log entry is **Approve Whitelist Request**. It does not need a confirmation.
+- **Deny** marks the request denied. Log entry **Deny Whitelist Request**, `whitelistRequest` with `action: 'denied'`, and the `application.denied` webhook. A denied player is not blocked. If they connect again they get a new request.
+- **Deny all** (visible when there are requests) asks "Are you sure you want to deny all N pending whitelist requests?". It denies every request whose last attempt is no newer than the newest one you were looking at, so a request that arrives while the dialog is open is left alone. Log entry **Deny All Whitelist Requests**, `whitelistRequest` with `action: 'deniedAll'`. It records an `application.denied` event per request but does not call the webhooks.
+
+### Approvals
+
+Identifiers that have been approved but whose owners have not connected yet. They are consumed automatically on first connect and then move to **Players**. Search filters the whole list in the browser, matching name, identifier and approver.
+
+| Column | What it shows |
+| --- | --- |
+| **Player** | Name (for Discord entries, the Discord tag) |
+| **Identifier** | The approved identifier |
+| **Approved by** | The admin who approved |
+| **Date** | When it was approved |
+| **Actions** | Remove (needs **Whitelist**) |
+
+Under the search box, the **Add identifier** row pre-approves someone before they ever connect. Enter `license:xxxx` or `discord:xxxx` and press **Add approval** or Enter. Any identifier type sxPanel recognises is accepted; anything else returns "Error: the provided identifier does not seem to be valid". For `discord:` identifiers sxPanel tries to fetch the member's tag and avatar when the bot is running; otherwise the name is shown as the shortened identifier.
+
+<Callout>
+  An approval matches on any identifier the connecting player has, so a
+  `discord:` approval works when the player connects with that Discord
+  identifier, even without a `license:` approval.
+</Callout>
+
+Removing an approval asks "Are you sure you want to remove this approval?" and logs **Remove Whitelist Approval**. Adding logs **Add Whitelist Approval**. Both fire `entry.granted` / `entry.revoked` and the `whitelistPreApproval` event.
+
+## Settings
+
+**Settings → Whitelist** holds the active workflow. Changing the workflow, schedule or instructions and pressing **Save** applies them immediately; the server browser values are pushed to the running server without a restart.
+
+| Setting | What it does | Default | Limits / values |
+| --- | --- | --- | --- |
+| **Whitelist** | Master switch. When off, nobody is checked. Choosing the **Disabled** workflow switches it off, and any other workflow switches it on. | Off | Enabled / Disabled |
+| **Join workflow** | The active workflow, one of the six described above. | Manual review | See [Join workflows](#join-workflows) |
+| **Allowlist instructions** | Plain text shown in the server browser's allowlist panel (the `sv_allowlistInstructions` convar). Shown for every workflow except **Disabled**. | Empty | Required whenever the whitelist is enabled; max 512 characters |
+| **Discord review channel** | **Manual review** only, optional. Channel ID where each new request opens a review thread. | Empty | A Discord ID (17–20 digits) |
+| **Whitelisted Discord roles** | **Discord server roles** only. The roles that let a player in. | None | At least one; each a Discord ID. Needs the Discord bot enabled |
+| **Application schedule** | Switch plus windows, below. | Off | See [Application schedule](#application-schedule) |
+| **Applications closed message** | Text shown on the card when applications are closed. | `Whitelist applications are currently closed.` | Free text |
+| **Connection deferral cards** | A pointer to **Settings → Deferral Cards** for the wording and layout of every join card. | — | — |
+
+Saving is refused with a message when:
+
+| Message | Cause |
+| --- | --- |
+| **Discord Bot is required.** | A Discord workflow is selected but the bot is not enabled. Enable it on the Discord tab. |
+| **Discord roles required.** | **Discord server roles** with no roles selected. |
+| **Invalid Discord Role ID.** | A role is not a valid Discord ID. |
+| **Allowlist instructions required.** | The whitelist is on and the instructions are empty. |
+| **Allowlist instructions are too long.** | More than 512 characters. |
+| **Schedule windows required.** | The schedule is on but has no windows. |
+| **Invalid Discord review channel.** | The channel is not a valid Discord ID. |
+
+### Server browser padlock
+
+While the whitelist is enabled, sxPanel sets `sv_appearAllowlisted` to `true` so the server shows the allowlist padlock in the FiveM/RedM server list, and sets `sv_allowlistInstructions` to your **Allowlist instructions**. When the whitelist is off both are cleared. This follows the **Whitelist** switch, so it also applies to **Admin-only** and **Discord** workflows, not only **External whitelist**. The values are set at server start and re-sent whenever settings are saved.
+
+### Application schedule
+
+The schedule limits when **new requests** can be made under **Manual review**. It does not affect players who are already approved, and does not apply to the other workflows.
+
+Turn on **Schedule on** and add one or more windows with **Add window**. Each window is:
+
+| Field | Meaning | Limits |
+| --- | --- | --- |
+| Day | Day of the week | Sunday to Saturday |
+| **Start hour** | First open hour | 0–23 |
+| **End hour** | First closed hour (the end is exclusive) | 0–23 |
+| **Timezone** | One timezone for the whole schedule | `UTC`, `America/New_York`, `America/Chicago`, `America/Denver`, `America/Los_Angeles`, `Europe/London`, `Europe/Paris`, `Europe/Berlin`, `Asia/Tokyo`, `Australia/Sydney` |
+
+A new window starts as Monday 18 to 23. With 18 to 23, applications are open from 18:00 up to but not including 23:00. If the end hour is lower than the start hour, the window is open from the start hour onward and again before the end hour, both on the window's own day. It does not continue into the next day, so add a second window on the following day for a late-night session. A schedule that is switched on needs at least one window, and an enabled schedule with no windows is treated as always open.
+
+When applications are closed, a player without an approval sees the **Applications Closed** card with your closed message, and no request is created.
+
+## Discord
+
+### Slash commands
+
+| Command | What it does |
+| --- | --- |
+| `/whitelist member <member>` | Pre-approves a Discord member. Adds a `discord:<id>` approval named after their server nickname, global name or username. |
+| `/whitelist application <id>` | Approves the open request with that ID (for example `R7K2M`). |
+| `/whitelist request <id>` | Same as `application`. |
+
+Request IDs are `R` followed by four characters and the command rejects anything else with **Invalid request ID.** An ID that does not exist gives **Whitelist request ID `…` not found.** Both subcommands need the invoking person to be a linked admin with **Whitelist**, and are logged as **Add Whitelist Approval** and **Approve Whitelist Request**.
+
+`/whitelist member` writes the approval directly. It does not fire the `entry.granted` webhook, unlike adding an identifier on the page.
+
+### Review threads
+
+With **Manual review** and a **Discord review channel** set, each new request opens a thread in that channel (the bot must be running). A reviewer with **Whitelist** reacts on the thread message to decide:
+
+- ✅, ☑️ or 👍 approves the request.
+- ❌, ✖️ or 👎 denies it.
+
+Reactions by someone without the permission, or on a thread with no pending request, are refused. The decision is recorded in the Action Log under the reviewer's name.
+
+### Log channel
+
+Whitelist activity can be routed to a Discord channel with the **Whitelist Logs** route: applications, approvals, grants and revocations. See [Discord](/docs/discord).
 
 ## Webhooks
 
-Whitelist workflow events (`application.created`, `application.approved`,
-`application.denied`, `application.withdrawn`, `entry.granted`,
-`entry.revoked`, `entry.consumed`) can be dispatched to external webhook URLs
-configured in the panel's Whitelist settings, so you can sync an external
-system without polling.
+Whitelist events can be posted to your own URLs so an outside system stays in sync. There is no panel editor for webhooks. They are stored under `whitelist.webhooks` in the profile's `config.json` as a list of:
 
-## Next steps
+| Field | Meaning |
+| --- | --- |
+| `id` | Any unique string, used in console warnings |
+| `url` | Destination URL |
+| `events` | Event names to send. An empty list sends nothing |
+| `enabled` | `true` to send; defaults to `true` |
 
-- Enable [Discord notifications](/docs/discord) to get alerted on whitelist
-  changes and join attempts.
-- Review [permissions](/docs/permissions) to decide which admins can manage
-  the whitelist.
+| Event | Sent when |
+| --- | --- |
+| `application.created` | A player without approval connects and gets a new request |
+| `application.approved` | A request is approved from the page or Discord |
+| `application.denied` | A single request is denied (not **Deny all**) |
+| `application.withdrawn` | Defined but not sent by anything yet |
+| `entry.granted` | An identifier is added on the **Approvals** tab |
+| `entry.revoked` | An approval or whitelisted player is removed |
+| `entry.consumed` | A pre-approved player connects and is let in |
+
+Each call is a `POST` with a JSON body. `ts` is a Unix timestamp in seconds:
+
+```json
+{
+  "event": "application.approved",
+  "ts": 1767225600,
+  "serverName": "My Server",
+  "license": "abc123…",
+  "applicationId": "R7K2M",
+  "adminName": "admin"
+}
+```
+
+Depending on the event the body also carries `identifier` and a `meta` object (for example `playerName` and `workflowId`). Calls are not signed, retried or queued, and a failing URL is only noted in the verbose console, so treat webhooks as best effort.
+
+## Resource events
+
+Resources on your server get these `txAdmin:events:*` events. See the [Events API](/docs/events-api) for how to listen.
+
+| Event | Payload | Fires when |
+| --- | --- | --- |
+| `whitelistPlayer` | `action` (`added`, `removed`), `license`, `playerName`, `adminName` | A player's whitelist flag is changed from the profile, or a pre-approval is consumed |
+| `whitelistPreApproval` | `action` (`added`, `removed`), `identifier`, `playerName`, `adminName` | An approval is added or removed from the page or Discord |
+| `whitelistRequest` | `action` (`requested`, `approved`, `denied`, `deniedAll`), `playerName`, `requestId`, `license`, `adminName` | A request is created or decided |
+
+## Common tasks
+
+### Run a closed, approve-by-staff server
+
+<Steps>
+<Step>
+
+Enable the Discord bot if you want review threads or Discord approvals.
+
+</Step>
+<Step>
+
+In **Settings → Whitelist**, switch **Whitelist** on and choose **Manual review (license)**.
+
+</Step>
+<Step>
+
+Write the **Allowlist instructions** players will see in the server browser, for example where to ask for access.
+
+</Step>
+<Step>
+
+Optionally set a **Discord review channel** and edit the **Not Whitelisted** card in **Settings → Deferral Cards** to explain how to apply.
+
+</Step>
+<Step>
+
+Click **Save**.
+
+</Step>
+<Step>
+
+When a player connects they see a request ID. Open **Players → Whitelist → Requests** and click **Approve**, or run `/whitelist application <id>`. Tell the player to reconnect.
+
+</Step>
+</Steps>
+
+### Pre-approve someone before they join
+
+<Steps>
+<Step>
+
+Open **Players → Whitelist → Approvals**.
+
+</Step>
+<Step>
+
+Type `license:…` or `discord:…` in **Add identifier** and click **Add approval**. Or use `/whitelist member` in Discord.
+
+</Step>
+<Step>
+
+The entry shows under **Approvals** until they connect, then moves to **Players**.
+
+</Step>
+</Steps>
+
+### Move a whitelist to another server
+
+<Steps>
+<Step>
+
+On the old server, open **Whitelist → Players → Export**.
+
+</Step>
+<Step>
+
+On the new server, open **Whitelist → Players → Import** and choose the file.
+
+</Step>
+<Step>
+
+Imported entries appear under **Approvals** and move to **Players** when each player first connects.
+
+</Step>
+</Steps>
+
+### Revoke a whitelist in bulk
+
+**Settings → Danger Zone** has **Revoke Whitelists**, for the Master Admin only: revoke every license whitelist, or only those of players who have not joined in 7, 15 or 30 days. It does not touch Discord member or role workflows.
+
+## Limits and edge cases
+
+- Only the license of a connecting player is used to create a request. A player without a `license` identifier (a server with `sv_lan` on) is refused with a "missing license" card.
+- Requests are stored in the database and have no expiry. A player who keeps retrying updates the same request instead of creating a new one.
+- Players added with **Add WL** in the profile are let in under **Manual review** too, but do not appear in the **Players** tab, which lists entries from this page.
+- Stopping the server does not change who is approved. The check only runs when someone connects.
+- Search on **Players** and **Requests** is fuzzy, so near matches are included.
+- The panel only hides the Whitelist page when it is turned off; the backend routes stay available to anyone with the permission.
+
+## Problems
+
+| What you see | Cause and fix |
+| --- | --- |
+| **Discord Bot is required.** when saving | A Discord workflow needs the bot running. Enable it on the Discord tab first. |
+| Players get a **Whitelist Error** card on a Discord workflow | The bot could not look the player up. The card includes the error. Check that the bot is online and has the Server Members intent. |
+| "Please open the Discord Desktop app" on the card | The player has no `discord:` identifier. They must start the Discord desktop app, then reconnect. |
+| Approved player is still refused | They are not using **Manual review**, or they connect with a different `license`. Check the identifier in **Approvals** or **Players**. |
+| Nothing shows under **Requests** | The workflow is not **Manual review**, the schedule is closed, or players are being refused earlier by a ban. |
+| `Whitelist request ID R… not found.` | The request was already decided, or the ID is mistyped. |
+| **Invalid whitelist JSON file** on import | The file is not a JSON array. Use a file produced by **Export**. |
+| **You don't have permission to execute this action.** | Your admin account lacks **Whitelist**. |
+
+Also see [Troubleshooting](/docs/troubleshooting).
