@@ -200,7 +200,9 @@
         "nui/src/components/ResourcesPage/"
       ],
       "notes": "Resource list and grouping, start/stop/restart/ensure, downloading a resource, the config file editor (which files are editable, size limit, backups), and the in-game Resources page.",
-      "status": "todo"
+      "status": "done",
+      "writtenAt": "2026-11-18",
+      "sourceSha": "a21e752720dac257eafa73132d5d73599ec76ff2"
     },
     {
       "id": "chat-commands",

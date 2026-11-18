@@ -1,0 +1,228 @@
+---
+title: Resources
+description: List, start, stop, restart, ensure and download server resources, and edit their config files from the web panel or the in-game menu.
+---
+
+The Resources page shows every resource FXServer knows about, grouped by the folder it lives in, with its live state. Admins with the right permission can start, stop, restart or ensure a resource, download its folder as a zip, and edit its config files (`config.lua`, `*.json`, …) without leaving the panel or the game.
+
+## Where to find it
+
+- **Web panel:** **Server → Resources** (`/server/resources`).
+- **In game:** the **Resources** tab of the `/tx` menu, between **Stats** and **Reports**. See [In the in-game menu](#in-the-in-game-menu).
+
+![Resources page grouped by folder, with counters, search, folder filter and per-resource state](/docs/resources.webp)
+
+<Callout>
+The panel page can be turned off for everyone in **Settings → Panel Features** (**Resources Page Enabled**). The page and its sidebar entry are then hidden. The in-game tab is not affected by that switch.
+</Callout>
+
+## Who can use it
+
+| Permission | Id | Allows |
+| --- | --- | --- |
+| **Start / Stop Resources** | `commands.resources` | Start, stop, restart and ensure resources, and **Refresh**. Shows the **Resources** tab in the in-game menu. |
+| **Download Resources** | `commands.resources.download` | Download a resource folder as a zip. |
+| **server.cfg Editor** | `server.cfg.editor` | Together with `commands.resources`: edit a resource's config files. |
+
+Without any of these you can still open the page in the panel and read the list. Rows are not clickable, and the refresh button only re-reads the list. **Download** also needs the [**Resource Download**](#download-a-resource) setting to be enabled. **Edit config files** needs both `commands.resources` and `server.cfg.editor`; the server checks both on every request.
+
+## The page
+
+### Header and counters
+
+The header shows five live counters: **Total**, **Started**, **Stopped**, **Updates** and **Folders**. **Started** turns green and **Updates** turns amber when they are above zero. They show `—` while the list loads.
+
+### Toolbar
+
+| Control | What it does |
+| --- | --- |
+| Search | Matches the resource name, author or description (case-insensitive). While you search, all folders with matches are expanded. |
+| Folder filter | **All Folders**, or a single folder with its resource count. |
+| **All** / **Started** / **Stopped** / **Updates** chips | Filter by state, each with its count. **Stopped** includes resources that are starting. **Updates** lists resources with an update notice, and is highlighted when there are any. |
+| Expand / collapse all | Opens or closes every folder. Folders start expanded. |
+| Refresh | With `commands.resources`: sends the server a `refresh` command (re-scans the resources folder for new or changed resources), waits about 1.5 seconds and reloads the list. Without it: only reloads the list. |
+
+When the filters match nothing you see **No resources match your filters** and a **Clear all filters** button. If the server is offline or does not answer, the page shows **Failed to load resources** with the error and a **Retry** button.
+
+### Folders
+
+Resources are grouped by their path below `<server data>/resources`, for example `[cfx-default]/[gameplay]` or `[local]`. Resources directly in the `resources` folder are grouped under `root`; the server's built-in resources are under `system_resources`. Folders and the resources in them are sorted alphabetically.
+
+Each folder header shows `started/total` (green when all are started) and, when any resource has an update notice, an amber **N update(s)** pill. Click the header to collapse or expand it.
+
+### Resource rows
+
+Each row shows a status dot (green **Started**, pulsing amber **Starting**, red **Stopped**), the name, the version (if the manifest has one), the description and `by <author>` from the manifest. Stopped and starting resources also carry a state label.
+
+The CPU, memory and tick-time indicators on started resources always show **N/A**: per-resource performance is not collected.
+
+Click anywhere on a row (or focus it and press `Enter` or `Space`) to open its action menu. The menu only appears if you have at least one of the permissions above.
+
+| Action | Needs | What it does |
+| --- | --- | --- |
+| **Restart** | `commands.resources` | Runs `restart <resource>` on the server. |
+| **Stop** (shown when started) | `commands.resources` | Runs `stop <resource>`. |
+| **Start** (shown when not started) | `commands.resources` | Runs `start <resource>`. |
+| **Edit config files** | `commands.resources` and `server.cfg.editor` | Opens the [config file editor](#edit-config-files). |
+| **Download** | `commands.resources.download`, download enabled | Downloads the folder as a zip. |
+
+The panel runs these without a confirmation prompt. Each one shows a toast ("Resource restart command sent." and so on) and re-reads the list after 1.5 seconds. The command is sent with your admin name as the author, so it appears in the [Live console](/docs/live-console) as yours. Every action is written to the action log (see [How it connects](#how-it-connects)).
+
+### Live updates
+
+The list loads once when you open the page and is then kept current over a live connection: starting, started and stopped states change on the row as FXServer reports them, including changes made from the console, other admins or scripts.
+
+### Update notices
+
+The **Update available** badge and the **Updates** filter are not read from any resource manifest. sxPanel watches the server console for lines printed by a resource (FXServer prefixes them with `[script:<resource>]`) that say an update is available, for example "new version available", "outdated", "out of date", "please update" or "update required". The first such line from each resource is kept (up to 300 characters) and shown when you hover the badge.
+
+- Notices only exist for resources that print such a line since the server last started. They are cleared when the server stops, and for a resource when it stops, so restarting an updated resource removes its badge.
+- Only the first 250 resources with a notice are tracked.
+- Resources that never print an update message never show a badge, even if they are outdated.
+
+## Actions
+
+### Start, stop, restart and ensure
+
+- **Start** starts a stopped resource.
+- **Stop** stops a running one.
+- **Restart** stops and starts a resource.
+- **Ensure** (in-game menu only) starts the resource if it is stopped, or restarts it if it is running.
+
+All four need the server to be running. If it is not, you get **The server is not running.** Commands are sent to FXServer and apply asynchronously, so the state in the list can lag a moment.
+
+<Callout type="warn">
+Starting, restarting or ensuring a resource whose name contains `runcode` is blocked with *The resource "runcode" might be unsafe.* If you know what you are doing, run the command from the [Live console](/docs/live-console).
+</Callout>
+
+### Download a resource
+
+**Download** zips the resource folder on the server and streams it to your browser as `<resource>.zip`. It never zips more than the one resource.
+
+1. Make sure **Settings → General → Resource Download** is **Enabled** (it is by default).
+2. Make sure your admin account has **Download Resources**.
+3. On the Resources page, click the resource row and choose **Download**.
+
+The browser shows **Preparing download…** and the file starts downloading as soon as the archive begins streaming. A successful download is logged as **Download Resource** in the action log.
+
+| Rule | Detail |
+| --- | --- |
+| Setting | **Resource Download** (`general.resourceDownloadEnabled`), default **Enabled**. When disabled, no admin can download, whatever their permissions; the menu item disappears and the server answers *Resource downloading is disabled.* |
+| Location | Only folders inside `<server data>/resources` can be downloaded. `system_resources` and the whole `resources` folder itself are refused. |
+| Skipped | These folders are left out of the zip: `node_modules`, `.git`, `.svn`, `.hg`, `__pycache__`, `.turbo`, `.yarn`, `.pnpm-store`, `.next`, `dist`, `build`, `.cache`. Symbolic links are skipped. |
+| Resource name | 1–64 characters of letters, digits, `_` and `-`. |
+| File count | In the fallback method (below) a resource may hold at most 10,000 files, otherwise *Resource exceeds the maximum of 10000 files.* |
+
+The archive is created with the system `tar` when it can write zip files (`bsdtar`, as on Windows). Otherwise sxPanel falls back to a built-in archiver, which is slower and has the file cap above. Both work the same for you.
+
+### Edit config files
+
+**Edit config files** opens a dialog (**Config files - `<resource>`**) with a file picker and a code editor. Edits are written straight into the resource folder.
+
+<Steps>
+<Step>
+Click a resource row and choose **Edit config files**. The dialog lists the editable files of that resource and opens the first one that is not too large.
+</Step>
+<Step>
+Pick a different file in the **Config file to edit** list if needed. If you have unsaved changes, you are asked *You have unsaved changes. Discard them?* first.
+</Step>
+<Step>
+Edit the file. Save with **Save File** or `Ctrl+S` (`⌘+S` on macOS). The button is enabled only when there are unsaved changes.
+</Step>
+<Step>
+A toast confirms *Saved `<file>` (backup: `<file>.bkp`).* and a banner asks *File saved. Restart the resource to apply the changes?* with a **Restart resource** button. Most resources only read their config when they start.
+</Step>
+</Steps>
+
+Saving does not restart anything by itself.
+
+#### Which files are editable
+
+Only files that look like configuration are offered, and only inside the resource's own folder. A file is editable when it meets one of these:
+
+| Kind | Rule |
+| --- | --- |
+| Data files | Any file ending in `.cfg`, `.json`, `.yml`, `.yaml`, `.toml` or `.ini`. |
+| Script files (`.lua`, `.js`) | The file name contains a config-like word, as a separate word (`config.lua`, `sv_config.lua`, `client-settings.js`, `locale_en.lua`) or at the start or end of a word for `config`, `settings`, `locale` and `translation` (`esxconfig.lua`, `configuration_client.lua`). The words are: `config`, `configs`, `configuration`, `cfg`, `conf`, `settings`, `options`, `locale`, `locales`, `lang`, `langs`, `language`, `languages`, `translation`, `translations`, `i18n`. |
+| Script files in a config folder | Any `.lua` or `.js` file inside a folder named `config`, `configs`, `configuration`, `cfg`, `conf`, `settings`, `locale`, `locales`, `lang`, `langs`, `language`, `languages`, `translation`, `translations`, `i18n` or `data`. |
+
+Regular scripts such as `client.lua` or `server.lua` are never editable, and these files are always refused: `fxmanifest.lua`, `__resource.lua`, `package.json`, `package-lock.json`, `tsconfig.json`, `jsconfig.json`.
+
+#### Limits
+
+| Limit | Value |
+| --- | --- |
+| File size | 256 KiB, for opening and for saving. Larger files appear in the list as "(too large)" and cannot be selected. |
+| Files listed | 200 per resource. If there are more, the dialog notes *Only the first files found are listed.* |
+| Folder depth | Files up to 4 folders deep. |
+| Path length | 260 characters. |
+| Skipped folders | Hidden folders (starting with `.`) and the same build/dependency folders skipped in downloads (`node_modules`, `dist`, `build`, …). |
+| Text only | Files containing a null byte are refused (*This does not look like a text file.*). |
+
+Symbolic links are never listed or followed, and the resource must resolve to a folder inside `<server data>/resources`. You cannot create, rename or delete files here, only overwrite an existing one.
+
+#### Backups and line endings
+
+Before every save the current file is copied to `<file>.bkp` next to it, overwriting the previous backup. Only the last version is kept, so saving twice replaces the backup with your first edit. The editor highlights Lua, JavaScript, JSON, YAML and INI-style files (`.cfg`, `.ini`, `.toml`). If the original file used Windows line endings (CRLF) and your text uses only LF, CRLF is restored on save.
+
+Each save is logged as **Edit Resource Config** in the action log and printed in the sxPanel console. The change is a file write only: no Discord notification is sent.
+
+## In the in-game menu
+
+The **Resources** tab appears for admins with **Start / Stop Resources**. Without it the tab is missing and the `Tab` key skips it. It lists the same folders and resources as the panel and has the same states, but is laid out for the compact in-game menu:
+
+- A title bar with **All**, **Started** and **Stopped** chips with counts, and a **Refresh** button. A search field below matches name, author and description.
+- Each group is a heading `<folder> · <count>`. There is no collapsing, no folder filter and no update badge.
+- Every row has icon buttons: **Stop resource** or **Start resource**, **Restart resource**, **Ensure resource (start it, or restart it if already running)**, and **Edit config files** (needs `server.cfg.editor` as well).
+- **Stop**, **Restart** and **Ensure** on a running resource ask *Stop this resource?* or *Restart this resource?* with **Confirm** and **Cancel**. **Start** and **Ensure** on a stopped resource run immediately.
+- After a command is sent, a snackbar says for example *Restart command sent for `<name>`.* The row's buttons are disabled for about 1.5 seconds and then the list reloads. The in-game list is not live; use **Refresh** to update it.
+
+The in-game config editor is a plain text area with the same file picker and the same file rules. Differences from the panel:
+
+| | Panel | In game |
+| --- | --- | --- |
+| File size | 256 KiB | **64 KiB**. Bigger files are listed as too large; if every file is too large the tab says *The config files of this resource are too large to edit in-game. Use the web panel instead.* |
+| Syntax highlighting | Yes | No |
+| Switching files with unsaved changes | Asks to discard | Refused: *You have unsaved changes. Save or discard them first.* |
+| Leaving | Close the dialog | **Back** (**Discard changes** when there are edits) or `Esc`. `Esc` does nothing but warn while there are unsaved changes. |
+| Indent | Editor default | `Tab` inserts four spaces. |
+
+`Ctrl+S` saves and the same `.bkp` backup is written. After saving, a **Restart** button offers to restart the resource. If a file grows past 64 KiB while you edit it, saving is disabled with *This file is now too large to save in-game. Use the web panel instead.*
+
+## How it connects
+
+- **Action log:** each action is recorded with your admin name as **Start Resource** (`resource.start`), **Stop Resource** (`resource.stop`), **Restart Resource** (`resource.restart`), **Ensure Resource** (`resource.ensure`), **Refresh Resources** (`resource.refresh`), **Download Resource** (`resource.download`) or **Edit Resource Config** (`resource.config.edit`).
+- **Permissions:** assign them in the [Admin Manager](/docs/permissions).
+- **Settings:** **Resource Download** in **Settings → General**; **Resources Page Enabled** in **Settings → Panel Features**.
+- **Resource events:** sxPanel's server script reports resource lifecycle events (`onResourceStarting`, `onResourceStart`, `onResourceStop` and the server-side variants) to the panel. That is how states update live, and the boot times feed the server's resource-boot tracking. It runs automatically while the server is started by sxPanel.
+- **server.cfg:** to change which resources start with the server, use the **CFG Editor** page. Start, stop and restart here only affect the running server.
+
+## Limits and edge cases
+
+- **Server offline:** the list needs the running server. The panel shows **Failed to load resources** with *The server is not running.* Actions return the same error.- **Slow list:** the list is a snapshot requested from FXServer (`txaReportResources`). If FXServer does not answer within 1 second you get *Timed out waiting for resource list. Make sure the server is online.* The report is cached for 1 second, so rapid refreshes reuse it.
+- **Resource names:** resources whose names contain characters other than letters, digits, `_` and `-` (or are longer than 64) can be started and stopped but cannot be downloaded or have config files edited.
+- **Refresh vs. reload:** the refresh button asks FXServer to rescan the resource folders, which is needed after you add a new resource to the disk. It does not start the new resource.
+- **System resources:** built-in resources are listed under `system_resources` and can be controlled, but cannot be downloaded or edited.
+- **Rate limit:** saving config files is rate limited like other write actions in the panel.
+
+## Problems
+
+| Message | Cause and fix |
+| --- | --- |
+| The server is not running. | The server is stopped or still booting. Start it and refresh. |
+| Timed out waiting for resource list. Make sure the server is online. | FXServer did not report its resources in time. Retry; if it persists the server is hung or the sxPanel resource did not load. |
+| Failed to request resource list from the server. | The command could not be written to the server console. Retry once the server is up. |
+| You don't have permission to execute this action. | Missing **Start / Stop Resources**. |
+| You don't have permission to edit resource config files. | You need both **Start / Stop Resources** and **server.cfg Editor**. |
+| You don't have permission to download resources. | Missing **Download Resources**. |
+| Resource downloading is disabled. | Enable **Resource Download** in **Settings → General**. |
+| Downloading system resources is not allowed. | Built-in resources cannot be downloaded. |
+| Resource folder is outside the server resources directory. | The resource resolves (for example through a symlink) to a folder outside `<server data>/resources`. |
+| Resource not found. / Resource folder not found. | The name is not in the resource list or the folder is gone. Refresh the list. |
+| This file type cannot be edited. | The file does not match the [editable files](#which-files-are-editable) rules. |
+| This folder cannot be edited. | The file is inside a hidden or build folder. |
+| File is too large to edit (max 256 KiB). | Edit it over SSH/FTP or split the config. |
+| File is nested too deeply. | Files more than 4 folders below the resource root cannot be edited. |
+| Cannot create the backup file: a non-regular file is in the way. | `<file>.bkp` exists as a folder or link. Remove it. |
+| Failed to save file: … | The server could not write the file, usually a disk permission problem. Check the folder permissions of the resource. |
+| The resource "runcode" might be unsafe. | Starting `runcode` is blocked here; use the Live console. |
