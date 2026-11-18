@@ -1,0 +1,357 @@
+---
+title: Reports and tickets
+description: How players file tickets in game, the ticket lifecycle, the Reports page and ticket window, Report Analytics, the in-game staff tab, Discord ticket threads and commands, and the report settings.
+---
+
+Players use tickets to report other players, report bugs or ask staff a question without leaving the game. Staff triage them in the web panel, in the in-game menu or in Discord. Every ticket keeps its conversation, private staff notes, an activity trail and the server log around the time it was filed.
+
+![Reports page with status counters, search, and status and priority filters](/docs/reports.webp)
+
+## Where to find it
+
+| What | Where |
+| --- | --- |
+| Reports page | **Players → Reports**, at `/reports` |
+| Ticket window | Click a ticket on the Reports page, or open `/reports?ticket=TKT-XXXXX` with the real id. The **Copy link** button in the window copies that address. |
+| Report Analytics | **Analytics → Report Analytics**, at `/reports/analytics`, or the **Analytics** button on the Reports page |
+| Player form | `/ticket` in game. `/report` is an alias. |
+| In-game staff tab | **Reports** page of the `/tx` menu |
+| Discord | `/reports summary`, `claim`, `assign`, `resolve` and `reopen`, plus a thread per ticket |
+| Settings | **Settings → Game** |
+
+Ticket ids look like `TKT-XXXXX`. Older `RPT-XXXXX` ids are accepted and map to the same ticket.
+
+## Who can use it
+
+| Permission | What it allows | Without it |
+| --- | --- | --- |
+| **Reports** (`players.reports`) | See the Reports and Report Analytics pages, open tickets, reply, change status, claim, add and delete staff notes, use the in-game Reports tab and the `/reports` Discord commands. | The pages are not in the navigation and the API answers `Unauthorized`. The in-game tab shows "Permission denied." |
+| **Manage Tickets** (`manage_tickets`, flagged dangerous) | **Delete** a ticket and use the **Exclude From Auto Deletion** switch. | The **Delete** button and the switch are not shown. |
+| **Settings: Change** (`settings.write`) | Save the report settings in **Settings → Game**. | The fields are read-only. |
+
+Permissions are granted in the [Admin Manager](/docs/permissions). For Discord, the permission is checked against the Discord member's linked sxPanel admin or their mapped role presets, as for the other [Discord commands](/docs/discord).
+
+<Callout title="Easy to get wrong">
+  Any admin with **Reports** can delete any staff note, and can take over a ticket claimed by someone else. Only **Manage Tickets** can delete the ticket itself.
+</Callout>
+
+## How a ticket works
+
+### Statuses
+
+| Status | Meaning |
+| --- | --- |
+| **Open** | New and untouched, or reopened. |
+| **In Review** | Staff are working on it. |
+| **Resolved** | Staff dealt with it. The player can rate the support. |
+| **Closed** | Closed without resolving. The Reports page treats it as archived. |
+
+A ticket can only move along these paths. Anything else is refused.
+
+| From | To |
+| --- | --- |
+| Open | In Review, Resolved, Closed |
+| In Review | Open, Resolved, Closed |
+| Resolved | Open, Closed |
+| Closed | Open |
+
+Moving to **Resolved** or **Closed** records the admin as the resolver and the time. Moving back to **Open** clears both and adds a `reopened` entry to the activity trail.
+
+### What a ticket stores
+
+- The reporter, any target players the reporter picked, and the category, optional priority and description.
+- The conversation: the description, then every reply from the player, staff, or Discord.
+- Private staff notes, which the player never sees.
+- An activity trail of claims, status changes, notes and retention changes.
+- Up to three groups of server log entries from the 5 minutes before the ticket was filed: the reporter's, the targets', and world events (deaths, explosions and chat). They come from the most recent 500 log entries, so a busy server may keep fewer.
+- For categories whose name contains "player", the players standing near the reporter when the ticket was filed (see [Limits and edge cases](#limits-and-edge-cases)).
+- The player's feedback rating, once given.
+
+### Automatic changes
+
+| Event | Result |
+| --- | --- |
+| Staff replies to an **Open** ticket | It moves to **In Review** and the reply is posted. |
+| A player or Discord user replies | The status does not change. |
+| A ticket stays **Resolved** or **Closed** past the retention time | It is deleted by the daily database cleanup, unless excluded (see [Retention](#retention)). |
+
+## The Reports page
+
+The header shows four counters and two buttons. The counters cover every ticket, not only the filtered list.
+
+| Counter | Counts |
+| --- | --- |
+| **Open** | Tickets with status **Open**. Highlighted red when above zero. |
+| **In review** | Tickets with status **In Review**. Highlighted blue when above zero. |
+| **Resolved** | Tickets with status **Resolved**. |
+| **Archived** | Tickets with status **Closed**. |
+
+**Analytics** opens [Report Analytics](#report-analytics). **Refresh** reloads the list; the list is also reloaded when you close the ticket window.
+
+### Search and filters
+
+| Control | What it does |
+| --- | --- |
+| **Search tickets...** | Matches, ignoring case, the ticket id, reporter name, the first 80 characters of the description, any target name, or the name of the admin who claimed it. |
+| **Status** | **All Status**, **Open**, **In Review** or **Resolved**. There is no **Closed** choice; closed tickets live behind **Archived**. |
+| **Category** | Appears once there is at least one ticket. Lists the categories found on existing tickets, including categories you have since removed from the settings. |
+| **Priority** | **All Priorities**, **Low**, **Medium**, **High** or **Critical**. Tickets filed without a priority only show under **All Priorities**. |
+| **Archived** | Toggles between the active list (everything except **Closed**) and the **Archived Tickets** list (**Closed** only). The badge shows how many closed tickets match the other filters. The **Status** filter is ignored while **Archived** is on. |
+
+The list is sorted by last activity, newest first, and has no paging. An empty list says **No tickets found.** with no tickets at all, or **No tickets match your filters.** when filters hide them all. If the list cannot be loaded you see **Reports route not available.** and a **Try again** button.
+
+### Ticket rows
+
+Each row shows the ticket id, a status badge, the category, the priority (when set), who claimed it, the time of the last activity, the reporter, `→` and the target names, the message count and a one-line description preview.
+
+## The ticket window
+
+Clicking a row opens the ticket window. The bar at the top holds the claim button, the status menu, **Copy link** and, with **Manage Tickets**, **Delete**.
+
+| Control | What it does |
+| --- | --- |
+| **Claim** | Assigns the ticket to you. Once claimed, the button reads **Claimed by** and the admin's name. Clicking it when it is yours clears the claim; clicking it when it belongs to someone else takes the ticket over. Each change is added to the activity trail and logged. |
+| Status menu | Sets **Open**, **In Review**, **Resolved** or **Closed**, following the [allowed moves](#statuses). Resolving or closing posts an announcement to Discord. |
+| **Copy link** | Copies a `/reports?ticket=` link, on the panel's address, with this ticket's id. Opening it loads the Reports page with the window open. |
+| **Delete** | Asks **Delete Ticket?** and warns that this permanently deletes the ticket and cannot be undone, then removes it for good. |
+
+### Conversation
+
+The first bubble is the player's description, tagged **original**. Replies follow, with an author tag of `player`, `admin` or `discord`. Staff bubbles are indented. If the ticket has a screenshot it appears above the conversation under **In-game Screenshot**; click it to enlarge.
+
+At the bottom, **Type a reply...** sends on **Enter**, with a limit of 2048 characters. **Image URL (optional)** below it attaches one image by `http` or `https` link; it is shown to the player as a thumbnail. You can send an image with no text. Images that fail to load are hidden.
+
+The reply box is not shown once a ticket is **Resolved** or **Closed**. Reopen it to continue.
+
+Each reply:
+
+- appears in the player's ticket window in game straight away, if they are online;
+- is posted to the ticket's Discord thread, if it has one;
+- moves an **Open** ticket to **In Review**;
+- is recorded in the action log as "Replied to ticket".
+
+### Staff Notes
+
+The **Staff Notes** tab holds private notes for staff. The tab shows how many there are. Write in **Add a private staff note...** (2048 characters) and press the send button. Each note shows its author and time and has a delete button. Notes are never sent to the player or to Discord.
+
+### Logs
+
+The **Logs** tab shows **Ticket Activity** first: who claimed, unclaimed, assigned, resolved, closed or reopened the ticket, added or deleted a note, or changed the auto-deletion exclusion. Below it are **Reporter Logs**, **Target Logs** and **World Events**, captured when the ticket was filed. If nothing was captured the tab says **No log context was captured.**
+
+### Info
+
+The **Info** tab shows, in order:
+
+- **Exclude From Auto Deletion** (with **Manage Tickets** only): a badge reading **Excluded** or **Auto Delete** and a switch. See [Retention](#retention).
+- **Category**, **Priority** (if set), **Status**, **Created**, **Last Activity**, and, when they apply, **Resolved**, **Resolved By**, **Claimed By** and **Feedback**. Feedback is shown as five marks, for example `***--`, followed by the player's comment.
+- **Reporter**, **Target(s)** and **Nearby Players**. Names open the player window, which closes the ticket window. Each shows the in-game id (`#12`) and Discord ID when known.
+
+## Report Analytics
+
+![Report Analytics with the ticket queue, 7 and 30 day rollups and a daily activity table](/docs/report-analytics.webp)
+
+Report Analytics summarises ticket volume and staff response times. It needs **Reports** and can be hidden with the **Report Analytics** switch in **Settings → Panel Features**. When hidden, `/reports/analytics` redirects to the dashboard. The figures are cached on the server for a minute, so **Refresh** (the circular arrow) can show the same numbers for a short while.
+
+The header shows **Total Tickets** and **Resolution Rate**, which is Resolved plus Closed divided by all tickets. The rate turns green at 50% or more. **Reports** returns to the ticket list.
+
+| Section | What it shows |
+| --- | --- |
+| **Ticket Queue** | Counts of **Open**, **In Review**, **Resolved** and **Closed** over all tickets. |
+| **Queue Rollup · 7 Days** and **Queue Rollup · 30 Days** | For tickets created in that period: **Tickets Created**, **Tickets Resolved**, **Resolution Rate** and **Reopen Rate**. |
+| **Daily Activity (Last 14 Days)** | **Date**, **Created** and **Resolved** per day. Days are UTC. A ticket counts as resolved on the day of its first resolve or close. |
+| **Staff Performance** | **Avg Time To Claim** (first claim or assignment), **Avg First Response** (first staff or Discord reply), **Avg Resolution** (first resolve or close) and **Reopen Rate**. |
+| **Staff Metrics** | **Tickets Claimed**, **Tickets Responded**, **Resolved Tickets** and **Reopened Tickets**, plus a bar per status with its share of all tickets. |
+| **Staff Leaderboard (Last 30 Days)** | **Admin**, **Resolved** and **Avg Resolution**, ranked by tickets resolved. Hidden when empty. A ticket counts for the admin who resolved or closed it last. |
+| **Ticket Breakdown** | **By Category**, as a share of tickets created in the last 30 days, and **By Priority**, as counts. Each is hidden when there is nothing to show. |
+
+Durations are shown as minutes (`45m`), hours and minutes (`3h 10m`) or days and hours (`2d 4h`). A dash means no ticket has that event yet. Staff Performance and Staff Metrics use tickets created in the last 30 days, although the section's subtitle says "All-time". Player feedback ratings are not part of the analytics; read them on each ticket's **Info** tab.
+
+## Filing a ticket in game
+
+![The New Ticket form with category, target players, priority and description](/docs/menu-report-create.webp)
+
+Players type `/ticket` (or `/report`) to open the support window. It has two choices: **Submit a New Ticket** and **My Tickets**. **Esc** steps back one screen and closes the window from the first screen.
+
+### New Ticket
+
+| Field | Behaviour |
+| --- | --- |
+| **Category** | One of the configured [categories](#settings). The first is preselected. |
+| **Target Player(s)** | Shown only when the category name contains "player" (any case) and other players are online. Multi-select, listed as `[id] name`. A note says nearby players' IDs are attached automatically. |
+| **Priority (Optional)** | Shown only when **Priority Selection** is on. **None**, **Low**, **Medium**, **High** or **Critical**. |
+| **Description** | Required, up to 2048 characters, with a live counter. |
+
+**Submit Ticket** sends it. A player can file one ticket every 15 seconds. The ticket is created as **Open**, the player lands on **My Tickets**, and the server runs the [notifications](#how-it-connects).
+
+### My Tickets
+
+Lists the player's own tickets, newest first, with category, status, a preview, how long ago it was filed and the message count. Opening one shows the conversation. Staff replies are tagged **Staff** and arrive live, whether they come from the panel, the in-game tab or Discord. **Type a message…** and an optional **Image URL (optional)** send a reply (2048 characters; in game only `https` image links are accepted). Once the ticket is resolved or closed, the box is replaced by "This ticket has been Resolved." or "…Closed."
+
+When **Player Feedback** is on, a resolved or closed ticket without a rating shows **⭐ Please rate your experience**. Opening it shows **How was your support experience?** with a five-star rating and **Comments (optional)**. The rating is required and can be given once. Until it is given, opening that ticket always leads to the rating screen, not the conversation; **Back** returns to the list.
+
+![My Tickets list with statuses and a feedback prompt](/docs/menu-report-list.webp)
+
+## Handling tickets in game
+
+Staff with **Reports** see a **Reports** page in the `/tx` menu while reports are enabled.
+
+![The in-game Reports page with ticket counters, lists and an open ticket](/docs/menu-reports.webp)
+
+- The header has a **Refresh** button and counters for **Open**, **In Review** and **Archived**.
+- **Active** lists Open and In Review tickets, with a **Status** filter. **Archive** lists Resolved and Closed tickets. **Search tickets…** matches id, category, reporter, description and target names.
+- The first ticket in the list opens automatically. The detail shows who it is from, the conversation and the claimed-by badge.
+- Reply with **Type a reply…**. Replies from the menu are text only and follow the same rules as panel replies.
+- The buttons depend on the status: **Start Review** (Open), **Resolve** and **Close** (Open or In Review; **Close** is "Close without resolving"), and **Reopen** (Resolved or Closed).
+- When a new ticket arrives, staff with **Reports** get a banner that names the reporter and can be clicked to open the ticket.
+
+The menu tab cannot claim tickets or use staff notes. Use the panel or Discord for those.
+
+## Discord
+
+Discord support is optional. It needs the [Discord bot](/docs/discord) to be enabled.
+
+### Ticket threads
+
+Set **Discord Channel ID** in the settings. For each new ticket the bot then posts a summary (reporter, status, priority, targets, description) and opens a place for the conversation. What it opens depends on the channel you set:
+
+| Channel type | Result |
+| --- | --- |
+| Text or announcement channel | A summary message with a thread named like `[HIGH]Player Report - TKT-AB12C`. |
+| Forum channel | A new forum post with the same name. |
+| Category | A new text channel inside the category, named from the category, reporter and id. Its permissions copy the category's, with **View Channel** removed from `@everyone`. |
+
+If the ticket has a screenshot it is uploaded to the thread as well. Replies from the player, the panel and the in-game tab are posted to the thread. Anything a person writes inside a thread is added to the ticket as a `discord` message, with up to three attachments, and is shown to the player in game. Messages in a category-mode text channel are not read, because only threads are forwarded.
+
+Thread creation is skipped when the bot is disabled, no channel is set, or `discordBot.ticketThreadNotifyEnabled` is off (default on; config file only).
+
+### Announcements
+
+Each new ticket posts a "New Ticket" message with its id, category, reporter, targets and the first 200 characters of the description to the **Warnings Channel ID** configured in the Discord settings. Resolving or closing a ticket posts a "Resolved" or "Closed" message there. Resolving from the `/reports resolve` command posts the resolved announcement too.
+
+### Commands
+
+All subcommands need **Reports**. Leave `id` empty inside a ticket thread to act on that thread's ticket. Ticket ids are case-insensitive. Replies are visible only to you.
+
+| Command | What it does |
+| --- | --- |
+| `/reports summary [id]` | With an id or inside a ticket thread: a ticket snapshot with buttons **Refresh**, **Claim / Unclaim**, **Assign**, **Resolve** and **Reopen**. Without: the queue summary (counts per status, priority mix, the active tickets, average resolution). |
+| `/reports claim [id]` | Claim the ticket for yourself, or clear your claim. |
+| `/reports assign member [id]` | Assign the ticket to a Discord member. They must be linked to an sxPanel admin. |
+| `/reports resolve [id]` | Resolve the ticket. A closed ticket must be reopened first. |
+| `/reports reopen [id]` | Set a resolved or closed ticket back to **Open**. |
+
+Claims, assignments, resolves and reopens made in Discord are added to the activity trail and logged under your sxPanel admin name. There is no Discord command to close a ticket or to add notes.
+
+## Settings
+
+The report settings are on **Settings → Game** and need **Settings: Change**. They are saved together with the other fields on that tab.
+
+| Setting | What it does | Default | Limits / values |
+| --- | --- | --- | --- |
+| **Player Tickets** | Turns the whole ticket system on or off. Off hides the Reports pages, stops the `/ticket` and `/report` commands, hides the in-game tab, makes the ticket APIs answer "Reports are disabled." and removes the Discord report commands. Stored tickets are kept. The same switch appears as **Reports** in **Settings → Panel Features**. | On | On / Off |
+| **Categories** | The categories players choose from, comma separated. A semicolon also works. Order is kept and the first is the default. A name containing "player" shows the target picker. | `Player Report, Bug Report, Question, Other` | 1 to 20 categories, 1 to 64 characters each. Empty entries are dropped; an empty box restores the default. |
+| **Priority Selection** | Lets players set a priority when filing. | Off | On / Off |
+| **Player Feedback** | Asks players to rate resolved and closed tickets. | On | On / Off |
+| **Retention Days** | How long Resolved and Closed tickets are kept before they are deleted automatically. | 30 | Whole number, 1 to 365. Saving anything else shows "Retention days must be a number between 1 and 365." |
+| **Discord Channel ID** | Where ticket threads are created. Empty turns threads off. | Empty | A Discord channel id (17 to 20 digits). |
+
+Two more settings exist only in the config file:
+
+| Key | What it does | Default | Limits / values |
+| --- | --- | --- | --- |
+| `gameFeatures.ticketCategoryDescriptions` | A short description for each category. Returned by the panel's `/reports/config` route. The web panel and the in-game form do not show it. | One sentence per default category | Object of category name to text, 1 to 128 characters each |
+| `discordBot.ticketThreadNotifyEnabled` | Turns ticket threads off without clearing the channel. | On | true / false |
+
+Categories and **Priority Selection** are pushed to the game server as convars (`ticketCategories`, `ticketPriorityEnabled`), which the in-game form reads. Changing the **Discord Channel ID**, the feedback switch or the retention applies to new activity straight away.
+
+### Retention
+
+Once a day the database cleanup deletes tickets that are **Resolved** or **Closed** and were resolved more than **Retention Days** ago. Tickets that are still **Open** or **In Review** are never deleted. To keep one forever, open it, go to **Info** and turn on **Exclude From Auto Deletion** (needs **Manage Tickets**). The switch can be turned off again, and either change is logged and added to the activity trail. Reopening a ticket resets the clock, because the resolve time is cleared.
+
+## How to…
+
+### Handle a new player report
+
+<Steps>
+  <Step>
+    Open **Players → Reports**. New tickets are at the top with a red **Open** badge. Use **Priority** or **Category** to narrow the list.
+  </Step>
+  <Step>
+    Click the ticket and press **Claim** so other admins know you have it.
+  </Step>
+  <Step>
+    Read the **Info** tab for the reporter, targets and nearby players, and the **Logs** tab for what they and the targets did just before the report.
+  </Step>
+  <Step>
+    Ask for details in the **Conversation** tab. The first reply moves the ticket to **In Review**. Put your own findings in **Staff Notes**.
+  </Step>
+  <Step>
+    Act on the target from the player window (warn, kick or ban), then set the status to **Resolved**. Use **Closed** for tickets you want to dismiss without resolving, such as duplicates.
+  </Step>
+</Steps>
+
+### Add or change ticket categories
+
+<Steps>
+  <Step>Go to **Settings → Game**.</Step>
+  <Step>Type the new list in **Categories**, for example `Player Report, Bug Report, Refund Request`.</Step>
+  <Step>Click **Save**. Players see the new list the next time they open `/ticket`. Existing tickets keep their old category.</Step>
+</Steps>
+
+### Send ticket conversations to Discord
+
+<Steps>
+  <Step>Enable the [Discord bot](/docs/discord) and make sure it can see and post in the target channel.</Step>
+  <Step>Create a text channel, forum or category for tickets. Copy its id with Developer Mode.</Step>
+  <Step>Paste it into **Discord Channel ID** in **Settings → Game** and save.</Step>
+  <Step>File a test ticket in game. A thread should appear within a few seconds.</Step>
+</Steps>
+
+### Keep a ticket as evidence
+
+<Steps>
+  <Step>Open the ticket and go to **Info**.</Step>
+  <Step>Turn on **Exclude From Auto Deletion**. The badge changes to **Excluded**.</Step>
+</Steps>
+
+## How it connects
+
+- **Action log and Discord log routes.** Creating, replying to, claiming, resolving, closing, reopening, noting and deleting tickets are recorded in the action log, and the ticket workflow is available to the panel action log route in [Discord](/docs/discord#notifications).
+- **Addons.** Addons with the `tickets.read` permission can read tickets and receive `ticketCreated`, `ticketNewMessage`, `ticketStatusChanged`, `ticketClaimChanged` and `ticketDiscordLinked`. See [Tickets in the addon API](/docs/addon-api#tickets).
+- **In game.** New tickets notify online staff with **Reports**; new messages are pushed to the reporter's open window.
+- **Players.** Names in a ticket open the player window from [Players](/docs/players).
+- **Settings.** Switching a page on or off is described under **Panel Features** in the settings.
+
+## Limits and edge cases
+
+- **Description and reply length.** The in-game form and replies stop at 2048 characters. The server accepts up to 4000 for a description.
+- **Images.** A message carries at most three images. The panel and in-game windows send one at a time. Panel replies accept `http` and `https` links; in-game messages accept `https` links up to 2048 characters. Links that fail to load are hidden or replaced with "Image failed to load".
+- **Screenshots.** Ticket screenshots are saved in the profile's `data/ticket-screenshots` folder as PNG, JPEG, WebP or GIF up to 5 MiB, and served only to logged-in panel users. The in-game form does not capture one, so tickets filed there have none.
+- **Rate limit.** One ticket per player every 15 seconds. The timer resets when the player disconnects.
+- **Log context.** Only entries from the 5 minutes before filing are kept, taken from the most recent 500 server log entries. Tickets filed while the server log is quiet or just restarted can have empty sections.
+- **Nearby players.** For categories whose name contains "player", the server records up to 10 players within 20 units of the reporter, excluding the reporter and the chosen targets. Set the convar `txAdmin-ticketNearbyDistance` to change the radius.
+- **Targets.** Only players online when the form is submitted can be picked. Targets are stored by their license.
+- **Offline players.** A reply to an offline reporter is stored and shown when they next open the ticket.
+- **Disabled reports.** The Reports and Analytics routes redirect to the dashboard, the navigation entries disappear, and the commands do nothing. Tickets are not deleted by turning the system off.
+- **Deleting.** Deleting a ticket does not remove its Discord thread or a saved screenshot file.
+- **Panel only.** Staff notes and claims are not available in the in-game tab.
+
+## Problems
+
+| Message | Cause and fix |
+| --- | --- |
+| **Reports are disabled.** | **Player Tickets** is off. Turn it on in **Settings → Game**. In game the player sees "Support tickets are disabled on this server." |
+| **Unauthorized** | The admin lacks **Reports**, or **Manage Tickets** for delete and retention. Grant it in the Admin Manager. |
+| **Reports route not available.** | The ticket list failed to load. Click **Try again**; if it persists check the panel console. |
+| **Ticket not found.** inside the window | The ticket was deleted, or you picked a status that is not an allowed move from the current one (for example Resolved to In Review). Reopen it first, then pick the new status. |
+| **Failed to load analytics.** | The analytics request failed. Use **Retry**. |
+| "You are submitting too fast. Please wait a moment and try again." | The player filed a ticket less than 15 seconds ago. |
+| "Could not identify your license." | The player has no `license:` identifier. Tickets are tied to the license, so they cannot file. |
+| **Invalid category.** | The chosen category is no longer in the list, for example it was removed while the form was open. Reopen `/ticket`. |
+| **Description is required.** | The description was empty after trimming. |
+| **Not your ticket.** | A player tried to read or reply to someone else's ticket. |
+| **Feedback is disabled.** / **Feedback already submitted.** / **Ticket is not resolved.** | **Player Feedback** is off, the ticket was already rated, or it is still open or in review. |
+| **Failed to create ticket.** | The server could not save the ticket. Check the panel console for the underlying error. |
+| "That Discord account is not linked to an sxPanel admin, so it cannot own ticket assignments." | The member given to `/reports assign` is not linked to an admin. Link their Discord ID in the Admin Manager. |
+| "This Discord thread is not linked to a ticket." | The command ran in a thread the bot did not create for a ticket. Pass an `id`. |
+| No thread appears for a new ticket | Check that the bot is online, **Discord Channel ID** is a channel the bot can post in, and `discordBot.ticketThreadNotifyEnabled` is on. |

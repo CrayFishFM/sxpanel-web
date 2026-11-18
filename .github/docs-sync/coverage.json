@@ -166,7 +166,9 @@
         "core/modules/DiscordBot/ticketCommandHandlers.ts"
       ],
       "notes": "How players file reports in game, the ticket lifecycle, the Reports page and ticket detail modal, Report Analytics, Discord ticket handling, report settings.",
-      "status": "todo"
+      "status": "done",
+      "writtenAt": "2026-11-18",
+      "sourceSha": "a21e752720dac257eafa73132d5d73599ec76ff2"
     },
     {
       "id": "live-console",
