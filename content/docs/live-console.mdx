@@ -1,0 +1,292 @@
+---
+title: Live Console
+description: Watch the FXServer console in real time, run commands, search and filter the output, save favourite commands and download the log.
+---
+
+The Live Console streams everything FXServer prints, plus the commands admins run and the notices sxPanel adds, straight into your browser. Admins use it to watch a server boot, follow errors as they happen, and run console commands (`ensure`, `restart`, `say`…) without a remote desktop session.
+
+![Live console with saved commands, search, filter, clear, download and options](/docs/live-console.webp)
+
+## Where to find it
+
+- Panel: **Server → Live Console** (`/server/console`).
+- The [Overview dashboard](/docs/overview) shows a small read-only tail of the same output, with an **Open console →** link.
+
+## Who can use it
+
+| Permission | Id | What it allows |
+| --- | --- | --- |
+| **Console: View** | `console.view` | Open the page, receive the output, search, filter, clear and use saved commands. |
+| **Console: Write** | `console.write` | Send commands to the server. Marked as dangerous in the Admin Manager. |
+| **View System Logs** | `txadmin.log.view` | Use the **Download** button (see [Download](#download)). |
+
+- Without `console.view`, the sidebar entry is hidden and opening `/server/console` shows the Access Denied page. The server also does not subscribe you to the console feed.
+- With `console.view` but without `console.write`, you can read everything, but the command box is disabled and shows **You do not have permission to write to the console.**
+
+<Callout type="warn">
+Console: Write lets an admin run any FXServer command, including ones that stop the server or change its configuration. Grant it only to admins you trust with the whole server. See [Permissions](/docs/permissions).
+</Callout>
+
+## The screen
+
+### Header
+
+The header shows the title, a dot that is green while the page is connected to the panel and grey while it is not, and two jump buttons.
+
+| Button | What it does |
+| --- | --- |
+| **Last Start** | Scrolls to the most recent `FXServer Starting` banner in the output. |
+| **Prev Start** | Scrolls to the start banner before that one. |
+
+The jump buttons appear only while connected and only once a start banner has been loaded into the page. On narrow screens only their icons are shown. Every time the server is started, sxPanel writes a banner line `[<pid>] FXServer Starting` to the console, which is what these buttons look for. They only know about banners in the output currently loaded in your browser.
+
+### Output area
+
+The output is a terminal with a scrollback of 5,000 lines in your browser. Each line starts with a timestamp (see [Options](#options)) and is coloured as FXServer or sxPanel produced it. Lines written by sxPanel itself carry a tag between `║` characters:
+
+| Source | Tag | Look |
+| --- | --- | --- |
+| FXServer standard output | none | As printed by the server. |
+| FXServer error output | `STDERR` | Red tag, bold red text. |
+| A command typed by an admin | The admin's name | Amber highlight across the line. |
+| A command sent by sxPanel itself | `SXPANEL` | Grey highlight. |
+| Notices from sxPanel, such as the start banner | `SXPANEL` | Blue highlight. |
+
+If an output chunk ends in the middle of a line and the next chunk comes from a different source, sxPanel ends the line with a `↩` marker so the lines stay separate.
+
+When you scroll up, a pulsing double-arrow button appears at the bottom right. Click it to jump back to the newest output. While nothing has been printed yet, the page shows **Waiting for server output…**.
+
+While the browser is not connected to the panel, the page is covered by a **Connecting…** overlay. A disconnect shorter than half a second is ignored so quick reconnects do not flash the overlay.
+
+#### Markers
+
+Some lines get a small badge at their right edge. Hover to see the long label, click to open a toast with the details.
+
+| Badge | Hover label | When | Click shows |
+| --- | --- | --- | --- |
+| **EVENT** | **VIEW EVENT** | A `txaEvent` line the panel sends to the server resource. The raw text is replaced with `<broadcasting txAdmin:events:<name>>`. | The event name and its data as JSON. |
+| **CMD** | **VIEW COMMAND** | A `txaInitialData` line. The raw text is replaced with `<txaInitialData>`. | **Initial Player Data:** with the data as JSON. |
+| **RTL** | **VIEW RIGHT-TO-LEFT TEXT** | A line with three or more right-to-left characters (Arabic, Hebrew…). | **Bidirectional Text Detected:** with the text as it is meant to be read, because the terminal cannot render right-to-left text. |
+
+#### Load older output
+
+When the panel holds output older than what your page has loaded, a **Load older output** button appears at the top centre (it shows **Loading…** while fetching). Clicking it adds the older output above what you have, and keeps your scroll position. See [Limits and edge cases](#limits-and-edge-cases) for how much the panel keeps.
+
+### Command box
+
+The box at the bottom takes one command per submit. Press **Enter** to send it.
+
+- The command is sent to FXServer's console exactly as typed, after trimming spaces. Line breaks are replaced with spaces.
+- `cls` and `clear` are not sent to the server. They clear the console (see [Clear](#clear)).
+- **↑** and **↓** walk through your command history (the last 50 commands). Your half-typed input is restored when you press **↓** back to the start.
+- The box is focused automatically when the page connects.
+
+The box is disabled, with the reason shown as its placeholder, in this order of priority:
+
+| Placeholder | Cause |
+| --- | --- |
+| **You do not have permission to write to the console.** | You lack `console.write`. |
+| **The server is not running.** | FXServer is stopped or still starting. Start it from the [Overview](/docs/overview). |
+| **Socket connection lost.** | The browser lost its connection to the panel. |
+
+When the box is enabled, its placeholder is **Type a command...**.
+
+### Footer buttons
+
+| Button | What it does |
+| --- | --- |
+| **Saved** | Opens the [Saved and history](#saved-commands-and-history) sheet. |
+| **Search** | Toggles the [search bar](#search). Disabled while disconnected. |
+| **Filter** | Toggles the [filter panel](#filter). Disabled while disconnected. |
+| **Clear** | Clears the console. Disabled while disconnected. |
+| **Download** | Downloads the server log file. Disabled while disconnected. |
+| **Options** | Opens the [options menu](#options). |
+
+On screens narrower than 1400 px only icons are shown; the labels appear on wider screens.
+
+### Saved commands and history
+
+**Saved** opens a sheet from the right with two columns. Clicking a command in either column puts it in the command box and closes the sheet. It does not run it, so you can edit it first.
+
+| Column | Contents | Controls |
+| --- | --- | --- |
+| **History** | The last 50 commands you sent, newest first. Re-sending a command moves it to the top instead of duplicating it. | **Clear History** empties the list. Hover a command and click the star to save it. |
+| **Saved** | Commands you saved, newest first. No limit on how many. | **Add New** opens the **Save Command** dialog (**Enter the command to save:**). Hover a command and click the crossed star to remove it. |
+
+Saving a command that is already saved does nothing. Empty lists read **The command history is empty.** and **There are no saved commands.** Both lists are stored in your browser, so they are per browser and per device, not per admin account, and are not shared between admins.
+
+### Search
+
+Press **Ctrl+F** (**Cmd+F** on macOS) or click **Search** to open the search bar at the top right. It searches the whole scrollback and highlights every match in the terminal and in the scrollbar ruler.
+
+| Control | What it does |
+| --- | --- |
+| Input (**Search string**) | Searches as you type. **Enter** goes to the next match, **Shift+Enter** to the previous one. |
+| **Case Sensitive** | Match upper and lower case exactly. |
+| **Whole Word** | Match whole words only. |
+| **Regex** | Treat the text as a regular expression. |
+| Counter | `3/12` (current match out of total), or **No results**. |
+| **Previous** / **Next** | Move between matches. Also **F3** and **Shift+F3**. |
+| **Close** | Closes the bar and clears the highlights. **Esc** does the same. |
+
+Pressing **Ctrl+F** again while the bar is open moves focus to its input. **Clear** also closes the search bar.
+
+### Filter
+
+Search highlights matches in place. The filter panel instead lists only the matching lines, so you can follow one topic through a noisy console. Open it with **Filter** or **Ctrl+Shift+F** (**Cmd+Shift+F** on macOS). It opens on the right side and covers the full width on narrow screens.
+
+| Control | What it does |
+| --- | --- |
+| Query box (**e.g. player command**) | Lines must match the query. **Esc** clears the text; **Esc** on an empty box closes the panel. |
+| Regex toggle | Treat the query as a case-insensitive regular expression. An invalid expression shows **Invalid regex** in the header. |
+| Category chips | **Errors**, **Warnings**, **Commands**, **Players**, **Chat**, **Resources**. Click to switch each on or off. |
+| Result list | One row per matching line, with its timestamp. Click a row to scroll the console to that line and select it. |
+| Rescan button (**Rescan console**) | Runs the scan again now. |
+| **Follow new matches** | Keeps the list scrolled to the newest match. Scrolling up by hand turns it off; scrolling back to the bottom turns it on. |
+| **Newest** | Jumps the console to the newest matching line. |
+| Close button | Closes the panel. |
+
+The header shows the number of matching lines, for example **12 lines**. A trailing `+` means the list was cut at 1,000 results. With no query and no category chosen, the panel shows **Type terms or pick a category to filter the console.** and lists nothing; with a filter but no hits it shows **No lines match this filter.**
+
+#### Query syntax
+
+When Regex is off, the query follows these rules, all case-insensitive:
+
+- Words separated by spaces must all appear in the line: `player command`.
+- `"quoted phrase"` matches that exact text: `"ran command"`.
+- A leading `-` excludes lines containing the word or phrase: `player -bot`.
+
+#### Categories
+
+Each chip is a built-in pattern matched against the line text. With several chips on, a line must match at least one of them, and it must also match your query if you typed one.
+
+| Chip | Matches lines containing |
+| --- | --- |
+| **Errors** | `error`, `exception`, `fail`, `failed`, `failure`, `fatal`, `traceback`, `stack trace`, `unhandled`, or the word `err`. |
+| **Warnings** | `warn`, `warning`, `deprecat…`, or the word `caution`. |
+| **Commands** | `executing command`, the words `command` or `cmd`, `txaEvent`, `commandExecuted`, `console: execute`, or a `/command` style token. |
+| **Players** | `player`, `deferral`, `connecting`, `joined`, `dropped`, `disconnect`, `identifier`, `license:`, `steam:`, `discord:`, `fivem:` or `netid`. |
+| **Chat** | `chat`, `chatMessage`, `[chat]` or the word `say`. |
+| **Resources** | The words `resource` or `ensure`, `started resource`, `stopping resource` or `script:`. |
+
+The filter only scans what your page has loaded. It rescans on its own shortly after new output arrives.
+
+### Clear
+
+**Clear** (or typing `cls` or `clear`) empties your view and prints **[console cleared]**. The clear is remembered by the panel for your admin account, so reloading the page or reconnecting does not bring the old output back. It does not delete anything: the log file and other admins' consoles are unaffected, and you can still [download](#download) the full log. The remembered clear point is held in memory and resets when the panel restarts.
+
+### Download
+
+**Download** saves `fxserver.log`, the server's current log file on disk, to your computer. This is the log sxPanel writes continuously, not only what is on screen, and it includes timestamps in the form `[dd/mm HH:MM:SS]` with colours removed. The file is written in batches about every five seconds, so the very latest lines can be missing.
+
+Downloading needs **View System Logs** (`txadmin.log.view`) on top of `console.view`. Without it, the request is refused with "You don't have permission to call this endpoint."
+
+### Options
+
+The **Options** menu changes how the console looks and what gets copied. They are saved in your browser and apply on this device only.
+
+| Setting | What it does | Default | Values |
+| --- | --- | --- | --- |
+| **Timestamp** | How the time at the start of each line is shown. | **Auto** | **Auto** follows your browser's 12/24-hour preference, **24-hour**, **12-hour**, **Hidden**. |
+| **Include timestamp** (under **Copy Options**) | Keep the timestamp when you copy lines. | Off | On / off. |
+| **Include tag** (under **Copy Options**) | Keep the `║ tag ║` prefix when you copy lines. | On | On / off. |
+
+Changing **Timestamp** applies to lines printed from then on. Copying is done with **Ctrl+C** (**Cmd+C**) on a selection in the terminal; the clipboard text uses your platform's line endings. If copying fails you get a **Failed to copy to clipboard** toast.
+
+### Keyboard shortcuts
+
+| Keys | Action |
+| --- | --- |
+| **Ctrl+F** / **Cmd+F** | Open the search bar, or focus it if open. |
+| **Ctrl+Shift+F** / **Cmd+Shift+F** | Open or close the filter panel. |
+| **F3** / **Shift+F3** | Next or previous search match. |
+| **Esc** | Close the search bar and the filter panel. |
+| **Page Up** / **Page Down** | Scroll one page. |
+| **Home** / **End** | Jump to the top or bottom of the scrollback. |
+| **Ctrl+C** / **Cmd+C** | Copy the selected text using your copy options. |
+| **↑** / **↓** (in the command box) | Walk through command history. |
+| **F5** | Refreshes the page content without a full browser reload, while connected. |
+
+## How to
+
+### Run a command
+
+<Steps>
+<Step>
+Open **Server → Live Console**. Wait for the green dot.
+</Step>
+<Step>
+Type the command in the box, for example `ensure myresource`.
+</Step>
+<Step>
+Press **Enter**. The command appears in the output with your name as its tag, followed by the server's response.
+</Step>
+</Steps>
+
+### Save a command you use often
+
+<Steps>
+<Step>
+Send the command once, then open **Saved** and hover it in the **History** column and click the star. Or click **Add New** and type it.
+</Step>
+<Step>
+Next time, open **Saved** and click the command. It is placed in the box. Press **Enter** to run it.
+</Step>
+</Steps>
+
+### Find out why a resource failed
+
+<Steps>
+<Step>
+Press **Ctrl+Shift+F** to open the filter panel.
+</Step>
+<Step>
+Switch on **Errors** and type the resource name in the query box.
+</Step>
+<Step>
+Click a result to scroll the console to that line, then read the lines around it.
+</Step>
+</Steps>
+
+### Read only the last boot
+
+<Steps>
+<Step>
+Click **Last Start** in the header.
+</Step>
+<Step>
+Scroll down from the `FXServer Starting` banner.
+</Step>
+</Steps>
+
+## How it connects
+
+- **Action log.** Every command you send is recorded in the panel's system log as a command named **Live Console Command** (`console.command`) with your admin name and the text. It is also routed to Discord under **Panel Command Logs** (`system.command`). See [Discord](/docs/discord).
+- **Server resource.** Each command is also forwarded to the sxPanel resource as a `consoleCommand` event with `channel` set to `sxPanel`, `command` and `author`.
+- **Overview.** The mini console on the [Overview](/docs/overview) shows the last 60 lines of this output and also needs `console.view`.
+- **Chat Commands.** Adding or changing console-command actions in [Chat Commands](/docs/features) needs **Console: Write** as well.
+- **Host terminal.** The same output is printed to the terminal that runs FXServer unless quiet mode is on (`TXHOST_QUIET_MODE`, see [Configuration](/docs/configuration)). Quiet mode does not affect the Live Console or the log file.
+
+## Limits and edge cases
+
+- **What is kept.** The panel keeps the most recent output in memory as up to 8 blocks of about 32 KB each, roughly 256 KB. Older output is dropped and is only in the log file. This memory is lost when the panel restarts.
+- **What your browser keeps.** Your page loads the kept output when it connects and holds 5,000 lines of scrollback.
+- **Delivery.** New output is sent to your browser in batches every 250 ms.
+- **Server stopped.** The output stays visible, the command box is disabled, and a new start banner appears when the server starts again.
+- **Permission changes.** If an admin loses `console.view` while the page is open, they stop receiving output. Commands sent from a page that has left the console feed are ignored.
+- **Multiple admins.** Everyone sees the same output. Each admin has their own clear point, command history, saved commands and options.
+- **Local storage.** History, saved commands and options live in the browser's local storage. Clearing site data removes them.
+- **Commands that print nothing.** The command is still logged and sent. Only the server decides whether it prints a response.
+
+## Problems
+
+| Message | Cause and fix |
+| --- | --- |
+| **Connecting…** overlay that does not go away | The browser cannot reach the panel's websocket. Check your reverse proxy forwards websockets, and that you are signed in. |
+| **You do not have permission to write to the console.** | Ask an admin with Admin Manager access to grant **Console: Write**. |
+| **The server is not running.** | Start the server. Commands cannot be sent to a stopped server. |
+| **Socket connection lost.** | Wait for reconnection, or press the browser refresh. |
+| **Invalid regex** | The pattern in the filter panel is not a valid regular expression. Fix it or turn off the regex toggle. |
+| **Failed to copy to clipboard** | The browser refused clipboard access. Allow it for the panel's address, or copy over HTTPS. |
+| **No results** in search | Nothing in the loaded scrollback matches. Older output may only be in the log file. |
+| Download says "You don't have permission to call this endpoint." | Your account lacks **View System Logs**. |

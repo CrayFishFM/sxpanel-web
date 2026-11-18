@@ -182,7 +182,9 @@
         "core/modules/Logger/"
       ],
       "notes": "Sending commands, saved commands, search, filters, markers, download, options, buffer size, what needs Console: Write.",
-      "status": "todo"
+      "status": "done",
+      "writtenAt": "2026-11-18",
+      "sourceSha": "a21e752720dac257eafa73132d5d73599ec76ff2"
     },
     {
       "id": "resources",
