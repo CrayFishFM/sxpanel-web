@@ -1,0 +1,291 @@
+---
+title: Chat commands
+description: Every built-in sxPanel chat command, how to create your own commands from menu actions, chat messages, console commands and events, and how to override or turn off built-ins.
+---
+
+Chat commands are the `/` commands players and staff type in the in-game chat. sxPanel ships a set of built-in commands, one for most actions of the `/tx` menu, and the **Chat Commands** page lets server owners add their own or replace and turn off the built-in ones. Changes apply to a running server without a restart.
+
+## Where to find it
+
+- Panel: **Server → Chat Commands**, at `/server/commands`.
+- In game: type `/` in the chat to see the commands you can use. Each player only gets suggestions for the commands their permissions allow.
+
+![Chat Commands page on the Your commands tab, with the From the /tx menu tab next to it](/docs/chat-commands.webp)
+
+## Who can use it
+
+| Permission | Id | What it allows |
+| --- | --- | --- |
+| **Settings: View** | `settings.view` | Opens the page and shows the commands. The sidebar entry is hidden without it. |
+| **Settings: Change** | `settings.write` | Creates, edits, enables, disables and deletes commands. |
+| **Console: Write** | `console.write` | Required to add, change, toggle or delete **Console Command** and **Server Event** commands. |
+
+Without **Settings: Change** the page is read-only and shows a warning banner. Without **Console: Write** you can still see console command and server event commands, but their switch, edit and delete buttons are disabled (the edit button's tooltip reads **Requires Console: Write**). The server enforces the same rules when saving, including when you change a command's type away from one of these two.
+
+Who can *use* a command in game is a separate question, set per command by **Who can use it**. See [Permissions](/docs/permissions).
+
+## Built-in commands
+
+### Menu and moderation commands
+
+These are registered by the in-game menu. They need the in-game menu to be enabled and the player to be an admin with menu access.
+
+| Command | What it does | Permission |
+| --- | --- | --- |
+| `/tx`, `/txadmin` | Opens or closes the menu. With an argument (`/tx 12` or a name), opens that player's profile. | Menu access |
+| `/txAdmin-reauth` | Retries authenticating the menu, for example after you were added as an admin while connected. | Anyone |
+| `/ban <player>` | Opens the ban dialog for a player (server ID or name). | **Ban** (`players.ban`) |
+| `/kick <player>` | Opens the kick dialog for a player. | **Kick** (`players.kick`) |
+| `/warn <player>` | Opens the warn dialog for a player. | **Warn** (`players.warn`) |
+| `/announce <message>` | Sends a server-wide announcement. | **Send Announcements** (`announcement`) |
+| `/goto <player ID>` | Teleports you to a player. | **Teleport** (`players.teleport`) |
+| `/tpm` | Teleports you to your map waypoint. | **Teleport** (`players.teleport`) |
+| `/staffchat <message>` | Sends a message only online staff see. | Menu access; sending needs **Staff Chat** (`menu.staffchat`) |
+| `/ticket`, `/report` | Opens the ticket window. Only registered while reports are enabled. | Any player |
+
+`/ban`, `/kick` and `/warn` answer `Usage: /<action> [playerID]` when you give no target, and `You do not have permission to <action> players.` without the permission. See [Reports](/docs/reports) for the ticket commands.
+
+### Menu action commands
+
+Every other `/tx` menu action is a built-in command under a default name. Each one checks the permission below, both when typed and again on the server when the action runs.
+
+| Command | Arguments | What it does | Permission |
+| --- | --- | --- | --- |
+| `/tpw` | none | Teleports you to the map waypoint. | **Teleport** (`players.teleport`) |
+| `/tpc` | `[x] [y] [z]` | Teleports you to coordinates; `z` of 0 uses the ground. Commas are accepted. Without arguments it opens the coords dialog. | **Teleport** (`players.teleport`) |
+| `/tpback` | none | Returns you to where you were before your last teleport. | **Teleport** (`players.teleport`) |
+| `/bring` | `<player ID>` | Teleports a player to you. | **Teleport** (`players.teleport`) |
+| `/return` | `<player ID>` | Sends a player back to where they were before you brought them. | **Teleport** (`players.teleport`) |
+| `/healme` | none | Heals and revives you. | **Heal** (`players.heal`) |
+| `/heal` | `<player ID>` | Heals and revives a player. | **Heal** (`players.heal`) |
+| `/healall` | none | Heals and revives everyone. | **Heal** (`players.heal`) |
+| `/healradius` | `<radius>` | Heals every player within the radius around you, 1 to 500 meters. | **Heal** (`players.heal`) |
+| `/noclip` | none | Toggles NoClip. | **NoClip** (`players.noclip`) |
+| `/god` | none | Switches your player mode to God Mode. | **God Mode** (`players.godmode`) |
+| `/superjump` | none | Switches your player mode to Super Jump. | **Super Jump** (`players.superjump`) |
+| `/normal` | none | Disables NoClip, God Mode and Super Jump. | **NoClip** (`players.noclip`) |
+| `/invis` | none | Hides you from other players, or shows you again. | **Invisibility** (`players.invisible`) |
+| `/car` | `[model]` | Spawns a vehicle by model name. Without arguments it opens the spawn dialog. | **Spawn Vehicles** (`menu.vehicle.spawn`) |
+| `/fix` | none | Repairs the vehicle you are in. | **Fix Vehicles** (`menu.vehicle.fix`) |
+| `/dv` | none | Deletes the vehicle you are in. | **Delete Vehicles** (`menu.vehicle.delete`) |
+| `/boost` | none | Boosts the vehicle you are in. | **Boost Vehicles** (`menu.vehicle.boost`) |
+| `/cleararea` | `[radius]` | Clears entities around you. Without arguments it opens the radius dialog. Not available on RedM. | **Reset World Area** (`menu.clear_area`) |
+| `/ids` | none | Shows or hides overhead player IDs. | **View Player IDs** (`menu.viewids`) |
+| `/blips` | none | Shows or hides player blips on the map. | **View Map Blips** (`menu.mapblips`) |
+| `/dvall` | `[radius]` | Deletes every unoccupied vehicle within the radius around you, 1 to 300 meters. Without arguments it opens the radius dialog. | **Delete Entities** (`menu.delete_entities`) |
+| `/spectate` | `<player ID>` | Starts spectating a player. | **Spectate** (`players.spectate`) |
+| `/freeze` | `<player ID>` | Toggles freeze on a player. You cannot freeze yourself. | **Freeze Players** (`players.freeze`) |
+| `/disarm` | `<player ID>` | Removes all weapons from a player. | **Disarm** (`players.disarm`) |
+| `/sc` | `<message>` | Sends a message only online staff see, like `/staffchat`. | **Staff Chat** (`menu.staffchat`) |
+| `/coords` | none | Shows or hides your live coordinates and heading. | **Developer Tools** (`menu.devtools`) |
+| `/inspect` | none | Shows details about the entity you aim at. With **Delete Entities** you can press DELETE to remove it. | **Developer Tools** (`menu.devtools`) |
+
+Arguments in `<angle brackets>` are required and `[square brackets]` are optional. A missing or invalid argument shows an error in the menu's snackbar, for example `Usage: provide a valid player ID.`
+
+Three menu actions are not built-in commands, because they run without a confirmation dialog or have no permission attached: **Restart Server**, **Stop Server** and **Open Players Page**. You can still add them as your own commands (for example `/restartserver`, `/stopserver`, `/players`) from the **From the /tx menu** tab. Think hard before giving anyone a stop or restart command in chat.
+
+### Overriding and turning off built-ins
+
+A command you create always takes precedence over a built-in with the same name or alias:
+
+- **Replace it.** Create your own command with the name (or an alias) of a menu action built-in. The built-in is dropped and yours is used, with your permission and cooldown.
+- **Turn it off.** Create a *disabled* command with that name. The name is taken, so the built-in is not registered. The **Turn off** button on the **From the /tx menu** tab does exactly this.
+- **Turn it back on.** Delete the command that holds the name.
+
+This only applies to the menu action commands in the second table. The commands in the first table are registered by the menu itself and cannot be replaced or turned off here, and their names are reserved.
+
+## Your commands
+
+The **Your commands** tab lists the commands you created. The header shows four pills:
+
+| Pill | Meaning |
+| --- | --- |
+| **Saving** / **Saved** / **Save failed** | State of the last save. **Saved** disappears after a few seconds. |
+| **Live sync** / **Server offline** | Whether the game server is running. Hover for the explanation: changes apply in game instantly, or load when the server starts. |
+| **Commands** | How many custom commands exist. Built-ins are not counted. |
+| **Enabled** | How many of them are enabled. |
+
+Each row shows:
+
+- A switch to enable or disable the command. Disabled rows are dimmed.
+- The name with its `/` and its aliases.
+- Badges for the action type, the permission (**Everyone** when empty, otherwise the permission's label) and, if set, the cooldown (`30s cooldown`).
+- The description, or the action's content when there is no description.
+- **Edit** and **Delete** buttons. Delete asks `Delete /name? Players will no longer be able to use it.` first.
+
+The switch and delete save immediately; there is no separate save step. The whole list is saved on each change, shown at once in the panel and reloaded from the server if the save fails. A toast confirms creates, edits and deletes with `Live in-game now.` when the server picked the change up, or `Applies on next server start.` when it is offline.
+
+**New command** opens an empty editor (a chat message command by default). An empty list shows **Browse /tx menu actions**, which switches to the other tab.
+
+### Banners
+
+| Banner | Meaning |
+| --- | --- |
+| `The in-game menu is disabled in Settings, so /tx menu action commands won't work until it's enabled.` | You have enabled menu action commands but the in-game menu is off. Shown only when at least one such command is enabled. |
+| `You need the Settings: Change permission to edit chat commands.` | You can view but not change commands. |
+| `Error loading commands: …` | The list could not be fetched. **Try again** reloads it. |
+| `Error saving: …` | The server rejected the save. The list is reloaded. |
+
+### From the /tx menu
+
+The second tab, **From the /tx menu**, lists every menu action in groups: **Teleport**, **Health**, **Player Mode**, **Vehicle**, **World**, **Players**, **Staff Tools** and **Server**. Each action shows its description, a badge with the permission it requires, a green `/name built-in` chip when its built-in command is active, and chips for any of your commands that use it (green with a check when enabled).
+
+| Button | What it does |
+| --- | --- |
+| **Turn off** | Shown while the built-in is active. Saves a disabled command with the default name so the built-in is not registered. |
+| **Customize** | Opens the editor pre-filled for this action, with the default name (or `name2`, `name3`… if taken) so you can change the name, permission or cooldown. |
+| **Enable** | Adds a command for this action under its default name in one click. If the default name is taken it uses the next free number, and opens the editor if no name is free. |
+| **Add another** | Replaces **Enable** once the action already has a built-in or custom command. Adds another command for the same action. |
+
+## The command editor
+
+The editor opens as **New chat command** or **Edit /name**.
+
+| Setting | What it does | Default | Limits / values |
+| --- | --- | --- | --- |
+| **Command** | The name typed after `/`. A leading `/` and spaces are removed and letters are lowercased. | empty | 1–32 characters of lowercase letters, numbers, `-` and `_`. Reserved names are refused. |
+| **Aliases** | Extra names for the same command, separated by spaces or commas. | none | Up to 5, each with the same rules as the name. |
+| **Description** | Help text shown in the chat suggestions. When empty the suggestion reads `Custom command /name`. | empty (pre-filled for menu actions) | Up to 128 characters. |
+| **What it does** | The action type, see below. | **Chat Message** for a new command | **/tx Menu Action**, **Chat Message**, **Console Command**, **Server Event**, **Client Event** |
+| **Who can use it** | **Everyone (all players)**, or **Admins with:** a specific permission. | **Everyone** | Any permission id from the Admin Manager. |
+| **Cooldown (s)** | Seconds a player must wait before using the command again. | 0 (none) | 0–3600, whole numbers. |
+| **Enabled** | Whether the command works. | on | on / off |
+
+The footer shows the **Usage** line, for example `/heal <player ID>`. Switching **What it does** resets the action fields. Changing the menu action keeps your permission if you customized it, and otherwise follows the action's own permission. If a menu action's own permission differs from the one you picked, a warning says `This menu action also checks for <permission>. Players without it will be able to type the command, but the action will be denied.`
+
+Saving checks the whole form and shows the first problem under the fields, as `field: message`. It also refuses name collisions with your other commands and the permission rules above.
+
+### Action types
+
+| Type | Fields | What happens |
+| --- | --- | --- |
+| **/tx Menu Action** | **Menu action** (grouped list, with its description) | The player's menu runs the action with the typed arguments. Needs the in-game menu enabled and the player to have menu access; the action checks its own permission again. |
+| **Chat Message** | **Message** (up to 1000 characters), **Send to everyone** | Shows the message in chat. Only the player who typed it sees it, unless **Send to everyone** is on. Chat color codes such as `^5` work. |
+| **Console Command** | **Console command** (up to 500 characters) | Runs the command in the server console. |
+| **Server Event** | **Event name** (up to 96 characters) | Triggers a server event with the player's ID and the arguments. |
+| **Client Event** | **Event name** (up to 96 characters) | Triggers a client event on the player who typed the command. |
+
+Event names may contain letters, numbers, `_`, `:`, `.` and `-`, and fail with `Invalid event name.` otherwise.
+
+### Placeholders
+
+**Chat Message** and **Console Command** text can use placeholders:
+
+| Placeholder | Replaced with |
+| --- | --- |
+| `{source}` | The player's server ID. |
+| `{name}` | The player's name. |
+| `{args}` | All arguments, joined by spaces. |
+| `{1}` … `{9}` | The first to ninth argument, or nothing if it was not typed. |
+
+Semicolons and line breaks are removed from names and arguments before they are inserted, so a player cannot chain a second console command through an argument. Text you write yourself in the command is not changed. An unknown placeholder such as `{foo}` is left as written.
+
+**Server Event** receives `(source, args)` as `TriggerEvent(name, source, args)`, where `args` is the list of typed arguments. **Client Event** is sent as `TriggerClientEvent(name, source, args)`.
+
+<Callout type="warn" title="Console commands are powerful">
+A **Console Command** runs with full server console power. Restrict it with **Who can use it** to a permission you trust, and prefer fixed commands over ones built from `{args}`. For example `ensure {1}` lets anyone allowed to use it start any resource by name.
+</Callout>
+
+## Reserved names
+
+Custom commands cannot use names sxPanel or FXServer already use, because commands registered by a game resource win over the panel's commands. A reserved name fails with `This command name is reserved.`
+
+- **sxPanel:** `tx`, `txadmin`, `txadmin-reauth`, `ban`, `kick`, `warn`, `announce`, `goto`, `tpm`, `ticket`, `report`, `staffchat`.
+- **FXServer and common:** `quit`, `disconnect`, `connect`, `restart`, `start`, `stop`, `ensure`, `refresh`, `say`, `exec`, `set`, `sets`, `setr`, `seta`, `add_ace`, `add_principal`, `remove_ace`, `remove_principal`, `cmdlist`, `netgraph`, `loadlevel`, `bind`, `unbind`, `rbind`.
+
+If another resource registers a command with the same name as one of yours, whichever registers last wins.
+
+## How to
+
+### Add a command for a menu action
+
+<Steps>
+<Step>
+Open **Server → Chat Commands** and switch to **From the /tx menu**.
+</Step>
+<Step>
+Find the action. If it shows a `/name built-in` chip it already works; click **Customize** to change its name or permission.
+</Step>
+<Step>
+Click **Enable** to add it under its default name, or **Customize** to adjust it first.
+</Step>
+</Steps>
+
+### Change the permission or cooldown of a built-in
+
+<Steps>
+<Step>
+On **From the /tx menu**, click **Customize** on the action.
+</Step>
+<Step>
+The editor opens with the built-in's default name, for example `heal`. Keep it, and change **Who can use it** or **Cooldown (s)**. You can also add aliases.
+</Step>
+<Step>
+Click **Create command**. Your command now takes the place of the built-in under that name.
+</Step>
+</Steps>
+
+### Give players a `/discord` command
+
+<Steps>
+<Step>
+Click **New command** and enter `discord` as the **Command**.
+</Step>
+<Step>
+Leave **What it does** on **Chat Message** and write `^5Join our Discord: ^7discord.gg/yourserver` as the **Message**.
+</Step>
+<Step>
+Turn on **Send to everyone** if the whole server should see it, leave **Who can use it** on **Everyone**, set a **Cooldown (s)** such as 30 to prevent spam, and click **Create command**.
+</Step>
+</Steps>
+
+### Turn off a built-in command
+
+<Steps>
+<Step>
+Open **From the /tx menu** and find the action with the green `/name built-in` chip.
+</Step>
+<Step>
+Click **Turn off**. A disabled command named `name` appears on **Your commands**.
+</Step>
+<Step>
+To bring the built-in back, delete that disabled command.
+</Step>
+</Steps>
+
+## How it connects
+
+- **Storage.** Commands are saved in the `gameFeatures.customCommands` config key (**Custom Chat Commands**). Each save is recorded in the system log as `Changed config: Custom Chat Commands (gameFeatures.customCommands)` with your admin name. See [Permissions](/docs/permissions#per-admin-logging).
+- **Game server.** The sxPanel resource fetches the commands from the panel when the server starts and whenever you save. The list it receives holds your enabled commands plus the active built-in menu action commands.
+- **Server log.** Chat message commands with **Send to everyone**, console commands and server events are logged as `used custom command /name (detail)`, where the detail is the broadcast message, the console command that ran or the event name. Client events and menu actions have no entry of their own. Menu actions are logged by the action that ran.
+- **Chat suggestions.** Each player gets suggestions for the commands they may use, with argument hints for menu actions. They refresh when the player's permissions change.
+- **Permissions on other pages.** [Live Console](/docs/live-console) also needs **Console: Write** to run console commands.
+- **Discord.** The Discord bot has its own custom slash commands. They are unrelated to these in-game commands.
+
+## Limits and edge cases
+
+- At most 100 commands, 5 aliases per command, and a name or alias can belong to only one command. Collisions fail with `"/name" is used by both /a and /b.` or `/name lists "alias" more than once.`
+- FXServer cannot unregister a command. A disabled or deleted command stays registered but does nothing and gives no reply, until the server restarts.
+- Commands only work in game. Typing one in the server console prints `Custom chat commands can only be used in-game.`
+- Cooldowns are per player and per command, and are kept in memory: they reset when the player leaves or the server restarts. A command goes on cooldown as soon as it passes the permission check, even if the action then fails. While waiting, the player sees `Please wait Ns before using /name again.`
+- Permission checks look at the exact permission id. Players who are not logged in as an admin can only use commands set to **Everyone**. **All Permissions** admins pass every check.
+- Permission to use a command and permission for its menu action are separate. A command set to **Everyone** that runs a menu action still needs the player to be an admin with menu access and the action's own permission.
+- If the game server cannot be reached when it starts, it retries up to 6 times, 5 seconds apart, and then logs `[CustomCommands] failed to load commands (code …)`.
+- If the server is offline when you save, the commands are stored and load on the next start.
+- If the in-game menu is disabled, menu action commands reply `This command requires the sxPanel menu to be enabled.`
+
+## Problems
+
+| Message | Cause and fix |
+| --- | --- |
+| `This command name is reserved.` | The name is on the reserved list. Pick another name. |
+| `Only lowercase letters, numbers, - and _ are allowed (max 32 chars).` | The name or an alias has other characters or is too long. |
+| `At most 100 custom commands are allowed.` | Delete commands you no longer use. |
+| `You need the "Console: Write" permission to change console command or server event commands (/name).` | Ask an admin with **Console: Write** to make the change. |
+| `You do not have permission to change the settings.` | You need **Settings: Change**. |
+| `You do not have permission to view the settings.` | You need **Settings: View**. |
+| `Error saving the configuration file: …` | The config file could not be written. Check the file permissions of the data folder. |
+| `You do not have permission to use this command.` (in chat) | The player lacks the permission chosen in **Who can use it**. |
+| `You do not have this permission.` (in menu) | The command ran but the menu action needs a permission the player does not have, or the player has no menu access. |
+| Command is typed but nothing happens | It is disabled or deleted, the server has not restarted since it was removed, another resource registered the same name later, or the menu is disabled. |
+| New command missing from chat suggestions | Suggestions are sent when a player joins and when permissions change. Rejoin, or run `/txAdmin-reauth`. |

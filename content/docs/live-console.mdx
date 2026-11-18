@@ -264,7 +264,7 @@ Scroll down from the `FXServer Starting` banner.
 - **Action log.** Every command you send is recorded in the panel's system log as a command named **Live Console Command** (`console.command`) with your admin name and the text. It is also routed to Discord under **Panel Command Logs** (`system.command`). See [Discord](/docs/discord).
 - **Server resource.** Each command is also forwarded to the sxPanel resource as a `consoleCommand` event with `channel` set to `sxPanel`, `command` and `author`.
 - **Overview.** The mini console on the [Overview](/docs/overview) shows the last 60 lines of this output and also needs `console.view`.
-- **Chat Commands.** Adding or changing console-command actions in [Chat Commands](/docs/features) needs **Console: Write** as well.
+- **Chat Commands.** Adding or changing console-command actions in [Chat Commands](/docs/chat-commands) needs **Console: Write** as well.
 - **Host terminal.** The same output is printed to the terminal that runs FXServer unless quiet mode is on (`TXHOST_QUIET_MODE`, see [Configuration](/docs/configuration)). Quiet mode does not affect the Live Console or the log file.
 
 ## Limits and edge cases

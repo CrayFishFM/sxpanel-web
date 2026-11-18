@@ -217,7 +217,9 @@
         "resource/cl_custom_commands.lua"
       ],
       "notes": "Built-in commands (list every one with what it does and its permission), custom commands and every field in the editor, overriding and disabling built-ins. Move the Chat commands section out of features.mdx into this page and leave a short summary with a link.",
-      "status": "todo"
+      "status": "done",
+      "writtenAt": "2026-11-18",
+      "sourceSha": "a21e752720dac257eafa73132d5d73599ec76ff2"
     },
     {
       "id": "cfg-editor",

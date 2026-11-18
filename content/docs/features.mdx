@@ -18,7 +18,7 @@ the [Overview dashboard](/docs/overview) guide.
   tick-time histogram (`svMain`, `svNetwork`, …)
 - [Resource manager](/docs/resources) with folder grouping and start/stop/restart, plus an
   **Edit config files** action for editing a resource's config files
-- **Chat Commands** page for turning in-game menu actions, chat messages,
+- [Chat commands](/docs/chat-commands) page for turning in-game menu actions, chat messages,
   console commands and server/client events into `/` commands
 - `server.cfg` editor with multi-file support and validation on save
 - Real-time playerlist with fuzzy search & tag filtering, and a full
@@ -47,28 +47,15 @@ Admin tooling that lives inside the game.
   invisibility, unoccupied-vehicle cleanup, and returning or disarming players
 - Mouse-wheel speed control while in NoClip freecam
 - Every menu action is also available as a chat command — see
-  [Chat commands](#chat-commands)
+  [Chat commands](/docs/chat-commands)
 
 ## Chat commands
 
 Every `/tx` menu action is available as a chat command by default (for example
 `/heal`, `/noclip` or `/sc` for staff chat). The **Chat Commands** page under
-**Server** in the panel lists each built-in command and its status, and lets
-you add your own.
-
-A custom command has a name, up to 5 aliases, a description, an optional
-permission and an optional cooldown (0–3600 seconds). Its action is one of:
-a menu action, a chat message, a console command, a server event or a client
-event. Names use lowercase letters, numbers, `-` and `_` (up to 32 characters),
-and you can create up to 100 commands. Names that sxPanel or FXServer already
-use (such as `tx`, `ban` or `restart`) are reserved.
-
-- A custom command with the same name as a built-in command takes its place.
-  Create a disabled custom command with that name to turn the built-in off.
-- Console command and server event actions are privileged: you need the
-  **Console: Write** permission to add, change or remove them.
-- Saving needs the **Settings: Change** permission. Changes are loaded into a
-  running server without a restart.
+**Server** in the panel lets you add your own commands, or replace and turn off
+the built-in ones, without a restart. See [Chat commands](/docs/chat-commands)
+for every command, the editor and the permissions involved.
 
 ## Combat logging
 
