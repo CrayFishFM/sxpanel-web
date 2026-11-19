@@ -1,0 +1,275 @@
+---
+title: Insights & Player Drops
+description: Every Insights chart and how its numbers are calculated, the Player Drops timeline and drill-down, how disconnects are classified, and how long the data is kept.
+---
+
+The two analytics pages answer different questions. **Insights** shows how your player base and server behave over time: retention, population, session length, uptime and moderation. **Player Drops** shows why players leave: normal disconnects, resource kicks, timeouts, crashes and security kicks, and what changed on the server around the time they started happening.
+
+Server owners use them to spot a bad resource update, a crashing build or a quiet weekday. Both pages are read-only: nothing you do on them changes data, sends a Discord message or writes to a log.
+
+## Where to find it
+
+| Page | Panel path | URL |
+| --- | --- | --- |
+| **Insights** | **Analytics → Insights** | `/insights` |
+| **Player Drops** | **Analytics → Player Drops** | `/server/player-drops` |
+
+**Report Analytics** sits in the same sidebar section and is covered in [Reports](/docs/reports#report-analytics).
+
+The Overview dashboard also shows a **Drops (last 6h)** summary; see [Overview](/docs/overview#players-online).
+
+## Who can use it
+
+Neither page needs a permission. Any admin who can sign in to the panel can open both pages and load their data. Players who are not admins have no access to the panel.
+
+The only way to hide them is the page switches in **Settings → Panel Features** (group **Analytics**): **Insights** and **Player Drops**. Both are on by default. When a page is switched off, it disappears from the sidebar and its URL redirects to the dashboard. This only hides the page; the data endpoints keep answering. The setting is read when the panel loads, so reload the browser after saving.
+
+## Insights
+
+![Insights with player retention, player count and memory charts, and new versus returning players](/docs/insights.webp)
+
+The page has twelve cards in three sections. Each card loads on its own, so one failing card does not stop the others. While loading a card shows a spinner; if it cannot be built it shows the reason in place of the chart (see [Problems](#problems)).
+
+Data is cached in your browser for a minute and is not refreshed when you switch back to the tab. Reload the page to force new numbers.
+
+### Where each number comes from
+
+Insights reads from three stores, and that decides how far back each card can look.
+
+| Store | Used by | How far back |
+| --- | --- | --- |
+| **Player database** (every player the server has seen, and every warn, kick and ban) | Retention, New Players Per Day, Player Growth, Playtime Distribution, Top Players, Moderation Activity | All time (growth, playtime, top players, retention) or the last 90 days with data (new players, moderation) |
+| **Performance log** (a snapshot every few minutes) | Player Count & Memory, Peak Hours, Server Uptime Timeline | About 4 days for counts and memory; boot and stop markers are kept longer, see [Data retention](#data-retention) |
+| **Server log** (join and leave events) | Session Length, New vs Returning Players | The server log's in-memory buffer, plus up to 10 recent session files for New vs Returning |
+| **Player drop log** | Disconnect Reasons | Last 14 days |
+
+<Callout type="warn">
+Some card subtitles say "long-term", but the performance log only keeps about 4 days of player counts and memory. The Peak Hours heatmap is built from that same window, so each weekday cell averages at most one or two days of data. Treat it as a short-term view on a young server.
+</Callout>
+
+### Population
+
+**Player Retention** (`Do players come back?`). Two groups of tiles, plus a **Sample** pill with the number of players used.
+
+- **Return Rate (joined 30+ days ago)**: **After 1 day**, **After 7 days** and **After 30 days**. Only players whose first join was more than 30 days ago are counted, so every player has had the full 30 days to come back. A player counts as returned after N days when their last connection is more than N days after their first join.
+- **Current Activity (all players)**: **Active last 7d** and **Active last 30d**, the share of all players in the database whose last connection falls in that period.
+
+All values are whole-number percentages. Tiles are green at 50% or more, amber from 25% to 49%, and red below 25%. The card needs at least 10 players who joined more than 30 days ago.
+
+Because only each player's last connection is stored, a return rate means "last played at least N days after joining", not "played again on day N".
+
+**Player Count & Memory** (`Long-term population and host memory trend`). A **Peak** pill shows the highest player count in the series. Two stacked charts:
+
+- **Players**: player count over time, from the performance log.
+- **FXServer Memory**: the memory used by the FXServer process, shown as MB, or GB from 1024 MB. This chart only appears when at least one snapshot recorded memory.
+
+Hover to see a tooltip with the time and values. Times today show only the clock time; older ones include the date.
+
+**New vs Returning Players** (`Daily breakdown of who showed up`). A **Window** pill shows how many days of data were analysed (for example `5d`). For each day, the number of distinct players who joined that day, split into:
+
+- **New**: a player whose first-ever join (from the player database) was on that day, or whose license is not in the database.
+- **Returning**: a player whose first join was on an earlier day.
+
+A player who joins several times in a day counts once. The card reads join events from the server log's in-memory buffer and from the 10 newest session files, so it covers recent days only and is empty on a freshly installed panel.
+
+**New Players Per Day** (`First-seen players over time`). Players first seen per day, by the day of their first join in the server's local time zone, for the last 90 days that had at least one new player. The **Total** pill is the number of players in the database.
+
+**Player Growth** (`Cumulative unique players over time`). The running total of players in the database by first-join day, for all of history. **Total** is the current player count.
+
+**Peak Hours** (`Average players by weekday & hour`). A grid of weekday (rows) by hour 0–23 (columns). Each cell is the average player count of every snapshot in the performance log that falls in that weekday and hour, in the server's local time zone, rounded to a whole number. Hover a cell to read `<weekday> <hour>:00, <n> avg players`. Brighter cells are busier. An empty cell shows 0, which also means no data was recorded for that slot.
+
+### Sessions & Engagement
+
+**Session Length** (`How long sessions typically last`). The subtitle becomes `<n> sessions · <h>h analyzed`. **Avg** and **Median** pills sit above a histogram with the buckets `< 5m`, `5–15m`, `15–30m`, `30m–1h`, `1–2h`, `2–4h`, `4–8h` and `8h+`.
+
+A session is a join followed by a leave of the same player id in the server log buffer. Sessions shorter than 1 minute or longer than 24 hours are discarded. Players still connected, and sessions whose join has scrolled out of the buffer, are not counted.
+
+**Playtime Distribution** (`How much total time players accumulate`). **Median** and **Avg** pills, and a histogram of each player's lifetime playtime across all players in the database: `< 1h`, `1–5h`, `5–10h`, `10–24h`, `1–3d`, `3–7d`, `1–2w` and `2w+`. Playtime is the total stored on the player record.
+
+**Top Players by Playtime** (`All-time leaderboard`). The 20 players with the most playtime, with rank, name and time (`45m`, `3h 12m`, `2d 5h`). The top three ranks are coloured. Click a name to open that player's profile; see [Players](/docs/players#the-player-profile).
+
+**Disconnect Reasons** (`Last 14 days · logged disconnects`). A **Total** pill and one bar per drop category (**Player**, **Timeout**, **Security**, **Crash**, **Resource**, **Unknown**), sorted by count. The numbers come from the player drop log and follow the same rules as the [Player Drops](#player-drops) page, so server shutdowns are not counted.
+
+### Operations
+
+**Server Uptime Timeline** (`Historical up / down segments`). One horizontal bar from the oldest to the newest recorded event, with green segments for online time and red for offline time. Hover or focus a segment to see its status, duration and start and end times. Below the bar: `Uptime: <n>%` and `Total: <duration>`, where the percentage is online time divided by the time between the first and last segment.
+
+- A segment starts at a recorded server boot and ends at a recorded stop. The time between a stop and the next boot is offline.
+- A boot that is stopped again before any snapshot was recorded is removed, because the server did not really finish starting.
+- The last online segment runs to the current time while the server is up.
+- Segments narrower than 0.2% of the bar are not drawn, so brief restarts can be invisible on a long timeline.
+
+**Moderation Activity** (`Warns, kicks, bans and more over time`). Per day, the number of bans, warns and kicks recorded in the player database, for the last 90 days that had at least one action. Revokes and other action types are not counted.
+
+## Player Drops
+
+![Player Drops with expected and unexpected drop timelines, period overview and environment changes](/docs/player-drops.webp)
+
+A *drop* is a player leaving the server. The page sorts each drop into a category, charts them over time, and lets you drill into any period. It is meant to answer "did something go wrong at 21:00?" and "are crashes up since Tuesday's update?".
+
+### Drop categories
+
+Every drop is classified when it happens.
+
+| Category | Group | Meaning |
+| --- | --- | --- |
+| **Player** | Expected | Player left by quitting the game, leaving the server or other normal means. |
+| **Resource** | Expected | Player kicked out of the server by a resource. |
+| **Timeout** | Unexpected | Connection timed out due to networking issues or a client crash. |
+| **Crash** | Unexpected | Player left due to a game crash, but could still tell the server the crash reason. |
+| **Security** | Unexpected | Player kicked for suspect behaviour, such as sending too many commands or losing connection to the Cfx.re backend services. |
+| **Unknown** | Unexpected | Player left for a reason sxPanel could not classify. |
+
+How a drop is classified:
+
+- When FXServer reports a drop category, that is used. Client disconnects are **Player**, unless the reason is a game crash message, which becomes **Crash**. Connection timeouts and too many missed OneSync frames are **Timeout**. Kicks by the server, a second client with the same identity replacing the first, and state bag, net event, latent event and command rate limits are **Security**. Kicks by a resource are **Resource**.
+- When FXServer does not report a category, the disconnect message is matched instead. Messages such as `Exiting`, `Disconnected.`, `Reconnecting` and `Quit:` are **Player**; messages containing `timed out` forms are **Timeout**; overflow and `Disconnected by server:` messages are **Security**; a `Game crashed: ` prefix, in any of 13 languages, is **Crash**. Anything else is **Unknown**.
+- Drops caused by the server shutting down are not recorded at all: not in these charts, not in **Disconnect Reasons**, and not in the [Server Log](/docs/server-log#event-types).
+- Crash and unknown reasons are kept as text, truncated to 512 and 320 characters. Crash reasons are translated to an English prefix (`Unhandled exception: …`) so they group across languages. Resource kicks are counted per resource name.
+
+### Header
+
+The header band shows three pills, then the controls.
+
+| Control | What it does |
+| --- | --- |
+| **Drops** | Total drops in the last 14 days, all categories. |
+| **Unexpected** | Drops in the last 14 days in the unexpected categories (**Timeout**, **Crash**, **Security**, **Unknown**). |
+| **Changes** | Number of environment changes (below) in the last 14 days. |
+| Window label | The period the drill-down below shows: `Last 7 days` (**Hours**), `Last 14 days` (**Days**), or the range you selected. |
+| **Hours** / **Days** | Resolution of the timelines. **Hours** draws the last 7 days one bar per hour. **Days** draws the last 14 days one bar per day. Switching clears any selected range. |
+| **24h**, **3d**, **7d**, **14d** | Select that many days back from now as the drill-down period. The active button is highlighted when the range matches. |
+| **Reset** | Appears while a range is selected. Returns to the default window. |
+
+The three pills always cover the full 14 days, whatever range or resolution you pick. Until the data loads they show `—`.
+
+### Timelines
+
+Two charts show drops over time, each with a legend of its categories (ordered by most drops in the window).
+
+- **Expected Player Drops** (`Voluntary disconnects & kicks`): **Player** and **Resource**.
+- **Unexpected Player Drops** (`Crashes, timeouts & unknown disconnects`): **Timeout**, **Crash**, **Security** and **Unknown**.
+
+Each bar is stacked by category with the colours of the legend. The two charts have separate vertical scales, so a few crashes stay visible next to thousands of normal leaves.
+
+- **Hover** a bar: a legend follows the cursor with the count of each category for that hour or day. If something changed on the server in that period the legend ends with `1 CHANGE` or `<n> CHANGES`, and a small diamond marks the bar.
+- **Drag** across a chart to select a period. Release to load the drill-down for it; the chart keeps the selection highlighted. A click without dragging clears the selection. Selecting on either chart selects the same period on both.
+- When the chart has no data in range it shows `No players disconnected from your server recently.` If it cannot be drawn it shows `Render Error:` with a **Retry** button, and if the request fails `Error loading data.`
+
+### Drill-down
+
+Below the timelines, a line reads `Period from <start> to <end>.` with the exact times (hover for the ISO timestamps). It turns highlighted when you selected the range yourself. While new data loads the cards fade under an **Updating…** overlay.
+
+When you pick a range by dragging, the end is extended to the end of that day (**Days**) or hour (**Hours**), so the last bar you touched is fully included. Ranges end at the current time at most.
+
+**Period Overview.** One tile per category with its count and share of all drops in the period; hover for the category description. Below, `Average session time at disconnect:` shows the mean session length of the players who left, formatted `2h 15m`. With no drops it reads `No player drops within this time window.`
+
+**Resource Kicks.** Tiles with each resource that kicked players, its count and its share of all resource kicks. With none: `No players kicked by resources within this time window.`
+
+**Environment Changes.** Changes to the server that could explain a shift in drops, oldest first, each with its date and time. They are detected each time the server boots by comparing with the previous boot:
+
+| Entry | What it shows |
+| --- | --- |
+| **Changed FXServer version** | `Switched from <old> to <new>` (platform and build). |
+| **Changed game version** | `Switched from <old> to <new>` (game and build number, for example a GTA build change). |
+| **Changed boot resources** | Lists of **Removed**, **Added** and **Updated** resources. A resource whose name appears in both the removed and added lists is shown as updated, with its old and new version (`???` when a version is unknown). |
+
+With none: `No environmental changes within this time window.`
+
+**Crash Reasons.** A table of the crash messages in the period, with columns `%` (share of all crashes), `Count` and `Crash Reason`. Shared message beginnings are dimmed so the differing part stands out. Two selectors:
+
+| Selector | Options |
+| --- | --- |
+| Limit | **Top ~50** (default), **Top ~100**, **Show All** |
+| Sort | **Sort by Count** (default), **Group Reasons** (alphabetical, so similar messages sit together) |
+
+When the list is cut off, the last row says how many reasons are shown, how much of all crashes they cover, and offers **Show All!**. With no crashes: `No player crashes within this time window.`
+
+## How to do common tasks
+
+### Find out why players started crashing
+
+<Steps>
+<Step>Open **Analytics → Player Drops** and choose **Hours**.</Step>
+<Step>Look at the **Unexpected Player Drops** chart for the hours where **Crash** or **Timeout** rises. Hover a bar to read the counts, and look for diamonds and `CHANGE` flags just before the rise.</Step>
+<Step>Drag across the period from just before the rise to the end of it.</Step>
+<Step>Read **Environment Changes** for a new FXServer build, game build or resources that were added or updated.</Step>
+<Step>Read **Crash Reasons** with **Group Reasons** selected to see which message dominates. Click **Reset** to return to the default window.</Step>
+</Steps>
+
+### Find out which resource is kicking players
+
+<Steps>
+<Step>Open **Player Drops**, click **7d** or **14d**.</Step>
+<Step>Open **Resource Kicks** and look for the resource with the largest share.</Step>
+</Steps>
+
+### Check whether new players come back
+
+<Steps>
+<Step>Open **Analytics → Insights**.</Step>
+<Step>Read **Player Retention**: **After 1 day**, **After 7 days** and **After 30 days** give the return rates, and **Active last 7d** the current activity.</Step>
+<Step>Compare with **New vs Returning Players** to see how many of each showed up per day.</Step>
+</Steps>
+
+### Choose a quiet time for restarts
+
+<Steps>
+<Step>Open **Insights** and scroll to **Peak Hours**.</Step>
+<Step>Pick the darkest hour cells for the weekday you want, remembering the heatmap only covers about 4 days.</Step>
+</Steps>
+
+## How it connects
+
+- The **Drops (last 6h)** summary on the [Overview](/docs/overview#players-online) comes from the same drop log, and the player count chart there comes from the same performance log as **Player Count & Memory**.
+- Join and leave events behind **Session Length** and **New vs Returning Players** are the ones shown in the [Server Log](/docs/server-log).
+- Moderation totals come from the same records as the [History](/docs/history) page.
+- **Top Players by Playtime** opens the [player profile](/docs/players#the-player-profile).
+- Report volume and staff response times are on [Report Analytics](/docs/reports#report-analytics).
+- Nothing on these pages sends Discord notifications or emits addon events.
+
+## Data retention
+
+| Data | Kept | Stored in |
+| --- | --- | --- |
+| Performance snapshots (player count, memory, tick timings) | Newest 12 hours at 5-minute resolution, 12–24 hours merged to 15 minutes, 24–96 hours merged to 30 minutes; anything older than 96 hours is dropped. At most 720 entries. | `stats_svRuntime.json` in the profile `data` folder |
+| Server boot and stop markers | Kept through merging, until the 720-entry limit pushes them out | same file |
+| Player drops, crash reasons, resource kicks and environment changes | 14 days, grouped by hour | `stats_playerDrop.json` in the profile `data` folder |
+| Players, playtime, warns, kicks and bans | As long as the player database | Player database |
+
+- Snapshots are taken once a minute and saved at most every 5 minutes. A collection is skipped when the server is offline, has been up less than 30 seconds, or has too few ticks to be reliable.
+- The drop log is written shortly after each drop (at most every 15 seconds) and when the panel shuts down.
+- Both files are caches. If one cannot be read, it is reset with a console warning and starts again from empty.
+- The drop log is also reset when you change the server **Data Path** or **CFG Path** (`server.dataPath`, `server.cfgPath`), because the old history belongs to a different server.
+
+## Limits and edge cases
+
+- A new install has no data. Player Drops charts are empty until the first drop; Insights cards that use the performance log need the first snapshot (about five minutes after the server is up), and some need minimum amounts of data (see [Problems](#problems)).
+- If the server is stopped, no snapshots are taken, and the uptime timeline shows it as offline from the stop.
+- Player Drops starts counting from the first time it ran; it has no way to rebuild earlier disconnects.
+- Day boundaries in New Players, New vs Returning and Moderation Activity use the time zone of the machine running the panel; the Player Drops charts use your browser's time zone.
+- Windows beyond 14 days on Player Drops are not available.
+
+## Problems
+
+Insights cards show one of these in place of the chart.
+
+| Message | Cause and fix |
+| --- | --- |
+| `No performance data available yet.` | **Player Count & Memory**, **Peak Hours** or **Server Uptime Timeline**: no snapshot has been recorded yet. Start the server through sxPanel and wait about five minutes. |
+| `No player data available.` | **Player Retention** or **Playtime Distribution**: the player database is empty. |
+| `Not enough mature players (need at least 10 who joined 30+ days ago).` | **Player Retention** needs 10 players older than 30 days. |
+| `No disconnect data available yet.` | **Disconnect Reasons**: no drops in the last 14 days. |
+| `No recent server log data available.` | **Session Length**: the server log buffer is empty, for example right after the panel started. |
+| `Not enough session data to analyze.` | **Session Length**: no join and leave pair of 1 minute to 24 hours is in the buffer. |
+| `No player join data available.` | **New vs Returning Players**: no join events were found in the buffer or recent session files. |
+| `Failed to get <what>: <details>` | The server failed to build the card. The details come from the error; check the panel console. |
+| `Request failed` / `Failed to load` | The panel could not reach the server, or the response was empty. Reload the page. |
+
+On Player Drops:
+
+| Message | Cause and fix |
+| --- | --- |
+| `Error loading data.` | The request failed. Reload the page; an invalid date range can also cause it, so click **Reset**. |
+| `Render Error: …` | The chart canvas could not be drawn. Click **Retry**. |
+| `No players disconnected from your server recently.` | There are no drops in the chart's range. |

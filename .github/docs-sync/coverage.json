@@ -289,7 +289,9 @@
         "shared/insightsApiTypes.ts"
       ],
       "notes": "Every Insights chart and how each number is calculated, time ranges, the Player Drops timeline and drill-down, data retention.",
-      "status": "todo"
+      "status": "done",
+      "writtenAt": "2026-11-19",
+      "sourceSha": "a21e752720dac257eafa73132d5d73599ec76ff2"
     },
     {
       "id": "system",
