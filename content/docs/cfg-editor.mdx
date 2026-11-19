@@ -1,0 +1,183 @@
+---
+title: CFG editor
+description: Edit server.cfg and the other .cfg files in your server data folder from the panel, with validation of the main config on save.
+---
+
+The CFG editor is a code editor for your server's config files. Use it to change convars, endpoints and which resources start without opening the server's file system. The main config (usually `server.cfg`) is validated before it is saved, so a typo cannot silently stop the server from starting.
+
+## Where to find it
+
+- Panel: **Server → CFG Editor**, at `/server/cfg-editor`.
+- The failed-start message in the panel points you to this page when the server cannot start because of a config error.
+
+The page works only once the server data folder and CFG file are configured (see [Setup](/docs/setup)).
+
+## Who can use it
+
+| Permission | Id | What it allows |
+| --- | --- | --- |
+| **server.cfg Editor** | `server.cfg.editor` | Open the page, read the file list and files, and save. |
+
+Without the permission the sidebar entry is hidden. If you reach the page anyway, the server answers `You don't have permission to view this page.` (or `You don't have permission to execute this action.` on save). Every request checks the permission again on the server. See [Permissions](/docs/permissions).
+
+The same permission, together with **Start / Stop Resources**, controls editing a resource's own config files from the [Resources](/docs/resources#edit-config-files) page.
+
+<Callout type="warn">
+Anyone with **server.cfg Editor** can change what runs on your server, for example by adding `exec` lines or changing `rcon_password`. Grant it only to people you trust with the server.
+</Callout>
+
+## The screen
+
+The page has a header, an optional error banner and the editor.
+
+### Header
+
+| Control | What it does |
+| --- | --- |
+| Title and hint | **CFG Editor**, followed by `(main server config - validated on save)` for the main file or `(auxiliary config - saved without validation)` for any other file. |
+| File picker | Lists the `.cfg` files in the top level of the server data folder. The main config is first and shown in bold; the rest are sorted alphabetically. Picking a file loads it into the editor. If it cannot be read, a **Failed to load file.** toast appears and the previous file stays open. |
+| **Save File (⌘+S/Ctrl+S)** | Saves the file shown in the editor. **Ctrl+S** (**⌘+S** on macOS) does the same anywhere on the page. |
+
+<Callout type="warn">
+Switching files in the picker replaces the editor content immediately and does not ask about unsaved changes. Save first.
+</Callout>
+
+The picker lists only files whose name ends in `.cfg` and that sit directly in the data folder. If your main config has another name, such as `server.cfg.txt`, or lives in a subfolder, the editor still opens and saves it as the main file, but it does not appear in the picker and you cannot switch back to it after opening another file without reloading the page. Included files in subfolders cannot be opened here.
+
+### Error banner
+
+If the last attempt to start the server failed because of a config error, a red banner appears above the editor: **Server failed to start due to config error(s):**, followed by the errors and the hint **Fix the issues above and save the file, then try starting the server again.** The banner is read when the page loads and is not refreshed while the page is open. It is cleared when a start succeeds or when the main file is saved without errors.
+
+### Editor
+
+The editor is a Monaco editor with INI highlighting, line numbers and word wrap, without a minimap. It opens with the main config.
+
+## Saving
+
+### The main config
+
+Saving the main file validates the text in the editor, not the file on disk. Files it includes with `exec` are read from disk.
+
+1. The validator parses the config and every `exec`'d file (see [What is validated](#what-is-validated)).
+2. If it finds any error, nothing is written and a red toast lists them: **Cannot save `server.cfg` due to error(s) in your config file(s):**, with the file and line for each.
+3. Otherwise the current file is copied to `<file>.bkp` next to it (replacing any earlier backup) and the new text is written.
+4. A green **File saved.** toast confirms it. If the validator found warnings, an orange toast reads **File saved, but there are warnings you should pay attention to:** and lists them. The file is saved in that case.
+
+If the main config is shorter than 1024 characters, a warning toast appears first: **Your CFG file is very small - there is a good chance you deleted something you shouldn't. A backup file will be saved just in case.** The save still goes ahead.
+
+Saving does not restart the server. Changes take effect the next time it starts.
+
+### Other `.cfg` files
+
+Any other file is saved without validation. If the file already exists it is copied to `<file>.bkp` first; a new file gets no backup. The toast reads **File `<name>` saved.** Mistakes in these files only show up when the main config `exec`s them, at the next save of the main config or the next server start.
+
+The file name must end in `.cfg`, be at most 128 characters, and contain no `/`, `\` or `..`. The resolved path must stay inside the data folder.
+
+Each save is written to the panel's own console output. It is not recorded in the action log.
+
+## What is validated
+
+The validator reads each line the way FXServer does: `//` and `#` start comments, quotes group text, `;` separates commands, and `\"` and `\\` are escapes. It follows `exec` lines relative to the including file, up to 5 levels deep.
+
+### Errors (block the save)
+
+| Check | Message (abridged) |
+| --- | --- |
+| Command names with invisible or non-ASCII characters, usually from copy and paste | `the command ... contains invisible or non-ASCII characters. ... Please retype the line manually.` |
+| `endpoint_add_tcp` / `endpoint_add_udp` not in `ip:port` form | `the ... is not in a valid ip:port format.` |
+| An endpoint interface that this host does not have | `the ... interface ... is not available for this host.` |
+| A port from `40120` to `40150`, reserved for sxPanel | `... is dedicated for sxPanel and CAN NOT be used for FXServer.` |
+| The port the panel itself listens on | `... is being used by sxPanel and CAN NOT be used for FXServer at the same time.` |
+| The same endpoint and protocol added twice | `you CANNOT execute ... twice for the interface ...` |
+| `gamename` set more than once | `you already set the 'gamename' to ..., please remove this line.` |
+| No endpoint at all, or none used for both TCP and UDP | `Your config file does not specify valid endpoints for FXServer to use. ...` or `Your config file does not not contain a ip:port used in both endpoint_add_tcp and endpoint_add_udp commands. Players would not be able to connect.` |
+
+On hosted setups where the host fixes the game, port, network interface or player limit, the validator also enforces those values (`your 'sv_maxclients' MUST be <= ...`, `your 'gamename' MUST be ...`, and endpoint rules) and adds `Some of the configuration above is controlled by <host>.`
+
+### Warnings (the file is still saved)
+
+| Check | Message (abridged) |
+| --- | --- |
+| `+set`, `+sets` or `+setr` in the file | `remove the '+' from '...', as this is not an launch parameter.` |
+| An `endpoint_add_*` line without exactly one argument | `the endpoint_add_* commands MUST have exactly 1 argument (received N)` |
+| An `exec` target that is missing, unreadable, cyclical or nested deeper than 5 levels | The reason, for example `File doesn't exist or its unreadable.` |
+
+`exec @resource/file.cfg` lines are skipped, because they cannot be resolved without the server running.
+
+### Lines the panel manages
+
+These are not reported when you save. When the server next starts, the panel comments them out in the file (a `## [sxPanel CFG validator]: <reason>` line is inserted above the commented line) and lists them as warnings. If a line cannot be rewritten, the start fails and asks you to comment it out yourself.
+
+| Line | Reason |
+| --- | --- |
+| `start`, `stop` or `ensure` of `sxpanel`, `sxpanelclient` or `monitor` | You must not start or stop sxPanel resources. |
+| `set onesync ...` or `onesync ...` | OneSync is set only in the FXServer settings. |
+| `sv_allowlistInstructions` or `sv_appearAllowlisted` | Overwritten by the [whitelist](/docs/whitelist) settings. |
+| `set`, `sets` or `setr` of a convar starting with `sxpanel` or `txadmin` | Managed by sxPanel. |
+
+<Callout type="warn">
+Do not put these lines in your config expecting them to work. Remove them yourself to avoid the rewrite at the next start.
+</Callout>
+
+## How to
+
+### Change a setting in server.cfg
+
+<Steps>
+<Step>
+Open **Server → CFG Editor**, edit the text and press **Ctrl+S**.
+</Step>
+<Step>
+Read the toast: green means saved, orange means saved with warnings to review, red means nothing was written.
+</Step>
+<Step>
+Restart the server for the change to apply. Saving does not restart anything.
+</Step>
+</Steps>
+
+### Fix a server that will not start
+
+<Steps>
+<Step>
+Open the CFG editor. The red banner lists the errors from the last start attempt, each with its file and line.
+</Step>
+<Step>
+Fix them and press **Ctrl+S**. If the problem is in an included file, pick it in the file picker, fix it and save it; it is saved without validation.
+</Step>
+<Step>
+Open the main config again and save it to validate the whole tree, then start the server.
+</Step>
+</Steps>
+
+### Undo a bad save
+
+The previous version is next to the file as `<file>.bkp` (for example `server.cfg.bkp`). Only one backup is kept, so a second save overwrites it with your first edit. Copy the `.bkp` contents back over the file from your file system, or paste them into the editor and save.
+
+## How it connects
+
+- The **CFG Editor Page Enabled** switch in **Settings → Panel Features** hides the page and its sidebar entry for everyone, and its URL then redirects to the dashboard. Reload the panel after changing it.
+- The same validator runs when the server starts and when you validate the CFG file in [Setup](/docs/setup).
+- Resource config files have their own editor in [Resources](/docs/resources#edit-config-files).
+
+## Limits and edge cases
+
+- Only the main config is validated. Other files are saved as they are.
+- Only files inside the data folder can be opened or saved; anything else is refused with `Invalid file path.`
+- Backups are a single `.bkp` file; there is no history. `.bkp` files do not appear in the picker.
+- If a file changes outside the panel while it is open, saving overwrites it with the editor content.
+- Saving the main config when the file does not exist yet fails, because the backup step cannot copy it.
+
+## Problems
+
+| Message | Cause and fix |
+| --- | --- |
+| `You need to configure your server data path before being able to edit the CFG file.` | No server is set up. Finish [Setup](/docs/setup). |
+| `Failed to read CFG File with error: ...` | The main config cannot be read, for example `File doesn't exist or its unreadable.` (wrong path in the settings) or `Cannot read CFG file.` (permissions). |
+| `Server data path not configured.` | The file list was requested without a data path. |
+| `Failed to list files in server data directory.` | The panel cannot read the data folder. Check the path and permissions. |
+| `Invalid file name.` / `Invalid CFG file name.` | The name does not end in `.cfg`, is longer than 128 characters or contains `/`, `\` or `..`. |
+| `Invalid file path.` | The file resolves outside the data folder. |
+| `Cannot save server.cfg due to error(s) in your config file(s):` | Fix the listed lines. Nothing was written. |
+| `Failed to save server.cfg with error: ...` | The write or backup failed, for example because the file is read-only or missing. |
+| `Failed to save <file>: ...` | The write to an auxiliary file failed. |
+| `Invalid Request` | The save request had no text. Reload the page. |

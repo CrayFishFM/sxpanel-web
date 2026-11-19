@@ -232,7 +232,9 @@
         "core/lib/fxserver/fxsConfigHelper.ts"
       ],
       "notes": "Editing server.cfg and included files, validation, saving and restarting, backups, what is blocked. Never show a real license key in examples.",
-      "status": "todo"
+      "status": "done",
+      "writtenAt": "2026-11-19",
+      "sourceSha": "a21e752720dac257eafa73132d5d73599ec76ff2"
     },
     {
       "id": "server-log",
