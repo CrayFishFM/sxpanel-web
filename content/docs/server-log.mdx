@@ -1,0 +1,275 @@
+---
+title: Server Log
+description: Follow joins, chat, deaths, combat, admin menu actions and commands live, replay past sessions, download the log, and configure the combat log and log retention.
+---
+
+The Server Log is the record of what players and the game server did: who joined or left, what was said in chat, who died and who killed them, which admin-menu actions staff used, explosions and commands. Admins use it to follow a server in real time, to investigate an incident after it happened, and to review player-versus-player fights.
+
+It is separate from the [Live Console](/docs/live-console), which shows raw FXServer output, and from the action log, which records what admins do in the panel. See [History](/docs/history) for moderation actions.
+
+![Server Log with live/session picker, search and event-type filter chips](/docs/server-log.webp)
+
+## Where to find it
+
+- Panel: **Server → Server Log** (`/server/server-log`).
+- Settings: the log retention is under **Settings → FXServer**, and the combat log under **Settings → Game**.
+
+## Who can use it
+
+| Permission | Id | What it allows |
+| --- | --- | --- |
+| **View Server Logs** | `server.log.view` | Open the page and receive the live feed. |
+| **View System Logs** | `txadmin.log.view` | Load older events, list and open past sessions, and use **Download log**. |
+| **Settings: Change** | `settings.write` | Change the log retention and the combat log settings (the combat log also needs the master admin, see [Combat log](#combat-log)). |
+
+- Without `server.log.view`, the sidebar entry is hidden and `/server/server-log` shows the Access Denied page.
+- The older-events, session and download requests are checked against `txadmin.log.view`, not `server.log.view`. An admin who has only `server.log.view` sees the live feed, but scrolling up, the session picker and **Download log** do not load anything.
+- An owner can switch the page off in **Settings → Panel Features** (**Server Log**). A disabled page disappears from the sidebar and its URL redirects to the dashboard.
+
+## The screen
+
+### Header
+
+The header shows the page title and these indicators:
+
+| Indicator | Meaning |
+| --- | --- |
+| Connection state | **Live** (green, pulsing) when you are on the live feed and connected. **Connecting** while the live feed is not connected. **Paused** when you paused. **Session** when you are viewing a past session. |
+| **Events** | Number of events currently loaded in the page, before filters. |
+| **Joins**, **Leaves**, **Deaths** | Number of loaded events in those categories, before filters. |
+
+### Toolbar
+
+| Control | What it does |
+| --- | --- |
+| **Live** / **Paused** button | While live, the button reads **Live** with a green dot when connected. Click it to pause (**Click to pause live updates**). Click **Paused** (**Click to resume live updates**) to return to live; this clears the list and reloads the latest events. |
+| Session picker | Appears once at least one past session exists. **Current Session** is the live feed. Each other entry is a past session, shown as its start time and file size. See [Sessions](#sessions). |
+| Search | Filters the loaded events. See [Search](#search). The **×** clears it. |
+| Player badge | Shows the player name you are filtering by, with a **Commands only** toggle. Click the badge to clear it. See [Filtering by player](#filtering-by-player). |
+| Clock button (**Jump to time**) | Opens a date and time picker and a **Jump** button. See [Jump to time](#jump-to-time). |
+| Speaker button | Turns sound alerts on or off (**Enable sound alerts** / **Mute sound alerts (deaths & explosions)**). |
+| Download button (**Download log**) | Downloads the active text log file. See [Download](#download). |
+
+### Filter chips
+
+Under the toolbar, one chip per category shows its name and the number of loaded events in it. Click a chip to show or hide the category. Hidden chips are dimmed. The last button on the row selects all categories, or deselects all when every one is on (**Select all filters** / **Deselect all filters**).
+
+Your chip selection is remembered in this browser.
+
+| Chip | Event types it covers |
+| --- | --- |
+| **Joins** | Player Joining, Join Denied |
+| **Leaves** | Player Dropped |
+| **Chat** | Chat Message |
+| **Deaths** | Death Notice |
+| **Combat** | Combat Damage |
+| **Menu** | Menu Event |
+| **Explosions** | Explosion |
+| **Commands** | Command Executed |
+| **System** | Logger Started, Debug Message, Name Changed |
+
+### Event list
+
+Each row shows an icon coloured by category, the time, the source and the message. Click a row to open a detail dialog.
+
+- Times in the list are in your browser's locale. Hover the time to see how long ago it happened.
+- The source is the player the event is about, or `sxPanel` for events the panel itself raises (such as joins denied by a ban). Click a player's name to open their [player profile](/docs/players#the-player-profile).
+- When three or more join events (or three or more leave events) occur within 10 seconds, the list collapses them into one row such as **3 players joined: A, B, C**. The row lists up to three names and then "and N more". Individual rows are not expandable.
+- The list scrolls to the newest event while you are at the bottom and live. If you scroll up, an arrow button (**Scroll to latest events**) appears once more than 20 events are shown.
+- Scrolling to the top loads older events. **Loading older events…** appears while it loads, and **Beginning of log** appears when there is nothing older.
+- With no events yet, the page shows **Connecting…** or **Waiting for events…**. If events are loaded but every one is filtered out, it shows **No events match your filters** and a **Clear all filters** button, which turns on all chips and clears the search and player filter.
+
+### Event dialog
+
+Clicking a row opens a dialog with the event type, the full date and time, the source name, the identifier (for an online player, the server session id and **Net ID**), the Unix timestamp in milliseconds, the event type id and the full message.
+
+| Button | What it does |
+| --- | --- |
+| **Copy** | Copies `[time] [type] source: message` to the clipboard. |
+| **View Player** | Closes the dialog and opens the player's profile. Shown only when the event has a player source. |
+
+## Event types
+
+Every event is stored as a time, a type, a source and a message.
+
+| Type (label) | When it is logged | Message |
+| --- | --- | --- |
+| `playerJoining` (**Player Joining**) | A player connects and their identifiers are known. | `joined with identifiers …` with a summary of the identifiers. |
+| `playerJoinDenied` (**Join Denied**) | A player is refused because of an active ban. The source is `sxPanel`. | `player join denied due to active ban (<id>) for identifiers …`. |
+| `playerDropped` (**Player Dropped**) | A player disconnects. Drops caused by the server shutting down are not logged. | `disconnected (<reason>)`. |
+| `playerNameChanged` (**Name Changed**) | A connected player's name changes. | `changed name from "old" to "new"`. |
+| `ChatMessage` (**Chat Message**) | A player sends chat, or a script reports a chat message. Colour codes (`^1`) are removed. | `said "text"`, with the author in parentheses when it differs from the player's name. |
+| `DeathNotice` (**Death Notice**) | The victim's game client reports a death. | `died from <cause>`, plus `by <killer>` and the combat stats when another player killed them. Suicides read `suicide` or `suicide (<cause>)`. |
+| `CombatDamage` (**Combat Damage**) | A fight between two players ended without a kill and the [combat log](#combat-log) is on. The source is the attacker. | `damaged <victim> with <weapon> (4 hits, 1 headshot, 87 dmg, 23.4m)`. |
+| `MenuEvent` (**Menu Event**) | A staff member uses an action from the [in-game menu](/docs/chat-commands) (noclip, teleport, heal, spectate, vehicle tools, announcements, troll actions, custom commands and others). | A sentence such as `teleported to a waypoint` or `spawned a vehicle (model: adder)`. |
+| `explosionEvent` (**Explosion**) | A player causes an explosion that is visible, audible and does damage. | `caused an explosion (<type>)`, for example `ROCKET`. |
+| `CommandExecuted` (**Command Executed**) | A script reports a command through the logger. | `executed: /<command>`. |
+| `LoggerStarted` (**Logger Started**) | The sxPanel resource starts on the game server. Starts a new session. | `Logger started`. |
+| `DebugMessage` (**Debug Message**) | A script reports a debug message. | `Debug Message: <text>`. |
+
+Notes on the table:
+
+- A message that cannot be parsed is logged as its event type. Line breaks in a message are replaced with tabs.
+- A kill with no tracked damage (a vehicle kill, or a server without OneSync) shows only the distance in brackets, for example `(23.4m)`, or nothing when the distance is unknown.
+- Death events are reported by the victim's client and are limited to one every two seconds per player. The cause is cut to 64 characters.
+- Menu events are only logged for actions the player was allowed to run.
+- Events from unrecognised players are shown with the source `UNKNOWN PLAYER`.
+
+## Search
+
+The search box filters the loaded events, matching against the source name and the message, case-insensitively.
+
+| You type | Result |
+| --- | --- |
+| `player command` | Events containing both words. |
+| `"ran command"` | Events containing that exact phrase. |
+| `-bot` | Events that do not contain `bot`. Works with phrases too: `-"auto kick"`. |
+
+Search, chips and the player filter combine: an event must pass all of them. Search only covers events loaded in the page, not the whole log; load older events or open a session to search further back.
+
+### Filtering by player
+
+Clicking a source name opens that player's profile. When the source cannot be resolved to a player identifier, clicking it instead filters the list to that name. In that state the toolbar shows a badge with the name, and a **Commands only** toggle that shows only the commands that player ran and ignores the category chips (**Show only the commands this player ran (ignores the category chips)**). Click the badge to clear the filter.
+
+## Sessions
+
+A session is everything logged between two starts of the game server. A new session starts when the sxPanel resource reports `LoggerStarted` (server start or restart), and when the panel itself starts and finds an unfinished session from a previous run.
+
+- The live feed is the **Current Session**. Pick another entry in the session picker to replay it. Picking a past session pauses the live feed, clears the list and shows that session's events, newest at the bottom, up to the last 2,000. The header shows **Session**.
+- To come back, choose **Current Session** or click **Paused**.
+- The picker lists sessions newest first, each as `YYYY-MM-DD HH:MM:SS (size)`, where the time is when the session was closed.
+- Past sessions are read in one go. If a session file cannot be read, nothing is shown and no error appears.
+- Session files hold every event of the session, including those older than what the live feed keeps in memory.
+
+### Jump to time
+
+Click the clock button, choose a date and time in your browser's local time zone, and click **Jump**. The list shows the 500 events after that moment, taken from the live feed's memory, and the page is paused. If fewer than 500 events follow, the page returns to live instead. Jump to time cannot reach events older than the memory buffer; use a session for that.
+
+### How much history the page has
+
+| Source | Holds |
+| --- | --- |
+| Live feed on open | The last 500 events. |
+| Server memory | The last 32,000 events since the panel started, used for scrolling up and **Jump to time**. Older requests load 500 at a time. |
+| Page | At most 2,000 events at a time; the oldest are dropped when more arrive. |
+| Session files | Every event of each session, for as long as the retention allows. |
+
+## Download
+
+**Download log** downloads `server.log`, the plain-text log of the current period, as a file named `server.log`. Each line reads `[time] [player id] player name: message`, and the file starts with a banner with the sxPanel and FXServer versions. It is not affected by the filters, search or the session you are viewing. The button is disabled until the page has its security token. It needs `txadmin.log.view`.
+
+The text log is rotated automatically, daily by default, keeping 7 files. Rotated files stay in the same logs folder as `server.log` and can be copied from the server's file system; the panel only offers the active file. The rotation options come from the `logger.server` setting, and setting it to `false` turns the text log off (the live page and session files keep working).
+
+## Settings
+
+### Log retention
+
+Under **Settings → FXServer**. Requires `settings.write`.
+
+| Setting | What it does | Default | Limits / values |
+| --- | --- | --- | --- |
+| **Server Log Retention** (`logger.serverLogRetention`) | How many days of session files to keep. Older session files are deleted when the panel starts and each time a new session begins. | 14 days | Presets 3, 7, 14, 30, 60, 90 days, or **Custom** from 1 to 365. |
+
+Retention is by age of the session file, not by size. The in-memory buffer and the rotating text log are not affected.
+
+### Excluding event types
+
+`logger.serverLogExcludeTypes` is a list of event type ids (for example `explosionEvent`) that are dropped before they are stored, shown or sent to Discord. It is empty by default and has no field in the Settings page; set it in the panel's configuration (see [Configuration](/docs/configuration)). Use it on high-volume servers. Excluded events are not recorded anywhere, so they cannot be recovered later.
+
+## Combat log
+
+The combat log records player-versus-player damage so staff can review fights. Kills are logged with hits, headshots, damage and distance. Fights that do not end in a kill are logged once as a summary, when both players have stopped hitting each other. Entries appear in this page and can be sent to Discord.
+
+### Settings
+
+Under **Settings → Game**, in the combat log section.
+
+| Setting | What it does | Default | Limits / values |
+| --- | --- | --- | --- |
+| **Combat Log** (`gameFeatures.combatLogEnabled`) | Turns player-versus-player damage tracking on. | Off | On / off |
+| **Damage Summaries** (`gameFeatures.combatLogDamageSummaries`) | Logs fights that did not end in a kill. Turn it off to log only kills. Disabled while **Combat Log** is off. | On | On / off |
+| **Engagement Window (seconds)** (`gameFeatures.combatLogEngagementWindow`) | How long two players must stop hitting each other before a fight counts as over and its summary is logged. Disabled while **Combat Log** is off. | 10 | Whole seconds, 3 to 60 |
+
+<Callout type="warn">
+Only the master admin can change these settings, because the combat log records player activity. Other admins with `settings.write` see them disabled, with **Only the master admin can change the Combat Log settings.**, and a save that changes them is rejected with the same message.
+</Callout>
+
+Changes are sent to the running game server when you save, without a restart. The game-side resource re-reads them about every 5 seconds. Turning the combat log off while players are fighting discards the fights in progress without logging them.
+
+### How fights are tracked
+
+- Requires **OneSync**; the game only reports weapon damage to the server with it.
+- Hits are grouped per attacker and victim pair. A fight is the set of hits from one attacker to one victim, with the hit count, total damage, headshots (FiveM only), the weapons used, the distance at the last hit and the longest distance, and how long it lasted.
+- A **kill** attaches the fight to the victim's Death Notice, shown as `died from <cause> by <killer> (4 hits, 1 headshot, 87 dmg, 23.4m)`. If no damage was tracked, for example a vehicle kill, only the distance is recorded.
+- A **damage summary** is logged as a Combat Damage event when the pair has been quiet for the engagement window. It is also logged straight away when either player leaves the server.
+- Distance is measured on the server from the players' positions. Hit counts, damage, weapon and headshots come from the attacker's game client.
+- The tracker is capped to protect against a client flooding events: 32 open fights per attacker, 1,024 in total, 10,000 damage per hit and 8 weapons per fight. Hits beyond the caps are ignored.
+- Shots at non-player peds, at yourself, or at players who are not found are not tracked.
+
+<Callout>
+Hit details come from the attacker's game client, so treat them as evidence to review, not proof.
+</Callout>
+
+### Discord
+
+Kills, other deaths and damage summaries go to Discord through the **Combat Logs** route. Its entry filter lets you choose **Player Kills**, **Other Deaths** (falls, NPCs, suicide) and **Damage Summaries**. Hit, damage and distance details need the combat log to be on. See [Discord](/docs/discord#notifications).
+
+## How it connects
+
+- The **Combat Logs**, **Admin Command Logs**, **Player Connection Logs** and **Chat Logs** [Discord log routes](/docs/discord#notifications) are fed from the same events as this page. Joins, leaves, join denials, chat, menu events, deaths and combat damage can be routed; explosions, commands, name changes and debug messages cannot.
+- Menu events come from staff actions in the in-game menu. See [Chat commands](/docs/chat-commands).
+- Enabling or disabling the page is a **Panel Features** setting under **Settings**.
+
+## Common tasks
+
+### Watch a busy server
+
+<Steps>
+<Step>Open **Server → Server Log**. The header should read **Live**.</Step>
+<Step>Turn off the **Joins**, **Leaves** and **Chat** chips to leave only deaths, combat and explosions.</Step>
+<Step>Turn on the speaker button to hear an alert on every death and explosion.</Step>
+</Steps>
+
+### Investigate an incident that already happened
+
+<Steps>
+<Step>Pick the session that covers the time in the session picker. Its events replace the list.</Step>
+<Step>Search for the player's name, or for a phrase such as `"ran command"`.</Step>
+<Step>Click a row to see the exact time, then **View Player** to open their profile.</Step>
+</Steps>
+
+### Review a kill
+
+<Steps>
+<Step>Make sure **Combat Log** is on in **Settings → Game** (master admin only).</Step>
+<Step>Turn off every chip except **Deaths** and **Combat**.</Step>
+<Step>Find the `died from … by …` row. The brackets show hits, headshots, damage and distance. Look at **Combat** rows around it for earlier fights between the same players.</Step>
+</Steps>
+
+### Change how long sessions are kept
+
+<Steps>
+<Step>Open **Settings → FXServer** and set **Server Log Retention**.</Step>
+<Step>Save. Sessions older than the new limit are deleted at the next session start or panel restart.</Step>
+</Steps>
+
+## Limits and edge cases
+
+- The live feed is memory-only: after a panel restart it starts empty. Past sessions are still available from the picker.
+- The game server sends events in a batch once per second, so an event can show up to a second after it happened.
+- If the game server is stopped, the live feed stays connected but receives no new events.
+- On RedM, headshots are not tracked and weapon and death cause names use the RedM table.
+
+## Problems
+
+| What you see | Cause and fix |
+| --- | --- |
+| **Connecting…** stays on screen | The page cannot reach the panel's live feed. Check your connection or reload the page. |
+| **Waiting for events…** | Connected, but nothing has been logged yet. Players need to act, or the game server may be stopped. |
+| **No events match your filters** | Every loaded event is hidden by chips, search or player filter. Click **Clear all filters**. |
+| Older events, sessions or download do nothing, or the request returns **You don't have permission to call this endpoint.** | The admin has `server.log.view` but not `txadmin.log.view`. Grant **View System Logs**. |
+| **Failed to list session files.** or **Failed to read session file.** | The panel could not read the logs folder. Check the folder's permissions and free disk space. |
+| **Missing or invalid file parameter.** / **Invalid session file name** | The session request was malformed. Reload the page and pick the session from the list. |
+| **Only the master admin can change the Combat Log settings.** | Sign in as the master admin to change them. |
+| No combat entries appear | Check that **Combat Log** is on, OneSync is enabled, and for non-lethal fights that **Damage Summaries** is on. Summaries only appear after the engagement window passes. |
+| Kills show no hits or damage | No damage was tracked for that kill (vehicle kill, OneSync off, or the combat log was off when the fight began). |

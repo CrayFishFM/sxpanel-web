@@ -252,7 +252,9 @@
         "panel/src/pages/Settings/tabCards/gameCombatLog.tsx"
       ],
       "notes": "Every event type in the server log, filters, sessions, downloads, retention. Move the Combat logging section out of features.mdx into this page and leave a short summary with a link.",
-      "status": "todo"
+      "status": "done",
+      "writtenAt": "2026-11-19",
+      "sourceSha": "a21e752720dac257eafa73132d5d73599ec76ff2"
     },
     {
       "id": "permissions",

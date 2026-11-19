@@ -59,22 +59,11 @@ for every command, the editor and the permissions involved.
 
 ## Combat logging
 
-When **Combat Log** is enabled in the **Game** settings, sxPanel tracks
-player-versus-player damage. Kills are logged with hits, headshots, damage and
-distance. Fights that don't end in a kill are logged as one summary once both
-players stop hitting each other.
-
-- **Damage Summaries** can be turned off to log only kills.
-- **Engagement Window (seconds)** sets how long players must stop hitting each
-  other before a fight counts as over. It ranges from 3 to 60 and defaults to
-  10.
-- Combat Log is off by default and requires OneSync. Only the master admin can
-  change these settings.
-- Hit details are reported by the attacker's game client, so treat them as
-  evidence to review, not proof.
-
-Entries appear in the **Server Log** and can be sent to Discord with the
-**Combat Logs** route (see [Discord](/docs/discord)).
+Turn on **Combat Log** in the **Game** settings (master admin only, requires
+OneSync) to record player-versus-player kills and fight summaries in the
+[Server Log](/docs/server-log), and optionally send them to Discord. See
+[Combat log](/docs/server-log#combat-log) for the settings and how fights are
+tracked.
 
 ## Insights & Analytics
 
