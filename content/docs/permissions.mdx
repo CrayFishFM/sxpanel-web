@@ -1,59 +1,366 @@
 ---
-title: Permissions
-description: 40+ granular permissions with custom presets and per-admin action logging.
+title: Admins and permissions
+description: Create admin accounts, grant granular permissions with presets, sign in with a password, Cfx.re or Discord, protect accounts with two-factor, and review per-admin statistics.
 ---
 
-sxPanel ships with 40+ granular permissions (plus any extra permissions
-registered by installed addons) so you can give each admin exactly the access
-they need — nothing more. Permissions can be bundled into presets for fast
-onboarding, and every privileged action is logged per-admin for full
-accountability.
+The Admin Manager is where the master admin and trusted staff create other admin accounts and decide what each one may do. Every admin gets exactly the permissions you tick, optionally copied from a reusable preset, and every privileged action is recorded under the admin's name.
 
-Admins and presets are managed in **Server → Admins** (the *Admins* and
-*Permission Presets* tabs of the Admin Manager).
+![Admin Manager with admin cards, Bulk Apply, Add Admin and the Permission Presets tab](/docs/admins.webp)
 
-## Permission presets
+## Where to find it
 
-Presets are named bundles of permissions that admins can be assigned. Unlike a
-fixed "Viewer / Moderator / Admin" tier list, presets in sxPanel are fully
-custom — you create, name and edit them yourself from the admin manager, and
-assign one or more presets to an admin alongside any individually toggled
-permissions.
+- Panel: **Server → Admins** (`/admins`). The page title is **Admin Manager**.
+- Player profile: **More → Give Admin** opens **Add Admin** with the player's name, Cfx.re ID and Discord ID already filled in. See [Players](/docs/players).
+- Your own account: the avatar menu in the header → **Your Account** (password, identifiers and two-factor).
 
-<Callout>
-  sxPanel does not ship with built-in preset tiers. Create your own presets
-  (e.g. "Moderator" or "Head Admin") from the permissions you actually want to
-  bundle together, then assign them to admins.
-</Callout>
+## Who can use it
 
-## Permission categories
+| Permission | Id | What it allows |
+| --- | --- | --- |
+| **Manage Admins** | `manage.admins` | Open the page, see every admin, add, edit, delete, reset passwords, bulk apply permissions, manage presets and read admin stats. Marked as dangerous. |
 
-- **System** — manage admins, view or change settings, view system/action
-  logs, view login IPs, or grant the root "All Permissions" permission.
-- **Server** — view or write the live console, start/stop/restart the server,
-  send announcements, start/stop resources, download a resource folder, edit
-  `server.cfg`, view server logs.
-- **In-Game Menu** — spawn/fix/boost/delete vehicles, reset a world area, view
-  player IDs and map blips, use developer tools, delete entities, and use
-  staff chat.
-- **Player Management** — direct message, whitelist, warn, kick, ban (with a
-  separate "permanent ban" grant), unban, freeze, heal, NoClip/God Mode/Super
-  Jump, invisibility, spectate, disarm, teleport, troll actions, manage reports, delete tickets,
-  and permanently deleting player data.
-- **Addons** — permissions registered dynamically by installed addons.
+Without **Manage Admins** the **Admins** item is missing from the sidebar and `/admins` is not available. Every request the page makes (list, stats, presets and actions) is checked again on the server and refused.
+
+The header shows three counters: the number of admins, how many are **online** (in game right now, matched by their linked Cfx.re or Discord identifier) and how many are **master** (always one).
+
+## The master admin
+
+The master account is the first account, created during [installation](/docs/quick-start) with the PIN printed in the console and a Cfx.re login. There is always exactly one.
+
+- It has every permission. Its card reads **Master Account** and shows a crown.
+- Nobody else can edit it, reset its password or delete it. Its card has no **Edit**, **Reset Password** or **Delete** buttons, and a server-side check refuses the request too.
+- Some pages are for the master only, for example [Server Setup](/docs/setup) and the combat log settings in [Server log](/docs/server-log).
+- Permission checks for the master always pass, so a **Manage Admins** grant is never needed.
 
 <Callout>
-  The "dangerous" permissions (All Permissions, Manage Admins, Settings:
-  Change, Console: Write, Ban: Permanent, delete tickets, delete player data)
-  are flagged in the UI — grant them deliberately.
+  If `admins.json` does not contain exactly one admin with `master: true`, sxPanel refuses to start and prints `Unable to load admins.json` with the reason. See [Problems](#problems).
 </Callout>
+
+## Admin cards
+
+The **Admins** tab shows one card per admin.
+
+| Element | What it shows |
+| --- | --- |
+| Avatar and dot | Green when the admin is online in game, grey otherwise. Hidden while selecting. |
+| Name | The username. A crown marks the master; a **You** badge marks your own card. |
+| Permission summary | **Master Account**, **All Permissions**, or `N permissions`. |
+| **cfx** and Discord badges | The admin has a Cfx.re account or a Discord account linked. |
+
+Each card has these buttons (hover for the tooltip):
+
+| Button | What it does |
+| --- | --- |
+| **Stats** | Opens the [stats dialog](#admin-stats). Available on every card. |
+| **Edit** | Opens **Edit Admin**. Not shown on your own card or the master's. |
+| **Reset Password** | Gives the admin a new temporary password. Not shown on your own card or the master's. |
+| **Delete** | Removes the admin after a confirmation. Not shown on your own card or the master's. |
+
+If the list cannot be loaded the tab shows **Failed to load admin list.** With no admins it shows **No staff configured yet.**
+
+## Add or edit an admin
+
+**Add Admin** and **Edit** open the same dialog (**Add Admin** / **Edit Admin: name**).
+
+| Field | What it does | Limits / values |
+| --- | --- | --- |
+| **Username** | The login name. Matching is not case sensitive, and two admins cannot share a name. | 3 to 20 characters: letters, numbers, `_`, `.` and `-`. Must start and end with a letter, number or `_`. |
+| **Cfx.re ID** | Links a Cfx.re account. Accepts a forum username (`snipz`) or an identifier (`fivem:123456`). sxPanel looks the account up online and stores both. Needed for **Cfx.re Account** login and for the in-game menu. | Optional. A `fivem:` identifier is 1 to 8 digits. The lookup times out after 6 seconds. |
+| **Discord ID** | Links a Discord account. Needed for **Discord** login, the Discord bot and role permissions. | Optional. The numeric user ID (17 to 20 digits), not the username. |
+| **Apply Preset** | Replaces the ticked permissions with the preset's. See [Presets](#presets). | Pick from your presets. |
+| Permission checkboxes | The permissions. See [Permissions](#permissions). | |
+
+The dialog has a **Search permissions...** box that matches label, description and id. Each category heading has a checkbox that ticks or unticks the whole category. Ticking **All Permissions** ticks and locks everything else, and saving it stores just `all_permissions`.
+
+### Review before saving
+
+When you edit, a **Changes** box lists each permission you added (`+`) and removed (`−`). If you add a permission flagged **dangerous**, saving first shows **Dangerous Permissions** with the label and description of each one. Choose **Go Back** or **Confirm & Save**.
+
+### What happens when you save
+
+- **Create Admin** generates a random temporary password (22 characters) and shows it in **Admin Created**. Copy it then: it is not shown again. The admin must change it on first login.
+- **Save Changes** updates the identifiers and permissions. Renaming an admin is supported. It shows **Admin saved successfully.**
+- Both actions are written to the [system log](#per-admin-logging) as `Adding user 'name'.` and `Editing user 'name'.`.
+- Admins who are signed in are re-checked immediately, so permission changes apply without them logging in again, and the game server is told which online players are admins.
+
+### Rules the server enforces
+
+| Rule | Message |
+| --- | --- |
+| You cannot edit yourself. Use **Your Account** instead. | `(ERR0) You cannot edit yourself.` |
+| Only the master can edit the master. | `You cannot edit an admin master.` |
+| You can only hand out permissions you hold, unless you are the master or have **All Permissions**. | `You cannot give permissions you do not have:` followed by the list. |
+| Username must follow the rules above. | `Invalid username, it must follow the rule:` |
+| Names, Cfx.re accounts and Discord accounts are unique. | `Username already taken`, `CitizenFX ID already taken`, `Discord ID already taken` |
+| The Cfx.re lookup failed or found nothing. | `Invalid CitizenFX ID1`/`2`/`3` when adding, `(ERR1)`/`(ERR2)`/`(ERR3) Invalid CitizenFX ID` when editing, or `Failed to verify CitizenFX ID. Please try again or check the ID.` |
+| The Discord ID is not a numeric ID. | `Invalid Discord ID` |
+| The admin no longer exists. | `Admin not found.` |
+
+<Callout>
+  Because you can only grant what you hold, an admin with **Manage Admins** but not **All Permissions** cannot create someone more powerful than themselves.
+</Callout>
+
+## Reset a password
+
+<Steps>
+<Step>
+
+### Click Reset Password
+
+On the admin's card, click **Reset Password** and confirm. You cannot reset your own password here (`You cannot reset your own password here. Use the change password page instead.`).
+
+</Step>
+<Step>
+
+### Hand over the new password
+
+**Password Reset** shows the new temporary password. Send it to the admin. It is shown once.
+
+</Step>
+<Step>
+
+### The admin signs in
+
+The old password stops working and every password session of that admin is signed out. They are asked to change the temporary password before they can use the panel. The reset is logged as `Resetting password for user 'name'.`
+
+</Step>
+</Steps>
+
+Two-factor settings are kept when a password is reset. Cfx.re and Discord sessions are not affected.
+
+## Delete an admin
+
+Click **Delete** on the card and confirm **Are you sure you want to delete "name"?** The account is removed at once and any session it has is signed out. You cannot delete yourself (`You can't delete yourself.`) or the master (`You cannot delete an admin master.`). The action is logged as `Deleting user 'name'.`
+
+## Bulk apply permissions
+
+Use this to put several admins on the same permission set.
+
+<Steps>
+<Step>
+
+### Start selecting
+
+On the **Admins** tab click **Bulk Apply**. Cards become selectable. The master and your own card are greyed out and excluded.
+
+</Step>
+<Step>
+
+### Choose admins and click Apply Permissions
+
+Tick the admins. The counter shows `N selected`. **Apply Permissions** is disabled until at least one is selected.
+
+</Step>
+<Step>
+
+### Pick the permissions
+
+**Bulk Apply Permissions** says "Choose the permissions to apply to N eligible admins. This will replace their current permissions." and reports how many selected accounts will be skipped. Tick permissions (nothing is selected by default) and click **Apply to N Admins**.
+
+</Step>
+</Steps>
+
+A toast reports **Applied permissions to N admins.**, a partial result with the names that failed, or a total failure. The same privilege rule as for a single edit applies to each admin.
+
+<Callout>
+  Bulk apply replaces each admin's permissions entirely and sends an empty Discord ID with the request, which unlinks any Discord account the admin had. Review the admins you selected, and re-add their Discord ID afterwards if needed.
+</Callout>
+
+## Permissions
+
+A permission is either granted or not. An admin passes a check when they are the master, hold **All Permissions**, or hold that exact id. Addons add their own permissions, which appear under **Addons** with the id `addon.<addonId>.<permId>`; see [Addon API](/docs/addon-api).
+
+In the editor, **dangerous** permissions carry a red badge. Grant them deliberately.
+
+### System
+
+| Label | Id | What it allows | Dangerous |
+| --- | --- | --- | --- |
+| **All Permissions** | `all_permissions` | Root permission: grants every other permission. | Yes |
+| **Manage Admins** | `manage.admins` | Create, edit and delete admin accounts, presets and stats (this page). | Yes |
+| **Settings: View** | `settings.view` | View settings, with sensitive tokens hidden. | No |
+| **Settings: Change** | `settings.write` | Modify sxPanel settings. | Yes |
+| **View System Logs** | `txadmin.log.view` | View the sxPanel system and admin action logs. | No |
+| **View Login IPs** | `txadmin.log.view_ips` | View the IP addresses recorded in admin login log entries. | No |
+
+### Server
+
+| Label | Id | What it allows | Dangerous |
+| --- | --- | --- | --- |
+| **Console: View** | `console.view` | View the live FXServer console. | No |
+| **Console: Write** | `console.write` | Execute commands in the FXServer console. | Yes |
+| **Start / Stop / Restart Server** | `control.server` | Start, stop and restart FXServer and the scheduler. | No |
+| **Send Announcements** | `announcement` | Broadcast announcements to all players. | No |
+| **Start / Stop Resources** | `commands.resources` | Start or stop server resources. | No |
+| **Download Resources** | `commands.resources.download` | Zip and download a resource folder from the server host. | No |
+| **server.cfg Editor** | `server.cfg.editor` | Read and write `server.cfg`. | No |
+| **View Server Logs** | `server.log.view` | View FXServer log output. | No |
+
+### In-Game Menu
+
+| Label | Id | What it allows | Dangerous |
+| --- | --- | --- | --- |
+| **Spawn Vehicles** | `menu.vehicle.spawn` | Spawn vehicles via the in-game menu. | No |
+| **Fix Vehicles** | `menu.vehicle.fix` | Repair vehicles via the in-game menu. | No |
+| **Boost Vehicles** | `menu.vehicle.boost` | Boost vehicles via the in-game menu. | No |
+| **Delete Vehicles** | `menu.vehicle.delete` | Delete vehicles via the in-game menu. | No |
+| **Reset World Area** | `menu.clear_area` | Reset a world area via the in-game menu. | No |
+| **View Player IDs** | `menu.viewids` | See player IDs overhead in game. | No |
+| **View Map Blips** | `menu.mapblips` | See all players on the in-game map through blips. | No |
+| **Developer Tools** | `menu.devtools` | Use the coordinates HUD and the entity inspector in game. | No |
+| **Delete Entities** | `menu.delete_entities` | Delete the entity you are aiming at, and clean up unoccupied vehicles around you. | No |
+| **Staff Chat** | `menu.staffchat` | Send and receive staff-only chat messages in game. | No |
+
+### Player Management
+
+| Label | Id | What it allows | Dangerous |
+| --- | --- | --- | --- |
+| **Direct Message** | `players.direct_message` | Send direct messages to players. | No |
+| **Whitelist** | `players.whitelist` | Whitelist players. | No |
+| **Warn** | `players.warn` | Issue warnings to players. | No |
+| **Kick** | `players.kick` | Kick players from the server. | No |
+| **Ban** | `players.ban` | Ban players. Only temporary bans, unless **Ban: Permanent** is also granted. | No |
+| **Ban: Permanent** | `players.ban.permanent` | Apply permanent bans, and turn existing temporary bans into permanent ones. | Yes |
+| **Unban** | `players.unban` | Revoke existing player bans. | No |
+| **Freeze Players** | `players.freeze` | Freeze player peds in game. | No |
+| **Heal** | `players.heal` | Heal yourself or all players. | No |
+| **NoClip** | `players.noclip` | Toggle NoClip for yourself. | No |
+| **God Mode** | `players.godmode` | Toggle invincibility for yourself. | No |
+| **Super Jump** | `players.superjump` | Toggle super jump for yourself. | No |
+| **Invisibility** | `players.invisible` | Toggle invisibility for yourself, hiding you from other players. | No |
+| **Spectate** | `players.spectate` | Spectate players. | No |
+| **Disarm** | `players.disarm` | Remove all weapons from a player. | No |
+| **Teleport** | `players.teleport` | Teleport yourself, or bring, go to or return players. | No |
+| **Troll Actions** | `players.troll` | Use the troll menu on players. | No |
+| **Reports** | `players.reports` | View and manage player reports. | No |
+| **Manage Tickets** | `manage_tickets` | Delete any ticket at any time. | Yes |
+| **Remove Player Data** | `players.delete` | Delete bans and warns, players, and player identifiers. | Yes |
+
+<Callout>
+  When a server upgrades from an older admin file, admins with the old combined permissions are migrated automatically. `menu.vehicle` becomes the four vehicle permissions, `players.playermode` becomes **NoClip**, **God Mode** and **Super Jump**, and an admin holding **Ban** also receives **Unban** and **Ban: Permanent** so they keep what they could do before.
+</Callout>
+
+Some pages check for permissions that are not in this list. For example, editing player tags needs the master or **All Permissions**; see [Players](/docs/players).
+
+## Presets
+
+A preset is a named set of permissions. sxPanel ships with none: create the ones you need (for example "Moderator", "Head Admin").
+
+Open the **Permission Presets** tab. Each card shows the name, a count (or **All Permissions**), the first six permissions as badges and `+N more`. Only admins with **Manage Admins** see the card menu.
+
+| Action | What it does |
+| --- | --- |
+| **New Preset** | Opens **Create Preset**: a **Preset Name** (for example `Senior Moderator`) and the permission editor. Needs a name (`Preset name is required.`) and at least one permission (`Select at least one permission.`). |
+| **Edit** | Changes the name or permissions (**Save Preset**). |
+| **Duplicate** | Opens a new preset named `<name> (Copy)` with the same permissions. |
+| **Delete** | Removes the preset after **Are you sure you want to delete the preset "name"?** |
+
+<Callout>
+  A preset is a template, not a link. **Apply Preset** copies its permissions into the admin dialog, replacing what was ticked, and you still have to save. Editing or deleting a preset later does not change admins who already received it. The one exception is [Discord role permissions](#discord-role-permissions), which reads the preset each time the admin signs in.
+</Callout>
+
+Saving presets is logged as `Saving permission presets.` and re-checks all signed-in admins. Presets live in `permissionPresets.json` in the sxPanel data folder.
+
+## Discord role permissions
+
+You can map Discord roles to presets in the Discord settings (**Role Permissions**; see [Discord](/docs/discord) and [Configuration](/docs/configuration)). Each mapping holds a label, one or more Discord role IDs and a preset. When an admin who has a Discord ID linked signs in, and the Discord bot is connected, sxPanel reads their roles and adds the matching presets' permissions on top of the permissions you gave them. If a role is removed in Discord, the permissions it added are removed the next time sxPanel checks the roles, for example at sign-in.
+
+Permissions that came from roles are stored with the admin, so the Admin Manager shows them in the list. Saving the admin does not turn them into hand-picked permissions, and unlinking the Discord ID removes them.
+
+## Logging in
+
+Admins sign in at the login page with one of three methods.
+
+| Method | How | Needs |
+| --- | --- | --- |
+| **Sign in** (username and password) | Enter **Username** and **Password**. | A password. Wrong credentials give `Wrong username or password!`. |
+| **Cfx.re Account** | Authenticates with Cfx.re and matches the account's `fivem:` identifier. | The admin's **Cfx.re ID** is linked. Otherwise: `The Cfx.re account 'name' is not an admin.` |
+| **Discord** | Authenticates with Discord and matches the account's Discord ID. | **OAuth Client ID** and **OAuth Client Secret** set in the Discord settings (the button is hidden otherwise) and the admin's **Discord ID** linked. |
+
+- Password sessions last until the admin logs out or the password changes. Cfx.re and Discord sessions expire after 24 hours.
+- Each login is written to the system log as `logged in via password`, `logged in via password+2FA`, `logged in via cfxre` or `logged in via discord`, together with the IP address. Admins with **View Login IPs** can see the IPs.
+- Two-factor applies to password sign-in only. Cfx.re and Discord sign-in do not ask for a code.
+- Old bcrypt password hashes are replaced with Argon2id at the next successful login.
+- The in-game menu identifies admins by the game identifiers (`fivem:` or `discord:`) linked to the account, so an admin without a linked identifier cannot use it.
+
+## Your account
+
+Open **Your Account** from the header menu. A dialog titled **Your Account - name** has three tabs.
+
+### Password
+
+Enter **Current Password**, **New Password** and **Confirm Password**, then **Change Password**.
+
+| Rule | Value |
+| --- | --- |
+| Length | 12 to 128 characters |
+| Required characters | An uppercase letter, a lowercase letter, a number and a symbol from `!@#$%^&*()_+-=[]{}\|;:.,<>?` |
+| Spaces | Cannot start or end with a space |
+| Different | Must differ from the current password (`Your new password must be different from your current password.`) |
+
+With a temporary password the dialog opens by itself as **Welcome to sxPanel!**, hides **Current Password** and the panel stays locked until you change it. Changing the password signs out your other password sessions. It is logged as `Changing own password.`
+
+### Identifiers
+
+**FiveM identifier** (`fivem:000000`, or your forum.cfx.re username) and **Discord identifier** (`discord:000000000000000000`) can be edited here. They are required for **Cfx.re Account** login, the in-game menu and Discord bot commands.
+
+By default admins cannot change their own identifiers: the **Allow Self Identifier Edit** setting in the general settings is off, and a person without **Manage Admins** gets `Self identifier editing is disabled. An admin with "Manage Admins" permission must change your identifiers.` Admins with **Manage Admins** can always save. The change is logged as `Changing own identifiers.`
+
+### Security
+
+Two-factor authentication (TOTP) asks for a six-digit code from an authenticator app after the password.
+
+<Steps>
+<Step>
+
+### Start
+
+On **Security**, click **Enable 2FA**.
+
+</Step>
+<Step>
+
+### Scan and verify
+
+Scan the QR code, or type the key shown under **Can't scan? Enter this key manually:**. Enter the 6-digit code under **Verification Code** and click **Verify & Enable**.
+
+</Step>
+<Step>
+
+### Save the backup codes
+
+Ten one-time backup codes are shown once ("You won't be able to see them again."). Use **Copy Codes**, store them safely and click **Finish setup**. The change is logged as `Enabled 2FA (TOTP)`.
+
+</Step>
+</Steps>
+
+At login, after the password, the **Two-Factor Authentication** page asks for the code. A backup code is accepted instead and is used up. Codes use 30-second steps with one step of tolerance on either side, and a code that was already accepted cannot be reused.
+
+To turn it off click **Disable 2FA**, then enter your **Password** and a **2FA Code** (a backup code is not accepted here). It is logged as `disabled 2FA`.
+
+#### Require two-factor for everyone
+
+With **Require Two-Factor Authentication** on in the general settings, an admin without 2FA can only reach the account dialog (the **Security \*** tab) until they enable it. The in-game menu signs them out. Nobody can disable 2FA while the setting is on (`Two-factor authentication is required for all admins and cannot be disabled while that setting is on.`). The master can still open the general settings to turn the requirement off. The default is off.
+
+## Admin stats
+
+**Stats** on a card opens **name: Stats**, built from the [History](/docs/history) action database and resolved reports.
+
+| Item | Meaning |
+| --- | --- |
+| **Rank** | Position by total actions among admins with at least one action. Hidden if none. |
+| **Total**, **Bans**, **Kicks**, **Warns** | Actions this admin issued, by type. |
+| **Tickets** | Reports resolved by this admin. |
+| Ratio bar | Share of bans, kicks and warns. |
+| **Revoked** | Shown when above zero: `N of M (P%)` of this admin's actions were revoked. |
+
+Below, the **Bans**, **Kicks** and **Warns** sections expand to list each action with its id, a revoked marker, the player, the reason and the time. Each has a **Search player or reason...** box and a sort of **Newest**, **Oldest**, **Name A–Z** or **Name Z–A**. Click an action id to open that action, or a player's name to open their profile (the dialog closes first).
+
+Stats are matched by the admin's name stored on each action. Actions keep the name the admin had when they were issued.
 
 ## Per-admin logging
 
-Every privileged action is written to a structured JSONL system logger
-(`system_session.jsonl`, rotated periodically) with the author, category,
-timestamp and a human-readable action description. This is the single source
-of truth for auditing who did what, and when.
+Every privileged action is written to the structured system log with the admin name, a category, the time and a readable description. The active file is `system_session.jsonl` in the log folder, with older sessions rotated into dated files.
 
 ```json
 {
@@ -65,16 +372,48 @@ of truth for auditing who did what, and when.
 }
 ```
 
-## Logging in
+Admin management writes these action ids:
 
-Admins can sign in with a **Cfx.re account** (Discourse OAuth) or a local
-**username + password** — optionally protected with TOTP two-factor
-authentication. An admin account can additionally be linked to a Cfx.re and a
-Discord identity (used by the bot's `/info`-style commands and identity
-resolution).
+| Action id | Written when |
+| --- | --- |
+| `admin.user.add`, `admin.user.edit`, `admin.user.delete`, `admin.user.password_reset` | An admin is added, edited, deleted or has their password reset. |
+| `admin.presets.save` | Presets are saved. |
+| `auth.password.change`, `auth.identifiers.change` | An admin changes their own password or identifiers. |
+| `auth.2fa.enable`, `auth.2fa.disable` | An admin turns two-factor on or off. |
+| `auth.admins_file.create` | The master account is registered. |
+| `login.password`, `login.password_2fa`, `login.cfxre`, `login.discord` | An admin signs in. |
+
+Viewing the log needs **View System Logs** (`txadmin.log.view`).
+
+## Where the data lives
+
+Admins are stored in `admins.json` and presets in `permissionPresets.json` in the sxPanel data folder. sxPanel checks `admins.json` every 15 seconds while it runs. If it was changed or deleted by something other than sxPanel, it prints a warning and rewrites the file from memory, so edits made by hand while sxPanel runs are lost. Stop sxPanel before editing it. Passwords are hashed with Argon2id; backup codes are stored only as SHA-256 hashes.
+
+## Limits and edge cases
+
+- Admin names are matched without regard to case.
+- Only temporary passwords are ever shown, once. sxPanel cannot show an existing password.
+- There is no way in the panel to remove 2FA from another admin or to unlink another admin's Cfx.re account.
+- **Online** is decided from the current player list, so it only shows admins connected to the game server right now.
+
+## Problems
+
+| Message | Cause and fix |
+| --- | --- |
+| `Wrong username or password!` | The username or password is wrong. The console prints the IP of the attempt. |
+| `The Cfx.re account 'name' is not an admin.` | No admin has that Cfx.re identifier linked. Add it as **Cfx.re ID**, or sign in with your password. |
+| `Invalid Browser Session.` | The panel restarted between starting and finishing the Cfx.re login. Try again. |
+| `Wrong PIN.` | The first-run PIN is wrong. Restart FXServer to print a new one. |
+| `Invalid code. Please try again.` | The 2FA code is wrong, expired or already used. Wait for the next code or use a backup code. |
+| `No pending 2FA session. Please login again.` | Too much time passed or the browser lost the session. Sign in again. |
+| `2FA is already enabled. Disable it first to reconfigure.` | Disable 2FA before setting it up again. |
+| `Wrong current password.` | **Current Password** is wrong. |
+| `You must change your temporary password before using sxPanel.` | Change the temporary password in **Your Account**. |
+| `Two-factor authentication is required. Enable 2FA in your account settings.` | The server requires 2FA. Enable it in **Your Account → Security**. |
+| `You don't have permission to execute this action.` | You lack **Manage Admins**. |
+| `Unable to load admins.json` | The file is missing, empty, corrupt, has invalid data or lacks exactly one master. Restore a backup, or delete the file to create a new master. |
 
 ## Next steps
 
-- Wire [Discord slash commands](/docs/discord) to the same permission model so
-  admins can only run what they're allowed to.
+- Wire [Discord slash commands](/docs/discord) to the same permission model so admins can only run what they are allowed to.
 - Use the [Events API](/docs/events-api) to react to admin actions in real time.

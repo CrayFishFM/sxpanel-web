@@ -271,7 +271,9 @@
         "core/lib/adminPassword.ts"
       ],
       "notes": "A table of every permission (label, id, what it allows, flagged dangerous or not), presets, adding and editing admins, login methods, two-factor, password resets, the master admin, admin stats.",
-      "status": "todo"
+      "status": "done",
+      "writtenAt": "2026-11-19",
+      "sourceSha": "a21e752720dac257eafa73132d5d73599ec76ff2"
     },
     {
       "id": "insights",
