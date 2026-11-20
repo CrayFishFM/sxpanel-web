@@ -1,0 +1,208 @@
+---
+title: Staff tools
+description: The in-game staff tools of the /tx menu — staff chat, invisibility, the coordinates HUD, the entity inspector with entity deletion, vehicle clean up, and disarming or returning players — with permissions, commands, keybinds, limits and error messages.
+---
+
+Staff tools are the in-game helpers admins use while they work on a live server: talk to other staff without players seeing it, hide from players, read coordinates and entity details, delete stray entities and vehicles, and take weapons from or send back a player. They run inside FiveM and RedM as part of the [in-game menu](/docs/in-game-menu).
+
+![Coordinates HUD and entity inspector](/docs/menu-staff-hud.webp)
+
+## Where to find it
+
+| Tool | Menu | Chat command | Keybind (FiveM) |
+| --- | --- | --- | --- |
+| Staff chat | **Staff Tools → Staff Chat** | `/staffchat <message>`, `/sc <message>` | **Staff Chat** |
+| Invisibility | **Self → Invisibility** | `/invis` | **Toggle Invisibility** |
+| Coords HUD | **Staff Tools → Dev Tools → Coords HUD** | `/coords` | **Dev Tools: Coords HUD** |
+| Entity inspector | **Staff Tools → Dev Tools → Inspector** | `/inspect` | **Dev Tools: Entity Inspector** |
+| Clean Up Vehicles | **Vehicle → Clean Up Vehicles** | `/dvall [radius]` | **Clean Up Vehicles** |
+| Disarm | Player profile → **Actions → Staff → Disarm** | `/disarm <player ID>` | none |
+| Return | Player profile → **Actions → Staff → Return** | `/return <player ID>` | none |
+
+Keybinds are **unbound by default** and only exist on FiveM; see [Keybinds](/docs/in-game-menu#keybinds). Commands are the suggested names for the menu actions. Server owners can rename, replace or turn them off on the **Chat Commands** page, so see [Chat commands](/docs/chat-commands) if one does not respond.
+
+<Callout>
+  `/staffchat` is built in. `/invis`, `/coords`, `/inspect`, `/dvall`, `/disarm`, `/return` and `/sc` are suggested names from **Chat Commands → From the /tx menu**; they exist only if your server has them enabled there.
+</Callout>
+
+## Who can use it
+
+You need menu access first (see [Getting access](/docs/in-game-menu#getting-access)), then the permission of each tool. Buttons for tools you lack are disabled. A keybind or command used without the permission shows `You do not have this permission.`
+
+| Tool | Permission | Id |
+| --- | --- | --- |
+| Staff chat (send and receive) | **Staff Chat** | `menu.staffchat` |
+| Invisibility (turning on) | **Invisibility** | `players.invisible` |
+| Coords HUD and inspector (turning on) | **Developer Tools** | `menu.devtools` |
+| Deleting the aimed entity, Clean Up Vehicles | **Delete Entities** | `menu.delete_entities` |
+| Disarm | **Disarm** | `players.disarm` |
+| Return | **Teleport** | `players.teleport` |
+
+Turning invisibility or a developer tool **off** never needs a permission, so an admin who loses the permission is never stuck with it on. The server re-checks every permission, whatever the client says. Manage permissions in the [Admin Manager](/docs/permissions).
+
+## Staff chat
+
+Staff chat sends a message that only online staff see. It is for coordinating on a live server without players reading it in public chat.
+
+Send a message with **Staff Chat** in the menu (a dialog titled **Staff Chat**: `This message will only be shown to online staff members with the Staff Chat permission.`, with the placeholder `Message to staff...`), with `/staffchat <message>` or `/sc <message>`, or with the **Staff Chat** keybind, which opens the menu straight into that dialog and closes it after you send.
+
+Every online admin with **Staff Chat** receives the message, including you, as a notification that stays 12 seconds. It shows **Staff Chat · [id] name** and the text. Messages from other people also play a sound. The notification appears even while the menu is closed, in the position set by the menu's notification settings (see [Notification settings](/docs/in-game-menu#notification-settings)). Admins without the permission receive nothing.
+
+The server cleans each message before sending:
+
+- Control characters (such as newlines) become spaces and surrounding whitespace is trimmed.
+- A message that is empty after that is ignored.
+- Anything beyond 300 characters is cut off.
+- Each admin can send one message per second. A faster one is dropped and shows `You are sending staff messages too fast.`
+
+An empty message typed through the menu, `/staffchat` or `/sc` answers `Usage: /staffchat [message]`.
+## Invisibility
+
+Invisibility hides your character from other players, for example to watch a suspected cheater without being noticed.
+
+Toggle it from **Self → Invisibility**, with `/invis` or with the keybind. While on:
+
+- Other players cannot see you. You see yourself as a half-transparent character on FiveM where the game supports it. On RedM and where it does not, you do not see yourself.
+- An alert stays on screen: `You are invisible to other players.` The status strip of the menu shows **Invisible**.
+- It survives respawns and other resources resetting your visibility: the state is re-applied while it is on.
+- [NoClip](/docs/in-game-menu#noclip) hides your character on its own, so invisibility leaves your local visibility alone while it is active.
+- It turns off when you turn it off, when you lose menu access, and when the sxPanel resource stops.
+
+The server sets the player state bag `txAdminInvisible` to `true` while you are invisible and `false` after. Other resources can read it, for example to hide you from their own HUDs or scoreboards.
+
+## Developer tools
+
+The two developer tools draw overlays on your own screen. They need **Developer Tools** (`menu.devtools`) to turn on. Turning one off is done locally and needs nothing. The overlays stay visible with the menu closed, on the opposite side of the screen from the menu (the left when **Align Menu Right** is on, otherwise the right). The status strip lists **Coords** and **Inspector** while they are on.
+
+### Coords HUD
+
+Shows a **Position** card with `X`, `Y`, `Z` and **Heading** of your character, rounded to two decimals. It updates when a value changes, checked every 100 ms. Use it to copy coordinates for resource configs.
+
+### Entity inspector
+
+Shows an **Entity Inspector** card for the ped, vehicle or object under your crosshair, up to 150 meters from the camera, and draws a blue outline around its model. A small crosshair dot appears on screen and turns to the accent colour while a target is locked. The look-at test ignores your own ped and refreshes 10 times a second; values refresh 4 times a second.
+
+Without a target the card says `Aim at a ped, vehicle or object to inspect it.`
+
+| Field | What it shows |
+| --- | --- |
+| Badge | The entity type: **Ped**, **Vehicle** or **Object**. |
+| **Model** | The model name when the game can resolve it, followed by the hash in hex, for example `0x...`. Otherwise only the hex hash. |
+| **Player** | `#<server id>` when the target is a player's ped. Hidden otherwise. |
+| **Net ID** | The network id, or **Not networked** for entities that exist only on your client. |
+| **Owner** | `#<server id>` of the player that currently owns the networked entity. Hidden when unknown. |
+| **Health** | A bar and `health/max`. The bar changes colour as health drops. |
+| **Distance** | Meters from you, one decimal. |
+| **Coords** | The entity's position. |
+
+### Deleting the aimed entity
+
+With **Delete Entities** (`menu.delete_entities`), the card shows a `DEL` hint with **Delete entity**. Press the **Delete** key while an entity is targeted to remove it. Without the permission, or when the entity cannot be deleted (a player, or not networked), the hint is hidden.
+
+The server checks the request again and refuses with one of these messages:
+
+| Message | Cause |
+| --- | --- |
+| `You are not aiming at an entity.` | No target when you pressed **Delete**. |
+| `You cannot delete a player.` | The target is a player's ped. |
+| `Map objects that are not networked cannot be deleted.` | The entity exists only on your client. |
+| `That vehicle is occupied by a player.` | Another player is in the vehicle. You can delete the vehicle you are in yourself. |
+| `That entity is too far away.` | More than 300 meters from your ped. |
+| `That entity no longer exists.` | It was already removed, is not a ped, vehicle or object, or is in another routing bucket than you. |
+
+Success shows `Entity deleted.` and is logged with the entity type and model hash.
+## Clean Up Vehicles
+
+Clean Up Vehicles removes abandoned vehicles around you in one go, for example after a crash pile-up or a spawn spree. It needs **Delete Entities** (`menu.delete_entities`) and OneSync (`This option requires OneSync to be enabled.` otherwise).
+
+<Steps>
+  <Step>
+    Open **Vehicle → Clean Up Vehicles**, press the **Clean Up Vehicles** keybind, or type `/dvall`.
+  </Step>
+  <Step>
+    In the dialog, enter a radius in meters from 1 to 300 or pick one of the suggestions 25, 50 or 150. The placeholder is `50`.
+  </Step>
+  <Step>
+    Confirm. You see `Deleted <count> unoccupied vehicle(s) within <radius>m.`
+  </Step>
+</Steps>
+
+`/dvall <radius>` skips the dialog. A radius outside 1 to 300 shows `Invalid radius. Must be between 1 and 300.`
+
+The server deletes every vehicle that:
+
+- has no player inside, whether parked or abandoned (player-owned vehicles that nobody is sitting in are deleted too),
+- is in the same routing bucket as you,
+- is within the radius of your position, and
+- is not a train (trains are usually managed by a resource).
+
+The action is logged with the radius and the number of vehicles deleted. The keybind and dialog close the menu after confirming.
+
+## Disarm
+
+**Disarm** removes every weapon from a player. Use it on someone who is using weapons they should not have. Open the player's profile, go to **Actions**, and press **Disarm** under **Staff**, or use `/disarm <player ID>`. It needs **Disarm** (`players.disarm`).
+
+You see `Removed all weapons from the player.` The player sees a warning notification: `Your weapons were removed by a staff member.` Sending it for an id that is not online does nothing. The action is logged as `removed all weapons from player <name>`.
+
+## Return
+
+**Return** sends a player back to where they were before you brought them. It is the counterpart of **Bring**: open the player's profile, go to **Actions → Staff** and press **Return**, or use `/return <player ID>`. It needs **Teleport** (`players.teleport`).
+
+The server remembers the position and routing bucket a player had when an admin last brought them. **Return** teleports them back there and moves them back to their original routing bucket if it changed. You see `Sent the player back.` Using it when nothing is remembered shows `This player has no location to return to. Bring them first.` A return can only be used once per bring. The memory is cleared when the player leaves. It is logged as `sent player <name> back to their previous location`.
+
+See [Player profile](/docs/in-game-menu#player-profile) for **Bring** and the rest of the profile actions.
+
+## How to
+
+### Watch a player without being seen
+
+<Steps>
+  <Step>Turn on **Invisibility**.</Step>
+  <Step>Go to the player from their profile with **Go to**, or start **Spectate**.</Step>
+  <Step>Turn **Invisibility** off when you are done. It also turns off if your access is removed.</Step>
+</Steps>
+
+### Find and delete a stuck entity
+
+<Steps>
+  <Step>Turn on **Dev Tools → Inspector**.</Step>
+  <Step>Aim at the entity. Check the card: **Type**, **Net ID** and **Owner**.</Step>
+  <Step>Press **Delete**. You see `Entity deleted.`</Step>
+  <Step>Turn the inspector off again.</Step>
+</Steps>
+
+### Take a weapon-carrying player's weapons and put them back
+
+<Steps>
+  <Step>Open the player's profile and press **Disarm**.</Step>
+  <Step>If you moved them with **Bring**, press **Return** to send them back.</Step>
+</Steps>
+
+## How it connects
+
+- **Server Log.** Every allowed staff tool action is recorded as a **Menu Event** under your name, for example `turned invisibility on`, `turned on the coordinates HUD`, `deleted an entity (type=vehicle, model=...)`, `deleted 4 unoccupied vehicle(s) within a 50m radius` or `sent a staff chat message: <text>`. Most attempts without permission are recorded as denied. See [Server Log](/docs/server-log).
+- **Discord.** Menu events are routed by the **Admin Command Logs** route. See [Discord](/docs/discord).
+- **Addons and other resources.** The `txAdminInvisible` player state bag marks invisible admins.
+- **Chat commands.** Each tool maps to a menu action you can rename or turn off. See [Chat commands](/docs/chat-commands).
+- **Permissions.** See [Permissions](/docs/permissions).
+
+## Limits and edge cases
+
+- **Access changes.** When an admin logs out of the in-game menu or their access is removed, the coords HUD, the inspector and invisibility are switched off automatically. Invisibility is also cleared when the sxPanel resource stops.
+- **Server stopped or menu disabled.** With **Game Menu** off in **Settings → Game**, none of the tools exist. See [In-game menu](/docs/in-game-menu).
+- **Routing buckets.** Entity deletion and Clean Up Vehicles only touch entities in your own routing bucket.
+- **Distance.** Aimed deletion needs the entity within 300 meters of your ped, and the inspector sees 150 meters from the camera.
+- **Rate limit.** Staff chat is limited to one message per second per admin and 300 characters per message.
+- **FiveM and RedM.** The tools work on both. Keybinds are FiveM only. Seeing yourself while invisible is FiveM only.
+
+## Problems
+
+| Message | Cause and fix |
+| --- | --- |
+| `You do not have this permission.` | You lack the permission of that tool. Add it in the Admin Manager. |
+| `You are sending staff messages too fast.` | Wait a second between staff chat messages. |
+| `Usage: /staffchat [message]` | The message was empty. |
+| `This option requires OneSync to be enabled.` | Clean Up Vehicles needs OneSync. |
+| `Invalid radius. Must be between 1 and 300.` | Clean up radius is 1 to 300. |
+| `You are not aiming at an entity.` | Aim the crosshair at a ped, vehicle or object before pressing **Delete**. |
+| `This player has no location to return to. Bring them first.` | **Return** only works after **Bring**. |

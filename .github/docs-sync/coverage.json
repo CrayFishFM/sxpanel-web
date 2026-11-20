@@ -345,7 +345,9 @@
         "shared/hudColors.ts"
       ],
       "notes": "Staff chat, the coordinates HUD, entity inspector, invisibility, cleanup, disarm and return, and their permissions.",
-      "status": "todo"
+      "status": "done",
+      "writtenAt": "2026-11-20",
+      "sourceSha": "a21e752720dac257eafa73132d5d73599ec76ff2"
     },
     {
       "id": "settings-index",

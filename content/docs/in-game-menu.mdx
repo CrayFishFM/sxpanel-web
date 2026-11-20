@@ -123,7 +123,7 @@ Details:
 
 ### Clean Up Vehicles
 
-Under **Vehicle**, **Clean Up Vehicles** needs **Delete Entities** (`menu.delete_entities`) and OneSync. It asks for a radius from 1 to 300 meters (the dialog suggests 25, 50 and 150) and deletes every vehicle in range that has no player inside, in your routing bucket. Parked vehicles owned by players are deleted too; trains are not. A confirmation shows `Deleted <count> unoccupied vehicle(s) within <radius>m.` The chat command `/dvall` does the same.
+Under **Vehicle**, **Clean Up Vehicles** needs **Delete Entities** (`menu.delete_entities`) and OneSync. It deletes every unoccupied vehicle within a radius of 1 to 300 meters around you. See [Clean Up Vehicles](/docs/staff-tools#clean-up-vehicles).
 
 ### World
 
@@ -137,10 +137,10 @@ Under **Vehicle**, **Clean Up Vehicles** needs **Delete Entities** (`menu.delete
 
 | Action | Permission | What it does |
 | --- | --- | --- |
-| **Staff Chat** | **Staff Chat** (`menu.staffchat`) | Opens a dialog: `This message will only be shown to online staff members with the Staff Chat permission.` See [Staff chat](#staff-chat). |
+| **Staff Chat** | **Staff Chat** (`menu.staffchat`) | Opens a dialog: `This message will only be shown to online staff members with the Staff Chat permission.` See [Staff chat](/docs/staff-tools#staff-chat). |
 | **Send Announcement** | **Send Announcements** (`announcement`) | Opens a dialog: `Enter the message you want to broadcast to all players.` The message goes to everyone as an announcement. See [Announcements and direct messages](#announcements-and-direct-messages). |
 | **Dev Tools → Coords HUD** | **Developer Tools** (`menu.devtools`) | Shows your coordinates and heading on screen. |
-| **Dev Tools → Inspector** | **Developer Tools** (`menu.devtools`) | Shows details about the entity you aim at. See [Developer tools](#developer-tools). |
+| **Dev Tools → Inspector** | **Developer Tools** (`menu.devtools`) | Shows details about the entity you aim at. See [Developer tools](/docs/staff-tools#developer-tools). |
 
 ### Server
 
@@ -248,7 +248,7 @@ Notes:
 
 - **Bring** remembers where the player was. **Return** then sends them back, including to their original routing bucket. It answers `This player has no location to return to. Bring them first.` when there is nothing to return to, and the memory is cleared when the player leaves. Bring and Go to also move you or the player into the other's routing bucket, so both can see each other.
 - **Toggle Freeze** on yourself answers `You cannot freeze yourself.` The frozen player is taken out of any vehicle or off their mount and sees a persistent alert: `You have been frozen by a server admin!` You see `You have frozen the player!` or `You have unfrozen the player!`. The frozen state is cleared when the player leaves.
-- **Disarm** shows the player `Your weapons were removed by a staff member.` and you `Removed all weapons from the player.`
+- **Disarm** and **Return** are described in [Staff tools](/docs/staff-tools#disarm).
 - **Spectate** on yourself answers `You cannot spectate yourself.`
 
 ### Troll actions
@@ -302,39 +302,7 @@ The panel also has a live spectate and screenshot tool; see [Players](/docs/play
 
 ## Staff tools
 
-### Staff chat
-
-A message sent with **Staff Chat**, `/staffchat <message>` or `/sc` goes to every online admin that has **Staff Chat** (`menu.staffchat`), including you. Messages are trimmed, control characters become spaces, and anything past 300 characters is cut. You can send one message per second; faster ones answer `You are sending staff messages too fast.` An empty message answers `Usage: /staffchat [message]`. Staff messages are logged as `sent a staff chat message: <text>`.
-
-There is a keybind that opens the menu straight into the staff chat dialog. See [Keybinds](#keybinds).
-
-### Invisibility
-
-While on, other players cannot see you. On FiveM you still see yourself as a half-transparent character. The state is kept through respawns and is removed when you lose menu access, when the resource stops or when you turn it off. A state bag `txAdminInvisible` marks you for other resources. An alert reads `You are invisible to other players.`
-
-### Developer tools
-
-![Coordinates HUD and entity inspector](/docs/menu-staff-hud.webp)
-
-Both tools need **Developer Tools** (`menu.devtools`) to turn on. Turning one off needs nothing.
-
-- **Coords HUD** shows **Position** (x, y, z) and **Heading**, updated every 100 ms. `/coords` and the **Dev Tools: Coords HUD** keybind toggle it.
-- **Inspector** (`/inspect`, **Dev Tools: Entity Inspector**) outlines the ped, vehicle or object under your crosshair, up to 150 meters away, and shows its **Type**, **Model**, **Net ID** (or **Not networked**), **Owner**, **Player**, **Health**, **Distance** and **Coords**. Without a target it says `Aim at a ped, vehicle or object to inspect it.`
-
-With **Delete Entities** (`menu.delete_entities`), press **Delete** while the inspector has a target to remove it. The server refuses with these messages:
-
-| Message | Cause |
-| --- | --- |
-| `You are not aiming at an entity.` | No target. |
-| `You cannot delete a player.` | The target is a player ped. |
-| `That vehicle is occupied by a player.` | Someone else is inside. You can delete the vehicle you are in. |
-| `That entity is too far away.` | More than 300 meters from you. |
-| `Map objects that are not networked cannot be deleted.` | The entity exists only on your client. |
-| `That entity no longer exists.` | It was already removed, or is in another routing bucket. |
-
-Success shows `Entity deleted.` and is logged with the entity type and model.
-
-All the staff tools turn themselves off if you lose menu access.
+Staff chat, invisibility, the coordinates HUD, the entity inspector, vehicle clean up, disarm and return are described in full on [Staff tools](/docs/staff-tools): permissions, commands, keybinds, limits and error messages.
 
 ## Overhead player IDs
 
