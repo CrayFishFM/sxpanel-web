@@ -1,0 +1,528 @@
+---
+title: In-game menu
+description: How admins open and use the /tx menu in game — every page, self and teleport actions, vehicles, world tools, staff tools, player actions, NoClip, spectate, overhead IDs and map blips — plus what players see and every menu setting.
+---
+
+The in-game menu is the part of sxPanel that runs inside FiveM and RedM. Admins use it to moderate and look after the server without alt-tabbing to the web panel: heal, teleport, fly with NoClip, spawn and fix vehicles, find and act on players, and warn, kick or ban. Players never see the menu, but they do see the warnings, announcements and direct messages it sends.
+
+![The /tx menu's main page with self, teleport, vehicle, world, staff tools and server actions](/docs/menu-main.webp)
+
+## Where to find it
+
+| Where | What |
+| --- | --- |
+| Chat or F8 console | `/tx` or `/txadmin` opens and closes the menu. |
+| Player shortcut | `/tx <id>` or `/tx <name>` opens that player's profile. See [Open a player's profile](#open-a-players-profile). |
+| Keybinds (FiveM) | The **Open Main Page** and **Open Players page** keybinds. See [Keybinds](#keybinds). |
+| Web panel | **Settings → Game** holds the menu settings. See [Settings](#settings). |
+
+The menu is an overlay that moves to the right side of the screen when **Align Menu Right** is on. It closes with **Esc** or **Backspace**, and also closes by itself when the game's pause menu opens. `/tx` does nothing while the pause menu is open.
+
+<Callout>
+  Every menu action is also a chat command (`/heal`, `/noclip`, `/car` and so on). Those commands, their permissions and how to replace them are covered in [Chat commands](/docs/chat-commands).
+</Callout>
+
+## Who can use it
+
+### Getting access
+
+You can open the menu when all of these are true:
+
+- **Game Menu** is enabled in **Settings → Game**.
+- Your sxPanel admin account has a **Cfx.re ID** or **Discord ID** saved, and it matches the identifier you are connected with. Set them in **Admin Manager** or **Your Account**. See [Permissions](/docs/permissions).
+- If **Require Two-Factor Authentication** is on, your account has 2FA enabled.
+- You have no pending temporary-password change.
+
+When the check fails, `/tx` shows one of these messages instead of opening:
+
+| Message | Cause and fix |
+| --- | --- |
+| `The sxPanel Menu is not enabled! You can enable it in the sxPanel settings page.` | **Game Menu** is off. Turn it on and restart the server. |
+| `Your identifiers do not match any admin registered on sxPanel.` followed by `If you are registered on sxPanel, go to Admin Manager and make sure your identifiers are saved.` | No admin account has your game identifiers. Save your `fivem:` or `discord:` identifier on the account. |
+| `Two-factor authentication is required. Enable 2FA in the web panel Account settings before using the in-game menu.` | The 2FA requirement is on and your account has no 2FA. |
+| `You must change your temporary password in the web panel before using the in-game menu.` | Sign in to the panel and change the temporary password. |
+| `sxPanel Menu authentication failed with reason: <reason>` | The server rejected the check for another reason. The reason is shown in the message. |
+| `Timed out loading server context after 15000 ms` | The menu did not get the server's settings in 15 seconds. Reconnect, or check the server console. |
+
+Authentication runs when you connect. If you are added as an admin, or your identifiers change, while you are in game, run `/txAdmin-reauth`. It answers `Retrying menu authentication.` and shows the result. When an admin changes your permissions, the menu updates by itself.
+
+### Permissions
+
+The menu checks permissions twice: the menu greys out what you cannot do, and the server checks the permission again for every action. Actions the server refuses are not logged. The permissions each part needs are listed in its own section below. All of them are assigned in the [Admin Manager](/docs/permissions).
+
+On the main page, an action you lack permission for is shown dimmed. Selecting it shows `You do not have this permission.` In the player profile, buttons for missing permissions are disabled.
+
+## Open and navigate the menu
+
+The menu has up to five pages, shown as a tab bar above it:
+
+| Page | Shown when |
+| --- | --- |
+| **Main** | Always. |
+| **Players** | Always. |
+| **Stats** | Always. |
+| **Resources** | You have **Start / Stop Resources** (`commands.resources`). |
+| **Reports** | **Player Tickets** is on in **Settings → Game**. |
+
+The **Menu Page Switch Key** (default `Tab`) cycles to the next page and wraps back to **Main**. The tab bar and the key skip pages that are not shown.
+
+On the **Main** page:
+
+| Key | Does |
+| --- | --- |
+| **↑** / **↓** | Move between actions. The selection wraps at both ends. |
+| **←** / **→** | Change the option of an action that has several (for example NoClip, God, Super Jump, Normal). |
+| **Enter** | Run the selected action. |
+| Page switch key | Next page. |
+| **Esc** / **Backspace** | Close the menu. |
+
+The footer shows these hints, with the page switch key you configured. A tooltip with the description of the selected action appears next to the menu.
+
+The header shows the sxPanel version of the server (`v` plus the version). Under it, a status strip lists the staff modes and tools that are on, as chips: **NoClip**, **God**, **Super Jump**, **Invisible**, **IDs**, **Blips**, **Coords** and **Inspector**. With nothing active it says **No active modes**.
+
+Dialogs (radius, message, coordinates and so on) take the keyboard while they are open. **Submit** with an empty field shows `You cannot have an empty input.`
+
+## Main page
+
+### Self
+
+| Action | Options | Permission | What it does |
+| --- | --- | --- | --- |
+| **Player Mode** | **NoClip**, **God**, **Super Jump**, **Normal** | **NoClip** (`players.noclip`), **God Mode** (`players.godmode`), **Super Jump** (`players.superjump`). **Normal** needs none. | Switches your player mode. Only one mode is active at a time. Choosing the active mode again returns you to **Normal**. See [Player modes](#player-modes). |
+| **Invisibility** | Toggle | **Invisibility** (`players.invisible`) | Hides you from other players. You can still see yourself. Turning it off needs no permission. |
+| **Heal** | **Myself**, **Everyone**, **Radius** | **Heal** (`players.heal`) | See [Heal](#heal). |
+
+### Teleport
+
+All four options need **Teleport** (`players.teleport`).
+
+| Option | What it does |
+| --- | --- |
+| **Waypoint** | Teleports you to the waypoint on your map. Without one: `You have no waypoint set.` |
+| **Coords** | Opens a **Teleport** dialog: `Provide coordinates in an x, y, z format to go through the wormhole.` Enter numbers such as `340, 480, 12`. The third number is optional; without it (or with `0`) the menu finds the ground height for you. Anything that is not two numbers answers `Invalid coordinates. Must be in the format of: 111, 222, 33`. |
+| **Back** | Returns you to where you were before your last teleport. With none: `You don't have a last location to go back to!` |
+| **Copy Coords** | Copies your position and heading to the clipboard, as `x, y, z, heading` with four decimals. |
+
+The screen fades out and in around a teleport. You keep your vehicle (or mount on RedM). If you are in NoClip, the camera moves instead of your character. `/goto <id>` teleports you to a player and `/tpm` to your waypoint.
+
+### Vehicle
+
+| Option | Permission | What it does |
+| --- | --- | --- |
+| **Spawn** | **Spawn Vehicles** (`menu.vehicle.spawn`) | Opens **Spawn vehicle**: `Enter in the model name of the vehicle you want to spawn.` Needs OneSync. |
+| **Fix** | **Fix Vehicles** (`menu.vehicle.fix`) | Repairs the vehicle you are in (or the horse you ride on RedM). |
+| **Delete** | **Delete Vehicles** (`menu.vehicle.delete`) | Deletes the vehicle you are in. Needs OneSync. |
+| **Boost** | **Boost Vehicles** (`menu.vehicle.boost`) | Boosts the vehicle you are in. |
+
+Details:
+
+- **Spawn** places the new vehicle where you stand and seats you in the driver seat. If you are already in a vehicle, that vehicle is deleted and everyone who was in it is moved into the new one, keeping the speed. The dialog suggests shortcut words, and typing one picks a random model from that group: `car`, `bike`, `heli`, `boat` on FiveM; `horse`, `buggy`, `coach`, `canoe` on RedM. A model that does not exist answers `The vehicle model name '<model>' does not exist!`, and one that does not load in time answers `Failed to spawn vehicle: model '<model>' did not load in time.`
+- **Fix**, **Delete** and **Boost** outside a vehicle answer `You are not currently in a vehicle!`
+- **Delete** also removes a mount you are riding on RedM.
+- **Boost** raises top speed, acceleration, grip and brakes, adds nitro and makes the vehicle unbreakable. It works on cars, bikes and other road-type vehicle classes; boats, helicopters, planes, cycles and trains answer `This vehicle class is not supported.` A vehicle that is already boosted answers `This vehicle was already boosted.` On RedM, **Boost** gives your horse a short health and stamina overpower instead, and needs you mounted (`You can only boost when mounted on a horse.`).
+
+### Clean Up Vehicles
+
+Under **Vehicle**, **Clean Up Vehicles** needs **Delete Entities** (`menu.delete_entities`) and OneSync. It asks for a radius from 1 to 300 meters (the dialog suggests 25, 50 and 150) and deletes every vehicle in range that has no player inside, in your routing bucket. Parked vehicles owned by players are deleted too; trains are not. A confirmation shows `Deleted <count> unoccupied vehicle(s) within <radius>m.` The chat command `/dvall` does the same.
+
+### World
+
+| Action | Permission | What it does |
+| --- | --- | --- |
+| **Reset World Area** | **Reset World Area** (`menu.clear_area`) | Asks for a radius from 0 to 300 (suggestions 50, 150, 300) and resets entities around you on your own client. It does not remove entities spawned by the server, and is not available on RedM (`This option is not yet available for RedM.`). |
+| **Toggle → Player IDs** | **View Player IDs** (`menu.viewids`) | Shows or hides overhead player tags. See [Overhead player IDs](#overhead-player-ids). |
+| **Toggle → Map Blips** | **View Map Blips** (`menu.mapblips`) | Shows or hides a blip for every player on the map. See [Map blips](#map-blips). |
+
+### Staff Tools
+
+| Action | Permission | What it does |
+| --- | --- | --- |
+| **Staff Chat** | **Staff Chat** (`menu.staffchat`) | Opens a dialog: `This message will only be shown to online staff members with the Staff Chat permission.` See [Staff chat](#staff-chat). |
+| **Send Announcement** | **Send Announcements** (`announcement`) | Opens a dialog: `Enter the message you want to broadcast to all players.` The message goes to everyone as an announcement. See [Announcements and direct messages](#announcements-and-direct-messages). |
+| **Dev Tools → Coords HUD** | **Developer Tools** (`menu.devtools`) | Shows your coordinates and heading on screen. |
+| **Dev Tools → Inspector** | **Developer Tools** (`menu.devtools`) | Shows details about the entity you aim at. See [Developer tools](#developer-tools). |
+
+### Server
+
+Both actions need **Start / Stop / Restart Server** (`control.server`) and ask you to type a word before they run.
+
+| Action | Confirmation | What it does |
+| --- | --- | --- |
+| **Restart Server** | Type `RESTART` | Restarts FXServer. Every player, including you, is disconnected. |
+| **Stop Server** | Type `STOP` | Stops FXServer. It stays offline until someone starts it from the web panel. |
+
+The check ignores case and surrounding spaces. A wrong word answers `Confirmation text did not match. Type RESTART exactly to confirm.` (or `STOP`). Both requests are passed to the sxPanel core, which carries them out, and are logged as `requested a server restart` or `requested a server stop` with the reason `in-game admin menu`.
+
+### Heal
+
+| Option | What it does |
+| --- | --- |
+| **Myself** | Heals and revives you. The confirmation text changes between `All healed up!`, `You should be feeling good now!`, `Restored to full!` and `Ouchies fixed!`. |
+| **Everyone** | Heals and revives every connected player. |
+| **Radius** | Asks for a radius from 1 to 500 (suggestions 10, 25, 50) and heals every player within that distance of you. |
+
+A heal restores health, blood damage and stamina. On RedM it also refills the health, stamina and deadeye cores. Each healed player triggers the `txAdmin:events:playerHealed` server event (and the older `txAdmin:events:healedPlayer`), so a revive or ambulance resource can react. See [Events API](/docs/events-api) for how to listen to sxPanel events.
+
+## Player modes
+
+Player mode is exclusive: switching to one turns off the previous one.
+
+| Mode | Permission | Effect |
+| --- | --- | --- |
+| **NoClip** | **NoClip** (`players.noclip`) | You become invisible to other players, invincible and frozen in place while a free camera moves instead. |
+| **God** | **God Mode** (`players.godmode`) | You are invincible. |
+| **Super Jump** | **Super Jump** (`players.superjump`) | You jump far and run faster. Your stamina is refilled while it is on. |
+| **Normal** | none | Turns the active mode off. |
+
+An on-screen alert stays up while NoClip, God Mode or Super Jump is active. Changing mode plays a particle effect and sound that other players also see and hear, unless **Player Mode Change Effect** is off. There is no effect when you enter or leave NoClip. The current mode is stored in the player's state bag `txAdminPlayerMode`, so other resources can read it.
+
+### NoClip
+
+The NoClip camera follows your mouse. The **NoClip** instruction bar at the bottom of the screen lists the controls and the keys currently assigned to them on your input device:
+
+| Control | Does |
+| --- | --- |
+| Fwd/Back, Left/Right | Move the camera. |
+| Up, Down | Rise and sink. |
+| Faster, Slower | Hold to move faster or slower. Slower wins when both are held. |
+| Speed | The mouse wheel multiplies your speed from x0.05 to x20, in steps of 1.1. The value is kept between NoClip sessions. On FiveM a `Speed: x` label with the value appears for a moment when it changes. |
+
+On a gamepad the Faster and Slower controls are the right and left triggers.
+
+If you are in a vehicle when you enter NoClip, the vehicle is hidden, frozen and left behind, and you get it back, seated, when you leave. If you leave NoClip high above the ground, sxPanel pushes you down and blocks ragdolling so you land safely. Leaving NoClip puts you where the camera is. **Teleport → Back** returns you to where you started.
+
+Because you are invisible and invincible in NoClip, **Player Mode Change Effect** does not apply to it.
+
+## Players page
+
+The **Players** page lists everyone online. It refreshes every 5 seconds while it is open. Without a vehicle or position data (for example a player far away without OneSync), distance shows as `?? m`.
+
+![Players page with player cards, search, filter and sort](/docs/menu-players.webp)
+
+Each card shows a vehicle icon (walking, driving, boating, biking or flying), `#<server id>`, the name, the distance from you, a **Staff** badge or the player's highest-priority [player tag](/docs/players), and a health bar. Hover the bar for `<n>% health`. Cards load as you scroll.
+
+| Control | What it does |
+| --- | --- |
+| **Search** | Matches the name (ignoring special characters) or any part of the server ID. |
+| **Filter by** | **No Filter**, **Is Admin**, **Is Injured / Dead** (health 20% or less) or **In Vehicle**. |
+| **Sort by** | **ID (Joined First)**, **ID (Joined Last)**, **Distance (Closest)** or **Distance (Farthest)**. Unknown distances always sort last. |
+
+An empty result shows `No players found.` Click a card to open the player profile.
+
+### Open a player's profile
+
+You can also open a profile without the list:
+
+- `/tx 12` opens player 12. `/tx <name>` opens the one online player whose name contains the text. If several match, the **Players** page opens with that text in **Search** instead.
+- `/ban <id or name>`, `/kick <id or name>` and `/warn <id or name>` open the profile straight on the **Ban** tab, or on **Actions** with the Kick or Warn dialog already open. They need **Ban**, **Kick** or **Warn** respectively and answer `You do not have permission to <action> players.` without it. With no argument they answer `Usage: /<action> [playerID]`. These commands need a single match.
+- When nobody matches: `Was unable to find an online player with ID or a username of <target>`.
+
+## Player profile
+
+![Player profile in game, on the Actions tab](/docs/menu-player-modal.webp)
+
+The profile has five tabs: **Actions**, **Info**, **IDs**, **History** and **Ban**. **Ban** is disabled without **Ban** (`players.ban`). If the profile cannot load, it shows `An error occurred fetching this users details. The error is shown below:` with the error.
+
+Moderation actions here run through the web panel, so they behave exactly as in the panel's [player profile](/docs/players): they are recorded in the history, can notify Discord and fire the same events.
+
+### Actions
+
+Every button is disabled when you lack its permission.
+
+| Group | Button | Permission | What it does |
+| --- | --- | --- | --- |
+| **Moderation** | **DM** | **Direct Message** (`players.direct_message`) | Asks for a reason (the message) and sends a direct message. `Your DM has been sent!` |
+| | **Warn** | **Warn** (`players.warn`) | Asks for a reason and warns the player. `Player warned!` |
+| | **Kick** | **Kick** (`players.kick`) | Asks for a reason and kicks the player. `Player kicked!` |
+| | **Give Admin** | **Manage Admins** (`manage.admins`) | Only shows `Give Admin: use the panel`. Create admins in the panel. |
+| **Interaction** | **Heal** | **Heal** (`players.heal`) | Heals and revives the player. |
+| | **Go to** | **Teleport** (`players.teleport`) | Teleports you to the player. Needs OneSync. |
+| | **Bring** | **Teleport** (`players.teleport`) | Teleports the player to you. Needs OneSync. |
+| | **Spectate** | **Spectate** (`players.spectate`) | Starts spectating. See [Spectate](#spectate). |
+| **Staff** | **Return** | **Teleport** (`players.teleport`) | Sends a player you brought back to where they were. |
+| | **Toggle Freeze** | **Freeze Players** (`players.freeze`) | Freezes or unfreezes the player. |
+| | **Disarm** | **Disarm** (`players.disarm`) | Removes every weapon from the player. |
+| **Troll** | **Make Drunk**, **Set Fire**, **Wild attack** | **Troll Actions** (`players.troll`) | See [Troll actions](#troll-actions). |
+
+Notes:
+
+- **Bring** remembers where the player was. **Return** then sends them back, including to their original routing bucket. It answers `This player has no location to return to. Bring them first.` when there is nothing to return to, and the memory is cleared when the player leaves. Bring and Go to also move you or the player into the other's routing bucket, so both can see each other.
+- **Toggle Freeze** on yourself answers `You cannot freeze yourself.` The frozen player is taken out of any vehicle or off their mount and sees a persistent alert: `You have been frozen by a server admin!` You see `You have frozen the player!` or `You have unfrozen the player!`. The frozen state is cleared when the player leaves.
+- **Disarm** shows the player `Your weapons were removed by a staff member.` and you `Removed all weapons from the player.`
+- **Spectate** on yourself answers `You cannot spectate yourself.`
+
+### Troll actions
+
+Troll actions run on the target's own game and are logged like any other menu action. After sending one you see `Command sent!`
+
+| Action | Effect |
+| --- | --- |
+| **Make Drunk** | The target stumbles, the camera shakes and the screen is tinted. A drunk driver also gets random braking, accelerating and turning inputs. The effect lasts 30 seconds by default. Set the convar `txAdmin-menuDrunkDuration` in seconds in `server.cfg` to change it. |
+| **Set Fire** | Sets the target's character on fire. |
+| **Wild attack** | Spawns a pack of three wild animals 15 to 25 meters from the target: mountain lion, rottweiler, shepherd and coyote on FiveM; wolf, bear, cougar and black bear on RedM. They attack only that player, and are removed after 60 seconds, when the target dies or when the whole pack is dead. At most six of these animals exist at once on a client. |
+
+### Info
+
+| Field | What it shows |
+| --- | --- |
+| **Session Time**, **Play time**, **Joined** | How long they have been connected, their total playtime, and when they first joined. |
+| **Whitelisted** | The date, or `not yet`. **ADD WL** / **REMOVE WL** (needs **Whitelist**, `players.whitelist`, and a known license) changes it: `Whitelist status changed.` |
+| **Tags** | The player's tags. **Custom Tags** with an **Edit** menu lists the tags you can assign, or `No custom tags configured in settings.`. Editing needs a permission that only the master account and admins with **All Permissions** have; see [Players](/docs/players). `Updating tag...` then `Tag updated.` |
+| **Log** | The count of bans and warns (`No bans/warns found.` when none) and a **DETAILS** button that opens the **History** tab. |
+| Notes box | `Notes about this player...`. Saving shows `Player note changed.` |
+
+### IDs
+
+**Current Identifiers**, **Previously Used Identifiers** and **All Hardware IDs**, with click-to-copy.
+
+### History
+
+The player's bans and warns, newest first, each marked `BANNED by <admin>` or `WARNED by <admin>` with `Expires at`, `Expired at` or `Revoked by` details. **REVOKE** reverses an action and is disabled without **Warn** for warnings or **Ban** for bans. `Action revoked!`
+
+### Ban
+
+The **Ban** tab asks for a reason (required: `The Reason field is required.`) and a duration, then **Apply ban**. `Player banned!`
+
+- A template picker fills in the reason and duration from the [ban templates](/docs/players) set up in the panel.
+- Durations: **2 hours**, **8 hours**, **1 day**, **2 days**, **1 week**, **2 weeks**, **Permanent** and **Custom**. **Custom** takes a number and a unit: **hours**, **days**, **weeks** or **months**.
+- Bans follow the same permission rules as the panel: without **Ban: Permanent** (`players.ban.permanent`) you cannot apply a permanent ban.
+
+## Spectate
+
+**Spectate** in the profile starts spectating the target. The screen fades, your character is moved under the target and the camera follows them. On FiveM the minimap switches to spectator mode. Overhead player IDs turn on while you spectate and off when you stop.
+
+The **Spectate** instruction bar lists the controls: by default **Arrow Down** for **Next Player**, **Arrow Up** for **Previous Player**, and **Backspace** for **Exit Spectate**. They only work while the menu is closed and the pause menu is not open.
+
+- Next and previous skip you. With two or fewer players online they answer `There are no players to cycle to.`
+- If the target leaves, you get `Failed to resolve the target! Exiting spectate.` and are returned.
+- If the target is in another routing bucket, you are moved there and back when you stop.
+- Exiting returns you to where you started.
+
+The panel also has a live spectate and screenshot tool; see [Players](/docs/players).
+
+## Staff tools
+
+### Staff chat
+
+A message sent with **Staff Chat**, `/staffchat <message>` or `/sc` goes to every online admin that has **Staff Chat** (`menu.staffchat`), including you. Messages are trimmed, control characters become spaces, and anything past 300 characters is cut. You can send one message per second; faster ones answer `You are sending staff messages too fast.` An empty message answers `Usage: /staffchat [message]`. Staff messages are logged as `sent a staff chat message: <text>`.
+
+There is a keybind that opens the menu straight into the staff chat dialog. See [Keybinds](#keybinds).
+
+### Invisibility
+
+While on, other players cannot see you. On FiveM you still see yourself as a half-transparent character. The state is kept through respawns and is removed when you lose menu access, when the resource stops or when you turn it off. A state bag `txAdminInvisible` marks you for other resources. An alert reads `You are invisible to other players.`
+
+### Developer tools
+
+![Coordinates HUD and entity inspector](/docs/menu-staff-hud.webp)
+
+Both tools need **Developer Tools** (`menu.devtools`) to turn on. Turning one off needs nothing.
+
+- **Coords HUD** shows **Position** (x, y, z) and **Heading**, updated every 100 ms. `/coords` and the **Dev Tools: Coords HUD** keybind toggle it.
+- **Inspector** (`/inspect`, **Dev Tools: Entity Inspector**) outlines the ped, vehicle or object under your crosshair, up to 150 meters away, and shows its **Type**, **Model**, **Net ID** (or **Not networked**), **Owner**, **Player**, **Health**, **Distance** and **Coords**. Without a target it says `Aim at a ped, vehicle or object to inspect it.`
+
+With **Delete Entities** (`menu.delete_entities`), press **Delete** while the inspector has a target to remove it. The server refuses with these messages:
+
+| Message | Cause |
+| --- | --- |
+| `You are not aiming at an entity.` | No target. |
+| `You cannot delete a player.` | The target is a player ped. |
+| `That vehicle is occupied by a player.` | Someone else is inside. You can delete the vehicle you are in. |
+| `That entity is too far away.` | More than 300 meters from you. |
+| `Map objects that are not networked cannot be deleted.` | The entity exists only on your client. |
+| `That entity no longer exists.` | It was already removed, or is in another routing bucket. |
+
+Success shows `Entity deleted.` and is logged with the entity type and model.
+
+All the staff tools turn themselves off if you lose menu access.
+
+## Overhead player IDs
+
+**Toggle → Player IDs** (`/ids`, or the **Toggle Player IDs** keybind) draws a tag above every player within range. On FiveM each tag shows the player's tag prefix (for example `[S]` for staff), their name, server ID and distance, plus a health bar and a voice indicator that lights when they talk. The name takes the colour of their highest-priority [player tag](/docs/players). On RedM the tag is the game's own, with a speaker icon.
+
+The range is **Overhead Player ID Range** (default 150 meters). The layout options in [Settings](#settings) change the tag's look. It shows `Showing nearby player NetIDs.` or `Hiding nearby player NetIDs.` Tags also turn off when you stop spectating.
+
+## Map blips
+
+**Toggle → Map Blips** (`/blips`, or **Toggle Map Blips**) puts a blip for every online player on the map and minimap, refreshed every 5 seconds. The blip shape follows what the player is in: on foot, car, bike, helicopter, plane or boat. The colour follows the player's highest-priority tag, and the label is `<tag prefix>[<id>] <name>`.
+
+It needs OneSync for player positions. If no positions arrive, you get `Map blips require OneSync to be enabled on the server.` once. Blips are removed when you turn the toggle off or the resource stops.
+
+## Stats page
+
+![Stats page with players online, OneSync, resources and uptime](/docs/menu-stats.webp)
+
+**Server Stats** shows four tiles, refreshed on open, with the **Refresh** button, and every 10 seconds:
+
+| Tile | Shows |
+| --- | --- |
+| **Players Online** | The number of connected players. |
+| **OneSync** | The OneSync mode of the server. |
+| **Resources** | How many resources are started. |
+| **Uptime** | How long the sxPanel resource has been running since the server started. |
+
+Until the numbers arrive it shows `Loading stats…`. Any signed-in menu admin can open it.
+
+## Resources and Reports pages
+
+The **Resources** page lists resources with start, stop, restart, ensure and a config editor. It is described, with its limits, in [Resources](/docs/resources#in-the-in-game-menu). The **Reports** page is the staff side of player tickets, and `/ticket` (alias `/report`) is the player side. Both are described in [Reports](/docs/reports).
+
+## What players see
+
+### Announcements and direct messages
+
+![An announcement notification as players see it](/docs/menu-announcement.webp)
+
+An announcement shows as `Server Announcement by <author>:` followed by the message. A direct message shows as `DM from admin <author>:`. They stay on screen for a time based on their length: at least 7.5 seconds, at most 30, and twice as long for direct messages. They appear at the top centre of the screen by default.
+
+The author is the admin's name, or the server name when **Hide Admin Name In Messages** is on. See [Notification settings](#notification-settings).
+
+### Warnings
+
+![Full-screen warning with the hold-to-dismiss hint](/docs/menu-warning.webp)
+
+A warned player gets a full-screen **WARNING** with the reason and `Warned by:` the admin (or the server name when **Hide Admin Name In Punishments** is on). Any open menu closes. To dismiss it they hold **Space** for 10 seconds: the screen pulses every second and shows the seconds left, and releasing early resets the countdown. When it finishes, the warning is marked as seen on the server.
+
+A warning issued while the player was offline is shown after they connect, once they have started walking and walked for about five seconds, so it does not appear on the character screen. It reads `This warning was issued before you connected to the server.`
+
+### Notifications for admins
+
+Admins also see short messages for what they do: `Sent you into the wormhole!` after a teleport, `NoClip enabled`, `Vehicle fixed!`, `Command sent!` and so on. After joining, an admin sees `sxPanel Menu enabled, type /tx to open it.` plus the key binding hint, about 15 seconds after spawning. The hint repeats at most once a day.
+
+## Keybinds
+
+On FiveM every admin who passes the menu check gets a set of keybinds in the game's settings under **Settings → Key Bindings → FiveM**. All of them are **unbound by default**: you pick the keys. They only appear once you have been authenticated. RedM has no keybinds, so use the menu and the chat commands there.
+
+| Keybind label | Does | Permission |
+| --- | --- | --- |
+| **Open Main Page** | Opens or closes the menu (same as `/tx`). | Menu access |
+| **Open Players page** | Opens the menu on **Players**. | Menu access |
+| **Clear Area** | Opens the **Reset World Area** dialog. | `menu.clear_area` |
+| **Heal Yourself** | Heals you without opening the menu. | `players.heal` |
+| **Teleport: go Back** | Returns to the last location. | `players.teleport` |
+| **Teleport: to Coords** | Opens the coordinates dialog. | `players.teleport` |
+| **Teleport: to Waypoint** | Teleports to the waypoint. | `players.teleport` |
+| **Toggle NoClip** | Turns NoClip on or off. | `players.noclip` |
+| **Toggle Player IDs** | Overhead IDs on or off. | `menu.viewids` |
+| **Toggle Map Blips** | Map blips on or off. | `menu.mapblips` |
+| **Vehicle: Boost** | Boosts your vehicle. | `menu.vehicle.boost` |
+| **Vehicle: Delete** | Deletes your vehicle. | `menu.vehicle.delete` |
+| **Vehicle: Fix** | Repairs your vehicle. | `menu.vehicle.fix` |
+| **Vehicle: Spawn** | Opens the spawn dialog. | `menu.vehicle.spawn` |
+| **Toggle Invisibility** | Invisibility on or off. | `players.invisible` |
+| **Dev Tools: Coords HUD** | Coordinates HUD on or off. | `menu.devtools` |
+| **Dev Tools: Entity Inspector** | Inspector on or off. | `menu.devtools` |
+| **Clean Up Vehicles** | Opens the clean up dialog. | `menu.delete_entities` |
+| **Staff Chat** | Opens the staff chat dialog. | `menu.staffchat` |
+
+A keybind pressed without the permission shows `You do not have this permission.`
+
+## Settings
+
+Menu settings are on **Settings → Game**, in the card that holds the menu, the notification, the report and the combat log options. They need **Settings: Change** (`settings.write`) to edit.
+
+### Menu settings
+
+| Setting | What it does | Default | Limits / values |
+| --- | --- | --- | --- |
+| **Game Menu** | Lets admins open the menu with `/tx` or a keybind. Switch **Enabled** / **Disabled**. When off, none of the menu, its keybinds or its chat commands work, but warnings, announcements and direct messages still show. | Enabled | On or off. Applied when the server starts, so restart the server after changing it. |
+| **Align Menu Right** | Moves the menu to the right side of the screen. | Left aligned | **Right aligned** or **Left aligned**. |
+| **Menu Page Switch Key** | The key that switches menu pages. Click the field and press the key. | `Tab` | Stored as the key's code (`Tab`, `KeyQ`, `Digit1`). `Escape` and `Backspace` cannot be used and reset it to `Tab`. |
+| **Overhead Player ID Range** | The distance at which overhead player IDs are visible. | 150 | Whole number, 1 to 1000 meters. |
+| **Overhead Two-Row Layout** | FiveM only. Row one shows the tag prefix and native icons; row two shows the name, server ID and distance. | Enabled | On or off. |
+| **Overhead Vehicle Seat Icons** | FiveM only. Shows the driver and front-passenger icons on tags of players in vehicles. Rear seats use the text suffixes `BL` and `BR`. | Enabled | On or off. |
+| **Overhead Noclip Icon** | FiveM only. Shows the passive-mode icon on the tag of an admin in NoClip, to other admins who have overhead IDs on. | Enabled | On or off. |
+| **Player Mode Change Effect** | Plays a particle effect and a sound when an admin changes to or from God Mode or Super Jump. It helps players notice admins using special modes during PvP. Recommended on. | Enabled | On or off. Shown only when **Show Advanced** is on. |
+
+Changes to everything except **Game Menu** apply to a running server without a restart.
+
+### Notification settings
+
+These control what players see when an admin acts. Each switch shows **Hidden** or **Visible**.
+
+| Setting | What it does | Default | Limits / values |
+| --- | --- | --- | --- |
+| **Hide Admin Name In Punishments** | Never shows the admin's name to players on bans and warns. The server name is shown instead. The name stays in the history and logs. | Hidden | On or off. |
+| **Hide Admin Name In Messages** | Does not show the admin's name on announcements and direct messages. The name stays in the live console and logs. | Visible | On or off. |
+| **Hide Announcement Notifications** | Stops sxPanel's own announcement display, so your own resource can show it from the `txAdmin:events:announcement` event. | Visible | On or off. |
+| **Hide Direct Message Notification** | Stops the direct message display. Use the `txAdmin:events:playerDirectMessage` event. | Visible | On or off. |
+| **Hide Warning Notification** | Stops the full-screen warning. Use the `txAdmin:events:playerWarned` event. | Visible | On or off. |
+| **Hide Scheduled Restart Warnings** | Stops the scheduled-restart countdown display. Use the `txAdmin:events:scheduledRestart` event. | Visible | On or off. |
+
+<Callout type="warn">
+  With **Hide Warning Notification** on, players do not see the full-screen warning or hold Space to dismiss it. Make sure your own resource shows warnings, or players will not know they were warned.
+</Callout>
+
+The report settings on the same card are described in [Reports](/docs/reports), and the combat log in [Server Log](/docs/server-log).
+
+The announcement position on screen comes from the convar `txAdmin-menuAnnounceNotiPos` (`top-center`, `top-left`, `top-right`, `bottom-center`, `bottom-left` or `bottom-right`, default `top-center`), which you set in `server.cfg`. An invalid value is reported in the server console and falls back to `top-center`.
+
+The language of the menu follows the language set in **Settings → General**. Text added by a custom language file is used for the menu and the warning.
+
+## How to
+
+### Let a new admin use the menu
+
+<Steps>
+  <Step>Open **Admin Manager** and add or edit the admin.</Step>
+  <Step>Fill in **Cfx.re ID** or **Discord ID** with the identifier they connect with, and give them the in-game permissions they need.</Step>
+  <Step>Have them join the server and run `/tx`. If they were already connected, they run `/txAdmin-reauth` first.</Step>
+  <Step>Optionally, they bind keys under **Settings → Key Bindings → FiveM**.</Step>
+</Steps>
+
+### Warn a player by name
+
+<Steps>
+  <Step>Type `/warn` followed by part of their name or their ID.</Step>
+  <Step>Type the reason in the dialog that opens and submit.</Step>
+  <Step>The player gets the full-screen warning, and the warning appears in their history.</Step>
+</Steps>
+
+### Check on a suspected cheater
+
+<Steps>
+  <Step>Turn on **Toggle → Player IDs** and **Toggle → Map Blips** from the main page.</Step>
+  <Step>Open **Players**, sort by **Distance (Closest)** and click the player.</Step>
+  <Step>Use **Spectate** on the **Actions** tab. Use the arrow keys to cycle between players and **Backspace** to leave.</Step>
+  <Step>If needed, open the profile again and use **Warn**, **Kick** or the **Ban** tab.</Step>
+</Steps>
+
+### Move a player and put them back
+
+<Steps>
+  <Step>Open their profile and click **Bring**.</Step>
+  <Step>When you are done, click **Return** on the same profile.</Step>
+</Steps>
+
+## How it connects
+
+- **Server Log.** Every allowed menu action is recorded as a **Menu Event**, for example `teleported to a waypoint` or `healed player <name>`. See [Server Log](/docs/server-log).
+- **Discord.** Menu events can be routed with the **Admin Command Logs** route. Warns, bans and kicks done from the profile behave like the panel's and follow the Discord settings. See [Discord](/docs/discord).
+- **Events.** Heal fires `txAdmin:events:playerHealed`. Announcements, direct messages and warnings have their own `txAdmin:events:*` events, which you can use to build your own display when the built-in one is hidden. See [Events API](/docs/events-api).
+- **Chat commands.** Every action here has a command you can rename, replace or turn off. See [Chat commands](/docs/chat-commands).
+- **Permissions.** See [Permissions](/docs/permissions).
+- **Addons.** Addons can add tabs to the player profile. See [Addons](/docs/addons).
+
+## Limits and edge cases
+
+- **OneSync.** Spawning and deleting vehicles, clean up, Go to, Bring and map blips need OneSync. Without it the menu answers `This option requires OneSync to be enabled.`
+- **RedM.** There are no keybinds, **Reset World Area** is unavailable and overhead tags, vehicles and boost use RedM equivalents. The two-row layout, seat icons and NoClip icon options apply only to FiveM.
+- **Menu disabled or server stopped.** With **Game Menu** off, only warnings, announcements and direct messages work. The menu needs a running server; Restart and Stop are carried out by the sxPanel core.
+- **Routing buckets.** Spawn, clean up and entity deletion only affect your own routing bucket. Spectate, Go to and Bring move you or the target between buckets and move them back afterwards where noted above.
+- **Rate limit.** Staff chat is limited to one message per second per admin.
+- **Access changes.** If an admin's access is removed while in game, their invisibility and developer tools turn off.
+
+## Problems
+
+| Message | Cause and fix |
+| --- | --- |
+| `You do not have this permission.` | The admin lacks the permission of that action. Add it in the Admin Manager. |
+| `This option requires OneSync to be enabled.` | The server runs without OneSync. Enable OneSync in your server settings and restart. |
+| `You are not currently in a vehicle!` | Fix, Delete and Boost act on the vehicle you are in. |
+| `Invalid coordinates. Must be in the format of: 111, 222, 33` | Enter at least two numbers. |
+| `Invalid radius. Must be between 1 and 500.` | Heal radius is 1 to 500. |
+| `Invalid radius. Must be between 1 and 300.` | Clean up radius is 1 to 300. |
+| `Invalid radius input. Try again.` | Reset World Area radius is 0 to 300. |
+| `Usage: /<action> [playerID]` | `/ban`, `/kick` and `/warn` need a player ID or name. |
+| `Usage: provide a valid player ID.` | A custom command with a player argument got none. See [Chat commands](/docs/chat-commands). |
+| `ATTENTION! txAdmin received a NUI message from the origin "<origin>" which is not approved.` | Another resource tried to send commands to the menu. It is likely vulnerable to XSS; fix or remove it. |

@@ -329,7 +329,9 @@
         "locale/en.json"
       ],
       "notes": "Opening the menu (command, keybind), every page and tab, every player action (heal, freeze, spectate, teleport, troll actions), NoClip/freecam controls, vehicle and world actions, map blips and player IDs, the Stats and Resources pages, warnings as seen by the player, and the menu and notification settings.",
-      "status": "todo"
+      "status": "done",
+      "writtenAt": "2026-11-20",
+      "sourceSha": "a21e752720dac257eafa73132d5d73599ec76ff2"
     },
     {
       "id": "staff-tools",
