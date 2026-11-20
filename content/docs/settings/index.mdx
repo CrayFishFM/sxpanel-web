@@ -1,0 +1,193 @@
+---
+title: Settings overview
+description: How the sxPanel Settings page works, what each tab does, and how to use Panel Features, the telemetry opt-out and the Danger Zone.
+---
+
+The **Settings** page holds the server-wide options of sxPanel: the FXServer start-up, moderation, Discord, in-game features and which optional pages the panel shows. This page explains how the page works and documents the **Panel Features** tab and the **Danger Zone** tab, which includes the anonymous telemetry opt-out.
+
+## Where to find it
+
+**System → Settings**, or `/settings`. Each tab has its own address, for example `/settings#panel-features` or `/settings#danger-zone`, so you can bookmark a tab or send the link to another admin.
+
+![Settings page on the Appearance tab with the row of section tabs](/docs/settings.webp)
+
+## Who can use it
+
+| Permission | Id | What it allows |
+| --- | --- | --- |
+| **Settings: View** | `settings.view` | Shows the **Settings** entry in the sidebar and opens the page. Everything is read-only and secrets are hidden. |
+| **Settings: Change** | `settings.write` | Edits and saves settings. |
+| Master admin | `master` | Required for the **Danger Zone** tab and for a few individual settings (see [Master-only settings](#master-only-settings)). |
+
+Without **Settings: View** the sidebar entry is missing, and the settings request answers `You do not have permission to view the settings.`
+
+With **Settings: View** but not **Settings: Change**, all controls and the **Save changes** button are disabled. The server also hides secrets from you: the FXServer start-up arguments are redacted, and the Discord bot token and OAuth client secret show `[redacted by sxPanel]`. A save without **Settings: Change** fails with `You don't have permission to execute this action.`
+
+## How the page works
+
+The tabs are a row of buttons at the top, ordered by group: **Personal**, **sxPanel**, **Server**, **Moderation**, **Integrations** and **Gameplay**. Tabs added by [addons](/docs/addons) follow the built-in ones, and the **Danger Zone** tab is last (master admin only).
+
+### Saving
+
+Each card saves on its own. When you change a value, the tab shows an unsaved marker, the page header shows `Unsaved · <card>`, and a bar appears at the bottom with the card name and a **Save changes** button. Pressing it sends only that card to the server, which validates it and answers with a toast. Nothing else on the page is saved.
+
+- Only one card can have unsaved changes at a time. If you open another tab, a dialog says `You have unsaved changes in the <card> tab.` and asks you to confirm. Choose **Discard** to leave; the edits are lost.
+- Closing or reloading the browser tab with unsaved changes makes the browser ask for confirmation.
+- A setting you reset to its default is stored as "default" rather than as a fixed value.
+- Some cards apply immediately and others need an FXServer restart. The success toast says when a restart is needed, for example after saving **FXServer**.
+- Cards that need extra checks, such as the FXServer paths and the Discord bot token, validate them on the server and show failures as an error toast with a title like `Server Data Folder Error` or `Discord Bot Error`.
+
+### Master-only settings
+
+Some settings are refused for anyone except the master admin, even with **Settings: Change**:
+
+| Setting | Error shown to other admins |
+| --- | --- |
+| Combat log settings (**Game** tab) | `Only the master admin can change the Combat Log settings.` |
+| **Allow Self Identifier Edit** (**General**) | `Only the master admin can change the "Allow Self Identifier Edit" setting.` |
+| **Require Two-Factor Authentication** (**General**) | `Only the master admin can change the "Require Two-Factor Authentication" setting.` |
+| Anonymous telemetry (**Danger Zone**) | `Only the master admin can change anonymous telemetry collection.` |
+
+## Tabs
+
+| Tab | Group | What it controls |
+| --- | --- | --- |
+| **Appearance** | Personal | Your own theme, stored in your browser and not shared with other admins. |
+| **Panel Features** | sxPanel | Which optional pages are shown. [Documented below](#panel-features). |
+| **General** | Server | Language and general panel options, including the two-factor requirement and self identifier editing. |
+| **FXServer** | Server | Server data folder, CFG path, start-up arguments and restarts. Needs a restart to take effect. |
+| **Queue** | Server | The connection queue. |
+| **Bans** | Moderation | Ban settings and ban templates. |
+| **Deferral Cards** | Moderation | The cards players see while connecting. |
+| **Whitelist** | Moderation | Whitelist mode and its options. See [Whitelist](/docs/whitelist). |
+| **Discord** | Integrations | The Discord bot, OAuth and log routes. See [Discord](/docs/discord). |
+| **Game** | Gameplay | In-game menu, notifications, reports and combat log options. |
+| **Player Tags** | Gameplay | The tags shown on players. |
+| **Danger Zone** | master admin only | Backup, cleanup and telemetry. [Documented below](#danger-zone). |
+
+Config keys for every setting are listed in [Configuration](/docs/configuration).
+
+## Panel Features
+
+**Settings → Panel Features** (`/settings#panel-features`) turns optional pages on and off. A page that is switched off is removed from the sidebar and top navigation, and opening its address redirects to the dashboard (`/`).
+
+Each page has a switch that reads **Visible** (on) or **Hidden** (off). All default to **Visible**.
+
+| Group | Setting | Page |
+| --- | --- | --- |
+| **Players & Moderation** | **Whitelist** | [Whitelist](/docs/whitelist) |
+| | **History** | [History](/docs/history) |
+| | **Reports** | [Reports](/docs/reports), and more: see below |
+| **Analytics** | **Insights** | [Insights](/docs/insights) |
+| | **Player Drops** | Player Drops |
+| | **Report Analytics** | Report Analytics |
+| **Server** | **Resources** | [Resources](/docs/resources) |
+| | **CFG Editor** | [CFG Editor](/docs/cfg-editor) |
+| | **Server Log** | [Server Log](/docs/server-log) |
+| **System** | **Action Log** | Action Log |
+| | **Console Log** | Console Log |
+| | **Addon Manager** | [Addons](/docs/addons) |
+
+Hidden pages are also left out of the section dropdowns described in [Overview](/docs/overview).
+
+<Callout type="warn" title="Reports is more than a page">
+Hiding **Reports** also disables the in-game `/report` command, stops the report APIs from responding and removes the Discord report commands. It is the same setting as the reports switch in the game settings, so the two always agree.
+</Callout>
+
+<Callout type="warn" title="Hiding is not a permission">
+For every page except **Reports**, the switches only hide navigation and redirect the route in the browser. The server routes behind a page are unchanged. Use [permissions](/docs/permissions) to restrict what admins can do, and Panel Features to declutter what they see.
+</Callout>
+
+### Hide a page
+
+<Steps>
+<Step>Open **System → Settings** and select **Panel Features**. You need **Settings: Change**.</Step>
+<Step>Switch the page to **Hidden**.</Step>
+<Step>Press **Save changes**.</Step>
+<Step>A dialog asks **Reload to apply?** and says `Navigation and page changes only take effect after the panel reloads.` Choose **Reload now**, or **Later** to reload yourself.</Step>
+</Steps>
+
+Visibility is read once when the panel loads, so other admins see the change after they reload. Hiding a page does not delete anything; switching it back to **Visible** restores it.
+
+## Danger Zone
+
+**Settings → Danger Zone** (`/settings#danger-zone`) holds actions that change or remove data in bulk. The tab is listed only for the master admin; anyone else who opens `/settings#danger-zone` lands on the first tab.
+
+Every action needs the master admin and the web version of the panel. In the in-game menu the tab shows `These functions are disabled for the in-game menu - please use the web version.` and the buttons are disabled. The server refuses the same requests with `This functionality cannot be used by the in-game menu, please use the web version of sxPanel.` For a non-master admin it answers `Only the master account has permission to view/use this page.`
+
+<Callout type="warn">
+Cleanup and revoke actions run as soon as you confirm and cannot be undone. Download a backup first.
+</Callout>
+
+### Backup Database
+
+**Backup Database** downloads a copy of the player database file `playersDB.json`, named `playersDB_<date-time>.json`. The download is logged to the console as `[<admin>] Downloading player database.` If the file cannot be read, the error is `Failed to generate backup file with error: …`.
+
+### Revoke Whitelists
+
+Removes the whitelist approval from players who have not joined recently. It applies to the license whitelist only, not to Discord member or role whitelisting (see [Whitelist](/docs/whitelist)).
+
+| **Filter** option | Revokes the whitelist of |
+| --- | --- |
+| players that haven't joined in the last 30 days (default) | Whitelisted players whose last connection is more than 30 days ago. |
+| players that haven't joined in the last 15 days | The same, for 15 days. |
+| players that haven't joined in the last 7 days | The same, for 7 days. |
+| REVOKE ALL WHITELISTS | Every whitelisted player. |
+
+Players are not deleted, only their whitelist. **Revoke Whitelists** opens a confirmation (`Are you sure you want to:` followed by `Revoke Whitelist from all players that have not joined in the past …` or `Revoke ALL Whitelists.`). The result toast reads `Whitelists revoked: <n>` with the time taken.
+
+### Clean Database
+
+Permanently removes players and actions (bans and warns) from the database. Every selector defaults to **none**. If all four are **none**, you get `You need to select at least one option.` The confirmation dialog lists each selected removal before anything runs.
+
+| Selector | Options | Effect |
+| --- | --- | --- |
+| **Players** | **none**, **inactive over 60 days**, **inactive over 30 days**, **inactive over 15 days** | Deletes players whose last connection is older than the period and who have no notes. |
+| **Bans** | **none**, **revoked**, **revoked or expired**, **REMOVE ALL BANS** | **revoked** deletes revoked bans. **revoked or expired** also deletes bans whose expiration has passed. **REMOVE ALL BANS** deletes every ban. |
+| **Warns** | **none**, **revoked**, **older than 30 days**, **older than 15 days**, **older than 7 days**, **REMOVE ALL WARNS** | Deletes revoked warns, warns older than the period, or all warns. |
+| **HWIDs** | **none**, **from players**, **from bans**, **REMOVE ALL HWIDS** | Clears the stored hardware ID tokens from player records, ban records, or both. The players and bans stay. |
+
+HWID tokens are tied to the owner of your `sv_licenseKey`. Wipe them if you transfer the server to a different license key owner.
+
+When the clean finishes, a toast shows `Players deleted`, `Actions deleted` (bans and warns together), `HWIDs deleted` and the time taken. The steps run in the order players, actions, HWIDs. If one fails, the error names it (`Failed to clean players with error:`, `Failed to clean actions with error:` or `Failed to clean HWIDs with error:`) and the steps before it stay applied.
+
+<Callout type="info">
+sxPanel also runs a daily optimizer on its own database. It removes players who have not connected in 16 days and have under 2 hours of playtime, pending whitelist requests and pre-approvals older than 7 days, and resolved reports past the retention period. It does not touch your MySQL or framework databases.
+</Callout>
+
+### Telemetry opt-out
+
+The **Anonymous usage data** card controls whether sxPanel periodically sends anonymous install statistics: panel version, player slot usage, coarse region and resource folder names. Player names, licenses and chat content are not transmitted.
+
+The **Opt out of data collection** switch reads **Collecting** (default) or **Opted out**. It saves the moment you flip it, without the bottom bar, as the **Enable Anonymous Telemetry** setting (`general.enableTelemetry`, default on). It is disabled while the page loads, without **Settings: Change**, and for anyone who is not the master admin on the web panel.
+
+## Common tasks
+
+### Prepare for a new license key owner
+
+<Steps>
+<Step>Open **Settings → Danger Zone** as the master admin and press **Backup Database**.</Step>
+<Step>In **Clean Database**, set **HWIDs** to **REMOVE ALL HWIDS** and press **Clean Database**.</Step>
+<Step>Confirm the dialog and check the toast: `HWIDs deleted: <n>`.</Step>
+</Steps>
+
+### Retire old whitelists
+
+<Steps>
+<Step>Press **Backup Database**.</Step>
+<Step>In **Revoke Whitelists**, choose a **Filter** and press **Revoke Whitelists**.</Step>
+<Step>Confirm. The toast shows how many whitelists were revoked.</Step>
+</Steps>
+
+## Problems
+
+| Message | Cause and fix |
+| --- | --- |
+| `You do not have permission to view the settings.` | Your account lacks **Settings: View**. Ask a master admin. |
+| `You don't have permission to execute this action.` | Saving needs **Settings: Change**. |
+| `Only the master admin can change …` | The setting is master-only, see [Master-only settings](#master-only-settings). |
+| `Only the master account has permission to view/use this page.` | A Danger Zone action was requested by a non-master admin. |
+| `This functionality cannot be used by the in-game menu, please use the web version of sxPanel.` | Use the web panel. |
+| `Invalid Request` | The request was malformed. Reload the page and try again. |
+| A hidden page still shows, or a shown page is missing | Reload the browser tab; visibility is read at page load. |
+| `Error saving the <card> changes.` | The server rejected the card. The message under the title says why. |

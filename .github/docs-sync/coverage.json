@@ -364,7 +364,9 @@
         "panel/src/pages/Settings/TelemetryOptOutCard.tsx"
       ],
       "notes": "Create the settings/ folder with its own meta.json. How the settings page works (tabs, saving per card, who can change settings), a table of all tabs linking to the page that documents each, then Panel Features, telemetry opt-out and Danger Zone in full.",
-      "status": "todo"
+      "status": "done",
+      "writtenAt": "2026-11-20",
+      "sourceSha": "a21e752720dac257eafa73132d5d73599ec76ff2"
     },
     {
       "id": "settings-server",
