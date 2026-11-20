@@ -16,6 +16,7 @@ here. Fix this file when a path moves or a page gains a new source.
 | `events-api.mdx` | `resource/shared.lua`, `resource/sv_main.lua`, `resource/sv_*.lua` (events and exports), emitters in `core/modules/FxScheduler.ts`, `core/modules/FxMonitor/`, `core/routes/player/actions.ts`, `core/routes/history/actions.ts`, `core/routes/fxserver/commands.ts` |
 | `addons.mdx` | `core/modules/AddonManager/`, `core/routes/addons.ts`, `panel/src/pages/AddonsManagerPage.tsx`, `panel/src/pages/AddonsPage.tsx` |
 | `addon-api.mdx` | `addon-sdk/src/` (the `.d.ts` files are the public SDK surface), `shared/addonTypes.ts`, `shared/deferralAddonTypes.ts`, `addons/addon-starter-template/`, `core/modules/AddonManager/`, `core/lib/addonEvents.ts`, `bot/addonRuntime.js` |
+| `system.mdx` | `panel/src/pages/ActionLog/`, `panel/src/pages/SystemLogPage.tsx`, `core/routes/systemLogs.ts`, `core/routes/systemLogPartial.ts`, `core/routes/systemLogSessions.ts`, `core/routes/downloadLogs.ts`, `core/modules/Logger/SystemLogger.ts`, `core/lib/console.ts` (console buffer), `panel/src/pages/Diagnostics/`, `core/routes/diagnostics/`, `core/lib/diagnostics.ts`, `panel/src/pages/AdvancedPage.tsx`, `core/routes/advanced/` |
 | `troubleshooting.mdx` | Symptom-driven; verify each fix against the feature that owns it above |
 
 Screenshots referenced by the docs live in this repo under `public/docs/`.

@@ -1,0 +1,427 @@
+---
+title: System pages
+description: Review what admins did in the Action Log, read sxPanel's own process output in the Console Log, check runtime health and send a support report from Diagnostics, and the Advanced tools page.
+---
+
+The **System** section of the sidebar holds the pages that tell you what sxPanel itself is doing. The **Action Log** records who did what in the panel. The **Console Log** shows sxPanel's raw process output. **Diagnostics** reports the health of the host, sxPanel, FXServer and the Discord bot, and can send a support report. **Advanced** is a low-level tools page for experts.
+
+Server owners and admins use them to audit staff activity, to find out why a restart or a login happened, and to get help when something breaks. They are separate from the [Live Console](/docs/live-console) (FXServer output), the [Server Log](/docs/server-log) (what players did in game) and [History](/docs/history) (moderation actions against players).
+
+## Where to find it
+
+| Page | Sidebar | URL |
+| --- | --- | --- |
+| Action Log | **System → Action Log** | `/system/action-log` |
+| Console Log | **System → Console Log** | `/system/console-log` |
+| Diagnostics | **System → Diagnostics** | `/system/diagnostics` |
+| Advanced | Not in the sidebar | `/advanced` |
+
+**Artifacts** and **Panel Update** sit in the same section. See [Updating](/docs/updating).
+
+## Who can use it
+
+| Page | Permission | Id | Without it |
+| --- | --- | --- | --- |
+| Action Log | **View System Logs** | `txadmin.log.view` | The sidebar entry is hidden and the URL shows the Access Denied page. |
+| Console Log | **View System Logs** | `txadmin.log.view` | Same as above. |
+| Diagnostics | None to open the page or send a report. The three Discord bot buttons need **All Permissions** (`all_permissions`). | | The bot buttons are refused with **Insufficient permissions.** |
+| Advanced | **All Permissions** | `all_permissions` | Access Denied. |
+
+One more permission affects the Action Log:
+
+| Permission | Id | What it allows |
+| --- | --- | --- |
+| **View Login IPs** | `txadmin.log.view_ips` | See the IP address on login entries. Without it the address is removed from every entry the panel sends you. |
+
+The **Action Log** and **Console Log** pages can each be switched off for everyone in **Settings → Panel Features**, in the **System** group (**Action Log** and **Console Log**; stored as **Action Log Page Enabled** and **Console Log Page Enabled**, both on by default). A disabled page disappears from the sidebar and its URL redirects to the dashboard.
+
+## Action Log
+
+The Action Log is the audit trail of the panel. Every privileged action an admin takes (banning a player, running a console command, saving a setting, restarting the server) is written to it with the admin's name and the time, as are logins and automatic events such as scheduled restarts. It is also the place to find out who changed a setting.
+
+### Header
+
+The header shows the page title and these indicators:
+
+| Indicator | Meaning |
+| --- | --- |
+| Connection state | **Live** (green, pulsing) when you are on the live feed and connected. **Connecting** while the live feed is not connected. **Paused** when you paused. **Session** when you are viewing a past session. |
+| **Events** | Number of events currently loaded, before filters. |
+| **Actions**, **Commands**, **Config** | Number of loaded events in those categories, before filters. |
+| **Last Updated** | When the settings were last changed. Hover it and click **View Changelog** to open **Recent Changes**. |
+
+**Recent Changes** lists the latest settings changes, newest first: the admin, the time, and the config keys that changed. When nothing has been changed yet the indicator reads **No changes yet**. The changelog keeps the latest 32 changes and drops entries older than 120 days. It is separate from the log below and is not tied to the session you are viewing.
+
+### Toolbar
+
+| Control | What it does |
+| --- | --- |
+| **Live** / **Paused** button | While live, the button reads **Live**. Click it to pause (**Click to pause live updates**); the list stays as it is and stops receiving new events. Click **Paused** (**Click to resume live updates**) to go back to live. This clears the list and reloads the latest events. |
+| Session picker | Appears once at least one past session exists. **Current Session** is the live feed. Each other entry is a past session, shown as its start time and file size. See [Sessions](#sessions). |
+| **Search actions...** | Filters the loaded events. Matches the admin name and the action text, ignoring case. The **×** clears it. |
+| Clock button (**Jump to time**) | Opens a date and time field with **Jump** and a close button. See [Jump to time](#jump-to-time). |
+| Download button (**Download log**) | Downloads the active session file. See [Download](#download). |
+
+### Filter chips
+
+Under the toolbar, one chip per category shows its name and the number of loaded events in it. Click a chip to show or hide the category. Hidden chips are dimmed. The last button on the row selects all categories, or deselects all when every one is on (**Select all filters** / **Deselect all filters**). Your chip selection is remembered in this browser.
+
+| Chip | What it covers |
+| --- | --- |
+| **Actions** | Things an admin did in the panel or in game: bans, warnings, resource actions, server controls, admin management and so on. |
+| **Commands** | Console commands an admin ran. |
+| **Config** | Settings changes and changes to an admin's own security settings (for example turning two-factor off). |
+| **Logins** | Admin sign-ins: `logged in via password`, `logged in via password+2FA`, `logged in via cfxre` or `logged in via discord`. |
+| **Monitor** | Restarts triggered by the FXServer monitor. The author is `MONITOR`. |
+| **Scheduler** | Scheduled restarts being carried out. The author is `SCHEDULER`. |
+| **System** | Events sxPanel raises on its own, such as correcting `sv_maxclients` back to the host limit. The author is `SYSTEM`. |
+
+### Event list
+
+Each row shows an icon and left border coloured by category, the time, the author and the action. Login entries end with `from <ip>` when you may see IPs.
+
+- The time is in your browser's locale. Hover it to see how long ago it happened.
+- Click the author's name to open that admin's statistics. This needs **Manage Admins** (`manage.admins`); see [Admin stats](/docs/permissions#admin-stats).
+- Click anywhere else on the row to open the detail dialog.
+- The list scrolls to the newest event while you are at the bottom and live. If you scroll up, an arrow button (**Scroll to latest events**) appears once more than 20 events are shown.
+- Scrolling to the top loads 500 older events at a time (**Loading older events…**). **Beginning of log** appears when there is nothing older.
+- With no events yet the page shows **Connecting…** or **Waiting for events…**. If events are loaded but every one is filtered out, it shows **No events match your filters** and a **Clear all filters** button, which turns on all chips and clears the search.
+
+### Detail dialog
+
+The dialog is titled with the category and shows the full date, then:
+
+| Field | Content |
+| --- | --- |
+| **Admin** | The author's name. |
+| **Timestamp** | Full date and time, how long ago, and the Unix time in milliseconds. |
+| **Category** | The category label. |
+| **IP Address** | Shown only on entries that carry one, and only if you have **View Login IPs**. |
+| **Action** | The full text of the entry. |
+
+**Copy** puts `[<date>] [<Category>] <admin>: <action>` on the clipboard (with `from <ip>` appended when an IP is shown) and the button reads **Copied** for a moment.
+
+### Sessions
+
+Entries are stored in a session file in the sxPanel log folder. The current file is `system_session.jsonl`. Every time FXServer is started or restarted by sxPanel, the current file is closed and renamed to `system_session_<date>_<time>.jsonl`, and a new one begins. So **Current Session** means "since the last server start", not "today".
+
+- The session picker lists the dated files, newest first, with their size.
+- Choosing one loads the whole file and stops the live feed. The header reads **Session**. Choose **Current Session** to return.
+- Session files older than 14 days are deleted when a new session starts and when sxPanel boots.
+- A file left over from a crash is renamed the same way the next time sxPanel boots.
+
+### Jump to time
+
+Click the clock button, pick a date and time and click **Jump**. The page loads the 500 events that follow that moment from the current session and stops the live feed. Scroll up for older events. If fewer than 500 events follow the time you picked, there is nothing to page through and the page returns to the live view instead.
+
+Scrolling up and **Jump to time** read from the in-memory history of the current session, which holds the latest 16,000 entries. For earlier events, choose a past session.
+
+### Download
+
+**Download log** saves the active `system_session.jsonl` as it is on disk: one JSON object per line with `ts`, `author`, `category`, `action`, and `actionId` or `ip` when present. It always downloads the current session, whichever session you are viewing. The button is disabled until the page has your security token.
+
+### Live data
+
+The page loads the latest 500 entries when it opens and then receives new ones as they are written. The browser keeps at most 2,000 events; older ones scroll off the top until you load them again. The Dashboard's **Recent Admin Actions** card shows the latest eight entries of the same log ([Overview](/docs/overview)).
+
+### Common tasks
+
+<Steps>
+<Step>
+
+### Find out who changed a setting
+
+Open **System → Action Log**, turn off every chip except **Config**, and read down the list. For a quick answer, hover **Last Updated** and click **View Changelog**.
+
+</Step>
+<Step>
+
+### Find everything one admin did
+
+Type the admin's name in **Search actions...**. Click their name in a row to see their moderation totals.
+
+</Step>
+<Step>
+
+### Review what happened yesterday
+
+Pick the session that started before the event in the session picker, or use **Jump to time** on the current session. Narrow the list with the chips and the search.
+
+</Step>
+<Step>
+
+### Keep a copy for a dispute
+
+Open the entry and click **Copy**, or click **Download log** for the whole current session.
+
+</Step>
+</Steps>
+
+### How it connects
+
+- **Discord.** Every entry is also offered to the Discord bot, which posts it to Discord when one of your log routes matches it. See [Discord](/docs/discord).
+- **Other pages.** Pages that write to the log say so in their own sections (for example [Live Console](/docs/live-console), [Resources](/docs/resources) and [Admins and permissions](/docs/permissions#per-admin-logging), which lists the admin-management action ids).
+- **Not here.** Moderation actions against players are kept in [History](/docs/history). What players did in game is in the [Server Log](/docs/server-log).
+
+## Console Log
+
+The Console Log shows sxPanel's own process output since it started: boot messages, warnings, errors and the line sxPanel prints for each admin command. Use it when sxPanel itself misbehaves, when the Live Console is empty because FXServer is down, or when someone in support asks for "the sxPanel terminal output". It is not FXServer's output; that is the [Live Console](/docs/live-console).
+
+### The screen
+
+| Element | What it does |
+| --- | --- |
+| Status pill | **Loading** while fetching, **Loaded** once the text arrived, **Error** if the request failed. |
+| **Search** (`Ctrl+F`) | Opens a search bar over the text. |
+| Terminal | The captured output, with colours kept. Links open in a new tab. |
+| Scroll button | A round button at the bottom right (**Scroll to bottom of log**) appears when you scroll up. |
+
+The text is fetched once, when the page opens. When it ends you see `[END OF LOG - REFRESH THE PAGE TO LOAD MORE]`. It does not update live: reload the page to see newer output. If the request fails, the page shows **Error fetching Console Log:** followed by the reason, and a **Retry** button that reloads the page.
+
+### Search and keys
+
+| Key | Action |
+| --- | --- |
+| `Ctrl+F` / `Cmd+F` | Open the search bar, or focus it if it is open. |
+| `F3` / `Shift+F3` | Next / previous match. |
+| `Esc` | Close the search bar and clear the highlights. |
+| `Page Up`, `Page Down` | Scroll by a page. |
+| `Home`, `End` | Jump to the top or the bottom. |
+| `Ctrl+C` / `Cmd+C` | Copy the selection. |
+
+### What it holds
+
+sxPanel keeps the output in memory, not in a file: the first 8 KB since boot, plus the most recent output up to about 64 KB. When the recent part grows past its limit the oldest lines are dropped and a line reading `[!] The log body was sliced to prevent memory exhaustion. [!]` marks the cut. The buffer starts empty each time sxPanel starts. For older history use the [Action Log](#action-log) sessions or the files in the sxPanel log folder.
+
+## Diagnostics
+
+Diagnostics is a read-only health report for the machine, sxPanel, FXServer and the Discord bot, plus the button that sends a support report. Use it to see why a server is slow, to confirm which versions are running, to check whether the Discord bot is connected, and to give the support team everything they need in one go.
+
+The page opens on the **Overview** tab and reads the data once when it opens. To refresh, reload the page. The server builds the data on request and reuses it for 5 seconds, so reloading twice quickly shows the same snapshot. The **Snapshot metadata** card says which: **Executed in N ms** or **This page was cached in the last 5 seconds**.
+
+If the data cannot be loaded, the page shows **Failed to load diagnostics data.** and the reason underneath.
+
+### Overview
+
+Six tiles show the headline numbers:
+
+| Tile | Shows |
+| --- | --- |
+| **CPU usage** | Host CPU usage in percent. |
+| **Host memory** | Host memory usage in percent. The bar turns to the warning colour above 85%. |
+| **Heap** | How much of Node's heap limit sxPanel is using, in percent. Warning colour above 85%. |
+| **Uptime** | How long sxPanel has been running. |
+| **Monitor restarts** | Total restarts the monitor has triggered since sxPanel started, with **HB fails (HTTP + FD3)** beneath it. |
+
+A tile shows `—` when its figure could not be read.
+
+**Environment** describes the host:
+
+| Row | Meaning |
+| --- | --- |
+| **Node** | The Node.js version sxPanel runs on. |
+| **OS** | The operating system. |
+| **Username** | The OS user running sxPanel (`unknown` when it cannot be read, as on some Pterodactyl setups). |
+| **CPU model** | Manufacturer and brand. |
+| **CPU layout** | `<physical>c / <threads>t @ <speed> GHz`. A red **VERY SLOW!** badge appears at 2.4 GHz or below; an amber **SLOW** badge below 3.0 GHz with fewer than 8 threads. No badge is shown when the speed is unknown. |
+| **CPU usage**, **Memory usage** | Live usage with a bar, and the memory percentage with used and total. |
+
+If the host could not be read, this card shows the error instead (for example **Failed to retrieve host dynamic data.** or **Failed to retrieve host static data.**). If only the live figures are missing, it says **Dynamic usage data not available.**
+
+**sxPanel runtime** groups the rest:
+
+| Group | Rows |
+| --- | --- |
+| **Core** | **Uptime**; **Versions** (`v` for sxPanel, `b` for the FXServer build); **Database file** size. |
+| **Paths & host defaults** | **FXServer** path, **Profile** path, **Defaults** (host default flags that are set), **Interface**, **Provider**. |
+| **Monitor** | **HB fails** as `HTTP n · FD3 n`. **Restarts** as `BT · CL · HB · HC · BO`: boot timeout, close, heartbeat, health check, both. |
+| **Performance times** | Timing summaries for **Ban check**, **Whitelist check**, **Players table**, **History table**, **Database save** and **Perf collection**. |
+| **Memory** | **Heap** (used / limit and percent, with a bar), **Physical**, **Peak allocated**. |
+| **Logger** | **Storage size** of all logs on disk; **Admin** (the Action Log: writes and buffered entries), **FXServer** and **Server** status lines. |
+
+### Discord Bot
+
+Shows the state of the Discord bot process and its bridge to sxPanel. Set the bot up in [Discord](/docs/discord).
+
+The top card shows the guild name, when the runtime state was last updated, and three pills: the bot status (**DISABLED**, **STARTING**, **READY** or **ERROR**; an unknown value shows as `CODE-<n>`), **Bridge connected** or **Bridge disconnected**, and **Process running** or **Process stopped**.
+
+Three buttons act on the bot. They need **All Permissions** and are disabled while the bot is switched off or while one of them is running. They are not written to the Action Log.
+
+| Button | What it does | Messages |
+| --- | --- | --- |
+| **Restart Runtime** | Restarts the bot process. | `Discord bot restart requested.`; `Discord bot is disabled.` |
+| **Retry Addon Load** | Asks the bot to reload addon commands and events. Use it after fixing an addon listed under **Addon hook failures**. | `Discord bot addon commands and events reload requested.`; `Discord bridge is not connected.` |
+| **Resync Runtime** | Sends the config snapshot, presence and embeds to the bot again. | `Discord bot config snapshot, presence, and embeds were resynced.`; `Discord bridge is not connected.` |
+
+The result appears in a green or red box under the cards and the data refreshes.
+
+Below are five cards:
+
+| Card | Rows |
+| --- | --- |
+| **Bridge health** | **Connected**, **Connect / disconnect** counts, **Last auth**, **Last disconnect**, **Down for**, **Reconnect time**, **Auto heal at**. |
+| **Runtime state** | **Client ready**, **Last ready**, **Pending restart**, **Restart delay**, **Last recovery** (the last restart, reload or resync, whether it was manual or automatic, and whether it worked), **Recovery time**. |
+| **Recent process output** | The last `stderr` and `stdout` lines from the bot process. |
+| **Node child runtime** | Which Node binary runs the bot: **Resolved**, **Runtime path**, **Via musl loader**, **Host execPath**, **Candidates checked**. When it could not be resolved it also shows **Suggested SXPANEL_BOT_NODE_PATH** and a **Candidate sample**. Setting that environment variable is covered in [Configuration](/docs/configuration). |
+| **Recovery notes** | **Bot enabled**, **Runtime updated**, **Addon hook failures** (a count). |
+
+A red **Bot error** box shows the last bot error with its code and time. An amber **Process failure** box shows why the bot process last failed. Times show `--` when unknown.
+
+**Addon hook failures** lists each addon command or event that failed to load, with an **Event** or **Command** pill, the addon id, the time, the message and the file path. When there are none it reads **No addon command or event load failures recorded.** See [Addons](/docs/addons).
+
+### Command Analytics
+
+Statistics on Discord slash commands for the last 30 days, taken from the data the bot records for each use.
+
+| Section | Shows |
+| --- | --- |
+| **Commands** | Total uses and the number of unique commands. |
+| **Success rate** | Percentage that succeeded, and the count. |
+| **Denied / failed** | Counts, with the number that **Timed out** beneath. |
+| **Ack latency** | Time to acknowledge the interaction, average and **P95**. |
+| **Bridge roundtrip** | Time for the round trip between the bot and sxPanel, average and P95. |
+| **Handler duration** | Time the command handler ran, average and P95. |
+| **Outcome breakdown** | **Success**, **Denied**, **Failed** and **Timed Out** with counts, percentages and bars. |
+| **Rollups** | **Last 7 days** and **Last 30 days**: commands, success rate, average ack, bridge and handler times. |
+| **Denial reasons** | Why denied commands were denied, with counts. |
+| **Daily outcomes** | The latest 14 days, one row per day with total, success, denied, failed and timed out. |
+| **Command breakdown** | The eight busiest commands: total, success rate, denied, average ack and average handler. The header says how many of how many are shown. |
+
+Latencies under one second are shown in `ms`, longer ones as a duration, and `--` when there is no data. With no recorded commands the tables read **No command telemetry recorded.** and **No denial events recorded in the last 30 days.**
+
+### FXServer
+
+A snapshot of the running server taken from its own `/info.json`, with a 1.5 second timeout and no retry.
+
+| Row | Meaning |
+| --- | --- |
+| **Status** | `ONLINE` when the server answered. |
+| **Version** | `platform:branch:build`. |
+| **Resources** | Number of resources the server reports. |
+| **OneSync** | `enabled` or `disabled`. |
+| **Max clients** | `sv_maxClients`. |
+| **sxPanel version** | The sxPanel version the server resource reports. |
+
+If the build the server reports differs from the build sxPanel expects, a red box reads **This version doesn't match sxPanel's version!** It means FXServer was updated without restarting sxPanel, or was already running before sxPanel started. Restart sxPanel; see [Updating](/docs/updating).
+
+When **Disable HTTP Health Check** is on in the restarter settings, sxPanel does not query `/info.json`. The page shows `ONLINE` and the version `HTTP health check disabled`, and the other rows show `—`.
+
+| Message | Cause |
+| --- | --- |
+| **Server Offline** | FXServer is not running. |
+| **Server has no network endpoint** | FXServer is running but sxPanel has no address for it yet. |
+| **Failed to retrieve FXServer data.** | The request failed or timed out. The server must be online. |
+| **Failed to process FXServer data.** | The answer could not be read. |
+
+### Processes
+
+The processes that belong to sxPanel, sorted by CPU, highest first. Each card shows the name with its PID, the parent PID, CPU in percent and memory in MB, with bars scaled to the busiest process.
+
+| Name | Meaning |
+| --- | --- |
+| **sxPanel (inside FXserver)** | The sxPanel process itself. |
+| **FXServer** | A game server process. |
+| **FXServer MiniDump** | A child process using 10 MB or less. |
+
+A child of sxPanel shows its parent as `<pid> (sxPanel)`. On Windows the CPU column is always 0, because that figure is not collected there. If nothing could be read the tab says **Failed to retrieve process data.**; the reason is in the sxPanel terminal, with more detail when verbosity is on.
+
+### Support
+
+The **Support** tab sends a diagnostics report to the support team. It is optional. You receive a **Report ID** to quote when you ask for help in the [Discord community](/docs/discord).
+
+**Review details & send data** opens **Send Diagnostics Data**, which lists what is sent and how secrets are handled. **Agree & Send Data** sends it; **Close** cancels. While sending the dialog shows a spinner, then the **Report ID** or the error.
+
+<Callout type="warn">
+The report contains a lot: logs, settings, the admin list and your server's config files. Read the dialog and the table below before you send it, and only send it to get support.
+</Callout>
+
+#### What is sent
+
+| Part | Content |
+| --- | --- |
+| Diagnostics | Everything on this page: host, sxPanel, FXServer, processes, Discord bot and command analytics. A section that fails to collect is sent as an error line instead. |
+| Process and host info | PID, platform, architecture, process uptime, Node and library versions, resource usage, start arguments, OS type and release, memory, load, time zone and locale. |
+| Logs | The Console Log buffer, the last 500 lines of the active Action Log file, the last 500 Server Log events and the recent FXServer output. |
+| Environment variables | All environment variables, with sensitive values masked. |
+| Performance | The server performance data behind the dashboard chart, and player database statistics. |
+| Settings | The stored sxPanel configuration. |
+| Admin list | The admin entries, with password hashes removed. |
+| Server files | The list of files and folders in the server data folder, the config files in it, and an integrity scan of the monitor files. |
+
+#### What is masked
+
+| Data | Protection |
+| --- | --- |
+| Discord bot token | Replaced with `[REDACTED]`. |
+| Start arguments | Known secrets such as `sv_licenseKey`, `steam_webApiKey` and `sv_tebexSecret` are masked. |
+| Admin password hashes | Replaced with `[REDACTED]`. |
+| Environment variables | Any variable whose name contains `key`, `license`, `pass`, `private`, `secret`, `token` or `webhook` has every letter and digit replaced with `x`. |
+| Config files | Known secret parameters are masked. |
+| Logs | IPv4 addresses are replaced with `x.x.x.x`. |
+
+The report is compressed and posted to `https://www.sxpanel.org/api/diagnostics`.
+
+#### Limits
+
+- One report per minute for the whole panel. Another attempt shows **You can send at most one report per minute. Your last report ID was `<id>`.**
+- A failed send shows **Report failed:** followed by the reason from the server or the network error.
+- Sending a report writes `Diagnostics data report ID <id> sent by <admin>` to the sxPanel console. It does not add an Action Log entry.
+
+## Advanced
+
+<Callout type="warn">
+Advanced is for expert use only. The page itself warns that nothing on it is expected to work properly, that items may be added or removed at any time, and that there is no support for problems caused by using it. Some actions freeze or alter the running panel.
+</Callout>
+
+The page needs **All Permissions** and has no sidebar entry in a normal build; open `/advanced` directly.
+
+### Runtime Controls
+
+| Control | What it does |
+| --- | --- |
+| **Enable Verbosity** / **Disable Verbosity** | Turns detailed sxPanel terminal output on or off. It takes effect at once, is not saved, and returns to the startup default when sxPanel restarts. The button shows the current state. |
+| **Profile Monitor** | Records a 5 second performance profile of the running server, saves it as `txProfile.bin` in the profile's `data` folder and opens it with the `profiler` command. The server must be running, otherwise it shows **The server is not running.** The result appears in the [Live Console](/docs/live-console) a few seconds later. Logged as **Profile sxPanel Instance** (`advanced.profile_monitor`). |
+
+### Action Console
+
+Type an action name into the field (it starts as `perform_magic`) and click **Magic Button**. The response is shown in the box below. Failures show a red toast. An unknown name shows **Unknown action :(**.
+
+| Action | What it does |
+| --- | --- |
+| `perform_magic` | Returns the current player list as JSON. |
+| `show_db` | Returns the whole database as JSON and prints it to the terminal. |
+| `show_log` | Returns the recent Server Log buffer. |
+| `memory` | Returns the process memory figures. |
+| `getLoggerErrors` | Returns the last error of each logger. |
+| `getProcessEnv` | Returns the environment variables. Only a short list of harmless names show their value; every other value is shown as `********`. |
+| `printFxRunnerChildHistory` | Returns the history of FXServer child processes. |
+| `testSrcAddress` | Requests `https://api.myip.com` twice, with and without the configured source address, and returns both answers. |
+| `updateMutableConvars` | Sends the runtime-changeable convars to FXServer again. |
+| `reauthLast10Players` | Asks the game server to refresh the admin status of the last 10 players who joined. |
+| `safeEnsureMonitor` | Resets the communication token and runs `ensure monitor`. |
+| `playerDrop <reason>` | Feeds a simulated player drop with that reason to the Player Drops handler and returns the category it assigned. |
+| `set <scope>.<key> <json>` | Writes a setting, for example `set server.onesync "on"`. Goes through the normal config store and is recorded as a settings change under your name. |
+| `snap` | Writes a V8 heap snapshot file; the path is printed to the terminal. |
+| `gc` | Runs garbage collection, or answers **GC is not exposed**. |
+| `freeze` | Freezes the sxPanel process for 50 seconds. The panel does not answer until it ends. |
+
+Without **All Permissions**, every action is refused with **You don't have permission to execute this action.**
+
+## Problems
+
+| Message or symptom | Cause and fix |
+| --- | --- |
+| Action Log or Console Log is missing from the sidebar. | You lack **View System Logs**, or the page was switched off in **Settings → Panel Features**. |
+| **You don't have permission to call this endpoint.** when loading older events, a session, or the log download. | The request needs `txadmin.log.view`. |
+| Login entries show no IP address. | You lack **View Login IPs** (`txadmin.log.view_ips`). |
+| Action Log stays on **Connecting…** | The live connection to the panel is not up. Reload the page. If it persists, check that you can reach the panel and that the browser is not blocking WebSocket traffic. |
+| **Missing or invalid file parameter.** or **Invalid session file name** | The session request was not for a listed session file. Pick one from the session picker. |
+| **Failed to list session files.** | The log folder could not be read. Check its permissions. |
+| **Failed to download system log.** | The active session file could not be read. |
+| Console Log is out of date. | It loads once. Reload the page. |
+| Diagnostics shows **Failed to load diagnostics data.** | The request failed. The reason is shown under it. Reload the page. |
+| **Failed to retrieve process data.** | A system command sxPanel needs to list processes is missing. See the sxPanel terminal. |
+| Discord bot buttons are greyed out. | The bot is not enabled. Enable it in [Discord](/docs/discord). |
+| **Insufficient permissions.** on a bot button. | The buttons need **All Permissions**. |
+| **You can send at most one report per minute.** | Wait a minute, or use the Report ID given in the message. |
+| **Report failed:** … | The support server refused the report or could not be reached. The text after it is the reason. |

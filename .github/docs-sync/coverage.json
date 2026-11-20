@@ -310,7 +310,9 @@
         "core/routes/advanced/"
       ],
       "notes": "Action Log, Console Log, Diagnostics (including the diagnostics report and what it contains), and the Advanced page. Leave out development-only toggles.",
-      "status": "todo"
+      "status": "done",
+      "writtenAt": "2026-11-20",
+      "sourceSha": "a21e752720dac257eafa73132d5d73599ec76ff2"
     },
     {
       "id": "in-game-menu",
