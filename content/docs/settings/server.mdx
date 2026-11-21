@@ -1,0 +1,250 @@
+---
+title: General and FXServer settings
+description: Every field on the General and FXServer settings tabs, plus how scheduled restarts, the health monitor, crash detection and auto-restart behave.
+---
+
+The **General** and **FXServer** tabs hold the settings that define your server's identity and how sxPanel starts, watches and restarts the FXServer process. Server owners use them during setup and when tuning restarts. For how the Settings page itself works (tabs, saving, unsaved changes), see [Settings overview](/docs/settings).
+
+## Where to find it
+
+**System → Settings**, then the **General** tab (`/settings#general`) or the **FXServer** tab (`/settings#fxserver`). Both tabs are in the **Server** group.
+
+![Settings page with the row of section tabs](/docs/settings.webp)
+
+## Who can use it
+
+| Permission | Id | What it allows |
+| --- | --- | --- |
+| **Settings: View** | `settings.view` | Opens the tabs read-only. The start-up arguments are redacted. |
+| **Settings: Change** | `settings.write` | Edits and saves both cards. |
+| **All Permissions** | `all_permissions` | Needed for the **Reset** button next to **Server Data Folder**. |
+| Master admin | `master` | Needed to see and change **Allow Self Identifier Edit**, **Require Two-Factor Authentication** and **Resource Download** on the **General** tab. |
+
+Without **Settings: Change**, every control and **Save changes** is disabled. Non-master admins do not see the three master-only switches on **General** at all.
+
+## General tab
+
+A short card with the server's name, the language and three master-only switches. Saving shows the toast `General Settings saved!`. The changes apply immediately, without a restart. The name and language are also passed to the running server as convars (`txAdmin-serverName`, `txAdmin-locale`) and the server is told the configuration changed.
+
+| Setting | What it does | Default | Limits / values |
+| --- | --- | --- | --- |
+| **Server Name** | A short name used in the sxPanel interface and in server and Discord messages. | `change-me` | Required, 1 to 18 characters. |
+| **Language** | The language of chat and Discord messages that sxPanel sends. | `en` | Any listed language, or **Custom (txData/locale.json)**. |
+| **Allow Self Identifier Edit** | Whether every admin can change their own FiveM and Discord identifiers from the Account dialog. When off, only admins with the Manage Admins permission can edit identifiers. Master admin only. | **Disabled** | **Enabled** or **Disabled**. |
+| **Require Two-Factor Authentication** | Makes every admin, including the master account, enable 2FA before using the web panel or in-game menu. Master admin only. | **Optional** | **Required** or **Optional**. |
+| **Resource Download** | When **Disabled**, nobody can download resource folders from the [Resources](/docs/resources) page, whatever their permissions. Master admin only. | **Enabled** | **Enabled** or **Disabled**. |
+
+### Language
+
+The list shows English first, then your browser's language marked **(browser)** if sxPanel has it, then the other languages, and **Custom (txData/locale.json)** last.
+
+Choosing **Custom** uses your own phrases from a `locale.json` file in your txData folder. When you save, sxPanel reads the file and checks it. Failures show a `Custom Language Error` toast:
+
+| Message | Cause |
+| --- | --- |
+| `Could not find the custom language file:` followed by a path | The `locale.json` file does not exist at that path. |
+| `The custom language file contains invalid JSON.` | The file is not valid JSON. Trailing commas and comments are allowed. |
+| `The \`locale.json\` file is empty.` | The file has no content. |
+| `Invalid Locale Metadata` followed by details | The file's `$meta` block is missing or wrong. |
+| `Invalid humanizer language: …` | `$meta.humanizer_language` is not a supported language. |
+
+The custom file is copied to sxPanel's `.runtime` folder when the server starts and when settings change.
+
+### Server name checks
+
+The panel refuses to save an empty name (`The Server Name is required.`) or a name over 18 characters (`The Server Name is too big.`).
+
+### Two-factor requirement
+
+Turning on **Require Two-Factor Authentication** needs 2FA enabled on your own account first. Otherwise the save fails with `Enable two-factor authentication on your account before requiring it for all admins.` Other admins who try to change it get `Only the master admin can change the "Require Two-Factor Authentication" setting.`
+
+## FXServer tab
+
+The FXServer card controls which server sxPanel runs and how it keeps it alive. **Show advanced** at the bottom of the card reveals the rarely used settings; **Hide advanced** collapses them. Collapsing discards any unsaved edits to advanced settings.
+
+Saving the card shows `FXServer Settings Saved!` with `You need to restart the server for the changes to take effect.` Most settings only apply when the server next starts. The restart schedule and interval, and the monitor, apply immediately.
+
+### Main settings
+
+| Setting | What it does | Default | Limits / values |
+| --- | --- | --- | --- |
+| **Server Data Folder** | The full path of the folder that contains your `resources` folder, usually the same place as `server.cfg`. | none | Required. Must be a valid server data folder. |
+| **Restart Schedule** | Times of day to restart the server. Optional. | none | `HH:MM` times, 24 hour, server time. Duplicates are removed and the list is sorted. |
+| **Restart Interval** | Restart every N hours of uptime. `0` turns it off. | `0` | Whole number, `0` or more. |
+| **Quiet Mode** | Stops printing FXServer output to the terminal that runs sxPanel. The [Live Console](/docs/live-console) still works. | **Disabled** | **Enabled** or **Disabled**. |
+| **Server Log Retention** | How many days of server log sessions to keep. See [Server Log](/docs/server-log#log-retention). | 14 days | **3**, **7**, **14**, **30**, **60**, **90** days, or **Custom** from 1 to 365. |
+| **Hide FxServer Update** | Hides the FXServer update banner for all admins. | **Visible** | **Hidden** or **Visible**. |
+
+If your hosting provider fixes the data folder, a line under the field reads `<host>: This path should start with <path>`. If the host forces quiet mode, **Quiet Mode** is on and locked with `This setting is locked and cannot be changed.`
+
+### Advanced settings
+
+| Setting | What it does | Default | Limits / values |
+| --- | --- | --- | --- |
+| **CFG File Path** | The path to your server config file. Can be absolute or relative to the Server Data Folder. | `server.cfg` | Required. |
+| **Startup Arguments** | Extra command-line arguments for FXServer, separated by spaces, such as NodeJS flags. Put commands and convars in your `server.cfg` instead. | none | Cannot contain `onesync`. |
+| **OneSync** | The OneSync mode. | **On (recommended)** | **On (recommended)**, **Legacy** or **Off**. |
+| **Autostart** | Start the server automatically when sxPanel starts. | **Enabled** | **Enabled** or **Disabled**. |
+| **Disable HTTP health check** | Stops using the game's HTTP endpoint to check status and relies only on the FD3 heartbeat. | **Disabled** | **Enabled** or **Disabled**. |
+| **Resource Starting Tolerance** | At boot, how long to wait for any single resource to start before restarting the server. | **1.5 minutes (default)** | **1.5 minutes**, **3 minutes**, **5 minutes** or **10 minutes**. |
+
+Notes on individual fields:
+
+- **Server Data Folder** and **CFG File Path** are cleaned on save (slashes are normalised). The save fails with `Server Data Folder Error` when the folder is not valid; if sxPanel finds a likely folder nearby it asks `Did you mean this path?`. A missing or unreadable config file gives `CFG Path Error`, with a likely file suggested when one is found.
+- Startup arguments are stored as a list. The `onesync` word is rejected so that the **OneSync** selector is the only place it is set. Your `server.cfg` also cannot set OneSync (see [CFG Editor](/docs/cfg-editor)).
+- **OneSync** `Legacy` and `Off` are deprecated; most servers should use **On**.
+- **Autostart** only runs when a data folder and CFG path are set and at least one admin exists. Without admins the server stays stopped and the terminal says `The server will not auto start because there are no admins configured.`
+
+### Reset the server data folder
+
+**Reset** next to **Server Data Folder** clears the data folder and CFG path so you can return to the Setup page. It needs **All Permissions** and **Settings: Change**. The confirmation dialog (**Reset Server Data Path**) says it deletes no files or database, shows the current path so you can note it, and asks `Are you sure you want to reset the server data path?`
+
+After you confirm:
+
+- A running server is stopped (logged as `STOP SERVER`, reason `new server set up`).
+- The data folder and CFG path are cleared, and the action is logged as `Resetting server data settings.` (`settings.server_data_path.reset`).
+- The toast `Server data path reset.` appears and you are taken to `/server/setup`.
+
+### Restart schedule
+
+The **Restart Schedule** box lists the times as chips. **+** opens **Add Restart Time**, where you pick an hour and a minute. The trash button clears all times. The **x** on a chip removes that time. When the list is empty you can click a preset:
+
+| Preset | Times |
+| --- | --- |
+| **1x/day** | `00:00` |
+| **2x/day** | `00:00`, `12:00` |
+| **3x/day** | `00:00`, `08:00`, `16:00` |
+| **4x/day** | `00:00`, `06:00`, `12:00`, `18:00` |
+
+Times are in the server's time zone, not yours. If the browser time zone differs, a red line reads `Warning: Your server timezone is set to <server>, but your browser timezone is <browser>. Make sure to configure the time according to the server timezone.`
+
+The rest of the scheduler behaviour (warnings before a restart, one-off restarts and skipping) is described under [Scheduled restart behaviour](/docs/overview#scheduled-restart-behaviour) and [Schedule and Cancel](/docs/overview#schedule-and-cancel) on the Overview page.
+
+### Restart interval
+
+The **Restart Interval** restarts the server after N hours. The countdown starts when the server stops or restarts, and again when you change the interval or sxPanel starts. If both a schedule and an interval are set, whichever comes first restarts the server. A temporary restart you set from the Overview replaces both for that one restart.
+
+## Settings with no field in the panel
+
+These settings exist in the config file but have no control on these tabs. Edit them in `config.json` while sxPanel is stopped. See [Configuration](/docs/configuration).
+
+| Key | What it does | Default | Limits |
+| --- | --- | --- | --- |
+| `restarter.bootGracePeriod` | Seconds after the process starts during which the monitor does not restart the server and scheduled restarts are skipped. | `45` | Whole number, `15` or more. |
+| `server.shutdownNoticeDelayMs` | Milliseconds players get to read the shutdown notice before the process is killed on stop or restart. | `5000` | `0` to `60000`. Never less than `250` in practice. |
+| `server.restartSpawnDelayMs` | Milliseconds to wait between killing the server and starting it again, so the OS releases the ports. | `500` | `0` to `15000`. |
+| `logger.admin`, `logger.fxserver`, `logger.server` | Options for the rotating log files, passed to the log library. Set to `false` to turn a log off. | `{}` | `false` or an options object. |
+| `logger.serverLogExcludeTypes` | Event types left out of the server log. See [Server Log](/docs/server-log). | none | List of event types. |
+
+If FXServer reports that its port is busy, sxPanel lengthens the wait before the next start by 5 seconds each time, up to 45 seconds, and resets it after a successful boot. The terminal shows `Detected FXServer error: Port <port> is busy! Setting backoff delay to <n>s.`
+
+## How the server is started
+
+When the server starts (from autostart, the Overview buttons, a restart or the in-game menu), sxPanel:
+
+1. Checks the data folder and CFG path are set.
+2. Checks your `server.cfg` files for errors. On error the start is refused with `Unable to start the server due to error(s) in your config file(s).` and points you to the [CFG Editor](/docs/cfg-editor). An unreadable file gives `Your server.cfg file is unreadable.`
+3. Resets the monitor and begins a new system log session.
+4. Starts FXServer in the data folder with your start-up arguments, `onesync` set to your selection, sxPanel's convars and `+exec <cfg path>`.
+
+Starting fails with `The server has already started.` if the process is running, and `Cannot start the server while sxPanel is shutting down.` while sxPanel is exiting.
+
+## Health monitor and crash detection
+
+The monitor runs once a second while the server is supposed to be running. It combines two signals:
+
+- **Heartbeat (HB):** sxPanel's resource inside the server reports in over the FD3 channel.
+- **HTTP health check (HC):** sxPanel requests the server's `/dynamic.json` every second with a 1.5 second timeout.
+
+Each signal is **healthy** while it reports, **delayed** after 10 seconds without a report, and **fatal** after 60 seconds (heartbeat) or 180 seconds (HTTP). The status shown on the Overview is **Online** when both are healthy, **Degraded** when only one is, and **Offline** when neither is. With **Disable HTTP health check** on, only the heartbeat counts and the server is **Online** whenever the process is alive and the heartbeat is healthy.
+
+### When the server is restarted
+
+sxPanel restarts the server by itself in these cases:
+
+| Cause | When |
+| --- | --- |
+| Process closed | The FXServer process exited. This restarts immediately, with no waiting. |
+| Boot timeout, heartbeat | No resource event has been received since the process started, more than 45 seconds have passed since the last resource event while none is loading, or a resource has been starting longer than **Resource Starting Tolerance**. The message names the resource: `Resource "<name>" failed to start within the <time> time limit`. |
+| Boot timeout, HTTP | Resources started more than 45 seconds ago but the HTTP endpoint still does not answer. |
+| Not responding | Either signal becomes fatal: no heartbeat for 60 seconds, or no HTTP answer for 180 seconds. |
+
+None of these restart the server during the **Boot Grace Period** (45 seconds after the process starts), except a closed process. While the server is stopped, restarting or sxPanel itself was frozen for 10 seconds or more (a lag spike or DDoS, for example), the check is skipped.
+
+When a restart is triggered, sxPanel:
+
+- Prints `Restarting server: <reason> (HB:…|HC:…).` to the terminal with the issues found.
+- Writes the same message to the Action Log under `MONITOR` (`monitor.restart`) and to the FXServer log.
+- Kicks connected players with `the server needs to be restarted, please reconnect`.
+- Restarts the process, waiting `server.shutdownNoticeDelayMs` before killing it and `server.restartSpawnDelayMs` before starting it again (see [Settings with no field in the panel](#settings-with-no-field-in-the-panel)).
+
+Before a restart, a warning is printed at most every 10 seconds, for example `Server is not responding` or `Server is taking too long to start`.
+
+### Partial hang warning
+
+If only the HTTP check fails and the heartbeat is healthy, the server may be partly hung. When the HTTP check has been silent for more than 120 seconds, sxPanel announces `Due to a partial hang, this server will restart in 1 minute. Please disconnect now.` in game and sends a Discord announcement, then restarts a minute later if nothing recovers. The announcement is sent at most every 2 minutes.
+
+## How it connects
+
+- **Discord.** Server start, stop and restart announcements, scheduled restart warnings and partial hang notices are posted to Discord. See [Discord](/docs/discord).
+- **In-game events.** Addons receive `txAdmin:events:scheduledRestart`, `txAdmin:events:scheduledRestartSkipped` and `txAdmin:events:configChanged`. See [Events API](/docs/events-api).
+- **Server convars.** The server name, language and game settings are passed to FXServer as `txAdmin-*` convars and refreshed when you save.
+- **Overview.** The **Next restart** row, **Schedule** and **Cancel** are documented in [Overview](/docs/overview#next-restart).
+
+## Common tasks
+
+### Restart the server every day
+
+<Steps>
+<Step>Open **System → Settings → FXServer**. You need **Settings: Change**.</Step>
+<Step>Check that the red time zone warning is not shown, or convert your times to the server's time zone.</Step>
+<Step>Pick a preset such as **2x/day**, or press **+** and add each time.</Step>
+<Step>Press **Save changes**. The schedule is active immediately.</Step>
+</Steps>
+
+Players are warned 30, 15, 10, 5, 4, 3, 2 and 1 minutes before each restart.
+
+### Give a heavy resource more time to start
+
+<Steps>
+<Step>Open **FXServer** and press **Show advanced**.</Step>
+<Step>Raise **Resource Starting Tolerance** to **3 minutes** or more.</Step>
+<Step>Press **Save changes**, then restart the server.</Step>
+</Steps>
+
+### Move the server to a different folder
+
+<Steps>
+<Step>Note the current **Server Data Folder**.</Step>
+<Step>Press **Reset**, read the dialog and confirm. The panel opens the Setup page.</Step>
+<Step>Complete Setup with the new folder, or type the new path in **Server Data Folder** and press **Save changes** instead of resetting.</Step>
+</Steps>
+
+If the new folder already holds a valid server, you can skip **Reset** and replace the path directly.
+
+## Limits and edge cases
+
+- Saving the FXServer card does not restart the server; restart it yourself to apply start-up settings.
+- Scheduled restarts do nothing while the server is stopped. After you stop the server, a restart due within 2 hours is skipped once.
+- Schedule times are minute precision. `24:00` is stored as `00:00`.
+- Each card saves separately: edit General and FXServer in turn, not together.
+- The Resource Starting Tolerance list offers four values; the config file accepts any whole number of 30 or more.
+
+## Problems
+
+| Message | Cause and fix |
+| --- | --- |
+| `The Server Name is required.` / `The Server Name is too big.` | Use 1 to 18 characters. |
+| `The Server Data Folder is required.` | The field is empty. To go back to Setup use **Reset** instead. |
+| `The CFG File Path is required.` | The field is empty. It is normally `server.cfg`. |
+| `You cannot set OneSync in Startup Arguments.` | Remove `onesync` and use the **OneSync** selector. |
+| `Server Data Folder Error` | The path is invalid or not a server data folder. Use the suggested path if one is shown. |
+| `CFG Path Error` | The config file was not found or is not a file. Check the path. |
+| `Custom Language Error` | See the table under [Language](#language). |
+| `Only the master admin can change …` | Ask the master admin to change that switch. |
+| `Enable two-factor authentication on your account before requiring it for all admins.` | Enable 2FA on your own account first. |
+| `Unable to start the server due to error(s) in your config file(s).` | Open the [CFG Editor](/docs/cfg-editor) and fix the errors. |
+| `A restart is already in progress, with a delay of …` | A restart is underway. Wait for it to finish. |
+| `A shutdown is already in progress, with a delay of …` | The server is already being stopped. |
+| `Port <port> is busy!` in the terminal | A previous process still holds the port. sxPanel waits longer before the next start. Make sure no other server uses that port. |
+| Resource failed to start within the time limit | Raise **Resource Starting Tolerance**, or fix the slow resource. |
