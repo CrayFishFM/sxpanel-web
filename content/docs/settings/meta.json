@@ -1,4 +1,4 @@
 {
   "title": "Settings",
-  "pages": ["index", "server", "queue"]
+  "pages": ["index", "server", "queue", "game"]
 }

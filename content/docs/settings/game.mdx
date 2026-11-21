@@ -1,0 +1,190 @@
+---
+title: Game settings and player tags
+description: Every field on the Game and Player Tags tabs of the sxPanel Settings page - the in-game menu, notifications, tickets, combat log, and the tags shown on players.
+---
+
+The **Game** and **Player Tags** tabs control what players and admins see inside the game. **Game** holds the in-game menu options, which admin names and notifications players see, the ticket (report) system and the combat log. **Player Tags** defines the labels shown on players, such as **Staff** or a VIP tag you create.
+
+Server owners use these tabs to shape the in-game experience. Each option is described here in short; the feature itself is documented on the page linked in its section.
+
+## Where to find it
+
+**System → Settings**, then **Game** (`/settings#game`) or **Player Tags** (`/settings#player-tags`), both in the **Gameplay** group. For how the page works (tabs, saving, unsaved changes) see [Settings overview](/docs/settings).
+
+## Who can use it
+
+| Permission | Id | What it allows |
+| --- | --- | --- |
+| **Settings: View** | `settings.view` | Opens both tabs read-only. |
+| **Settings: Change** | `settings.write` | Edits and saves them. |
+| Master admin | `master` | Required to change the three combat log fields on the **Game** tab. |
+
+Without **Settings: Change** every control is disabled, including the **Add Tag** and delete buttons. A save without it fails with `You don't have permission to execute this action.`
+
+The combat log fields are disabled for every admin except the master admin, and show `Only the master admin can change the Combat Log settings.` The server enforces this too: a save that changes any of them from another admin is rejected with the same message. This applies to every card, so no other tab can slip a combat log change through.
+
+## Game tab
+
+The tab is a single card. Everything on it is saved together with one **Save changes** button, in this order: menu, notifications, tickets, combat log. A **Show advanced** button at the bottom of the card reveals one more setting; **Hide advanced** reverts it, and any unsaved edit to the advanced setting is discarded when you hide it.
+
+### Menu
+
+The in-game menu itself is documented in [In-game menu](/docs/in-game-menu).
+
+| Setting | What it does | Default | Limits / values |
+| --- | --- | --- | --- |
+| **Game Menu** (`gameFeatures.menuEnabled`) | Lets admins open the menu with `/tx` or the keybind set in the FiveM/RedM settings. Off disables the menu, its keybinds and its chat commands. | Enabled | **Enabled** / **Disabled**. Applied when the server starts, so restart the server after changing it. |
+| **Align Menu Right** (`gameFeatures.menuAlignRight`) | Moves the menu to the right side of the screen. | **Left aligned** | **Right aligned** / **Left aligned** |
+| **Menu Page Switch Key** (`gameFeatures.menuPageKey`) | The key that switches pages in the menu. Click the field and press the key; the key is stored by its code (`Tab`, `KeyQ`, `Digit1`). | `Tab` | Required. `Escape` and `Backspace` cannot be used: pressing either sets the field back to `Tab`. |
+| **Overhead Player ID Range** (`gameFeatures.menuPlayerIdDistance`) | Maximum distance in meters at which overhead player IDs are visible when an admin toggles them on. | 150 | Whole number, 1 to 1000. An empty or invalid entry becomes 150; a number outside the range is clamped to it. |
+| **Overhead Two-Row Layout** (`gameFeatures.overheadTwoRowLayout`) | FiveM only. Row one shows the tag prefix and native icons; row two shows the name, server ID and distance. | Enabled | **Enabled** / **Disabled** |
+| **Overhead Vehicle Seat Icons** (`gameFeatures.overheadSeatIcons`) | FiveM only. Shows the driver and front-passenger icons on players in vehicles. Rear seats use the text suffixes `BL` and `BR`. | Enabled | **Enabled** / **Disabled** |
+| **Overhead Noclip Icon** (`gameFeatures.overheadNoclipIcon`) | FiveM only. Shows the passive-mode icon on an admin in noclip, to other admins who have overhead IDs on. | Enabled | **Enabled** / **Disabled** |
+| **Player Mode Change Effect** (`gameFeatures.playerModePtfx`) | Plays a particle effect and a sound when an admin uses NoClip, God Mode and similar modes, so players can see that an admin is using one. Shown only after **Show advanced**, under an **Advanced** divider. | Enabled | **Enabled** / **Disabled** |
+
+<Callout type="warn">
+Keep **Player Mode Change Effect** on. It helps prevent admin abuse during PvP by making it visible and audible to every player when an admin uses a special mode.
+</Callout>
+
+### Notifications
+
+These control what players see when an admin acts. Each switch reads **Hidden** or **Visible**. The details, and what each setting replaces, are in [In-game menu](/docs/in-game-menu).
+
+| Setting | What it does | Default | Limits / values |
+| --- | --- | --- | --- |
+| **Hide Admin Name In Punishments** (`gameFeatures.hideAdminInPunishments`) | Never shows the admin's name to players on bans and warns. The name stays in the history and logs. | **Hidden** | **Hidden** / **Visible** |
+| **Hide Admin Name In Messages** (`gameFeatures.hideAdminInMessages`) | Does not show the admin's name on announcements and direct messages. The name stays in the live console and logs. | **Visible** | **Hidden** / **Visible** |
+| **Hide Announcement Notifications** (`gameFeatures.hideDefaultAnnouncement`) | Stops sxPanel's own announcement display, so your own resource can show it from the `txAdmin:events:announcement` event. | **Visible** | **Hidden** / **Visible** |
+| **Hide Direct Message Notification** (`gameFeatures.hideDefaultDirectMessage`) | Stops the direct message display. Use the `txAdmin:events:playerDirectMessage` event instead. | **Visible** | **Hidden** / **Visible** |
+| **Hide Warning Notification** (`gameFeatures.hideDefaultWarning`) | Stops the warning display. Use the `txAdmin:events:playerWarned` event instead. | **Visible** | **Hidden** / **Visible** |
+| **Hide Scheduled Restart Warnings** (`gameFeatures.hideDefaultScheduledRestartWarning`) | Stops the scheduled-restart countdown display. Use the `txAdmin:events:scheduledRestart` event instead. | **Visible** | **Hidden** / **Visible** |
+
+The last four settings hand the display over to your own resource through the named event. See [Events API](/docs/events-api).
+
+### Tickets
+
+The ticket system is documented in [Reports](/docs/reports), including retention, what a ticket contains and the Discord threads. These are its fields on this tab.
+
+| Setting | What it does | Default | Limits / values |
+| --- | --- | --- | --- |
+| **Player Tickets** (`gameFeatures.reportsEnabled`) | Lets players submit tickets with `/ticket`; admins review them on the Reports page. Off disables the whole system. | Enabled | **Enabled** / **Disabled** |
+| **Categories** (`gameFeatures.ticketCategories`) | The categories players choose from. Type a comma-separated list (a semicolon also works); blanks between entries are dropped. | `Player Report, Bug Report, Question, Other` | 1 to 20 categories, 1 to 64 characters each |
+| **Priority Selection** (`gameFeatures.ticketPriorityEnabled`) | Lets players choose a priority (Low, Medium, High, Critical) when filing. | Disabled | **Enabled** / **Disabled** |
+| **Player Feedback** (`gameFeatures.ticketFeedbackEnabled`) | When a ticket is resolved, asks the player to rate their support experience. | Enabled | **Enabled** / **Disabled** |
+| **Retention Days** (`gameFeatures.ticketRetentionDays`) | How many days resolved or closed tickets are kept before they are deleted automatically. | 30 | Whole number, 1 to 365. Another value shows `Retention days must be a number between 1 and 365.` and nothing is saved. |
+| **Discord Channel ID** (`discordBot.ticketChannelId`) | When set, new tickets create a thread in this channel. Needs the Discord integration enabled. | Empty | A channel ID of 17 to 20 digits. Empty turns threads off. |
+
+**Categories**, **Retention Days** and **Discord Channel ID** are marked as optional. **Discord Channel ID** is stored with the Discord bot settings, but you save it from this tab with the rest of the card.
+
+### Combat log
+
+The combat log records player-versus-player damage. How fights are tracked, the caps, and the Discord route are documented in [Server log](/docs/server-log#combat-log).
+
+| Setting | What it does | Default | Limits / values |
+| --- | --- | --- | --- |
+| **Combat Log** (`gameFeatures.combatLogEnabled`) | Tracks player-versus-player damage. Kills are logged with hits, headshots, damage and distance; fights without a kill are logged as one summary. | Disabled | **Enabled** / **Disabled**. Master admin only. Requires OneSync. |
+| **Damage Summaries** (`gameFeatures.combatLogDamageSummaries`) | Logs fights that did not end in a kill once both players stop hitting each other. Disable it on busy combat servers to log only kills. | Enabled | **Enabled** / **Disabled**. Master admin only; disabled while **Combat Log** is off. |
+| **Engagement Window (seconds)** (`gameFeatures.combatLogEngagementWindow`) | How long two players must stop hitting each other before a fight counts as over and its summary is logged. | 10 | Whole number, 3 to 60. Master admin only; disabled while **Combat Log** is off. |
+
+<Callout type="warn">
+Hit details are reported by the attacking player's game client. Treat them as evidence to review, not proof.
+</Callout>
+
+## Player Tags tab
+
+Tags are small coloured labels on a player, shown in the players list, the profile and, as a name prefix and colour, in game. Who gets which tag, and how admins assign custom tags by hand, is documented in [Players](/docs/players#player-tags). This tab defines them.
+
+### Settings
+
+| Setting | What it does | Default | Limits / values |
+| --- | --- | --- | --- |
+| **New Player Threshold** (`gameFeatures.newplayerThreshold`) | Players with less than this many minutes of total playtime receive the **Newcomer** tag. | 240 | Whole number of minutes, 0 or more. `0` turns the tag off. An empty field counts as 0. |
+| **Tags** (`gameFeatures.customTags`) | The list of built-in and custom tag definitions, described below. | Built-in tags only | Up to 20 custom tags. |
+
+### Built-in tags
+
+Three built-in tags are always listed first, in this order. You can restyle or disable them but not delete them or change their ID.
+
+| Tag | Shown when | Label | Prefix | Colour | Priority |
+| --- | --- | --- | --- | --- | --- |
+| `staff` | The player has an sxPanel admin account. | Staff | `[S] ` | `#EF4444` | 10 |
+| `problematic` | The player has an active (non-revoked) ban or warning. | Problematic | `[!] ` | `#FB923C` | 20 |
+| `newplayer` | The player has less than the **New Player Threshold** in minutes of playtime. | Newcomer | `[N] ` | `#A3E635` | 30 |
+
+A built-in tag has a switch, **Enabled** or **Disabled**, in place of the delete button. A disabled tag is dimmed in the list and no longer assigned. Only the built-in tags you changed from these defaults are written to the config.
+
+### Custom tags
+
+Each tag is a row with these fields. Press **Add Tag** to add a custom one, and the trash button to delete it. **Add Tag** is disabled once you have 20 custom tags.
+
+| Field | What it does | Default | Limits / values |
+| --- | --- | --- | --- |
+| **ID** | The tag's identifier, used by exports and addons. Locked on built-in tags. | Empty | Required. 1 to 32 characters; capitals are lowercased and anything except `a` to `z`, `0` to `9` and `_` is removed as you type. Must be unique. |
+| **Label** | The name shown to staff. | Empty | Required on custom tags. 1 to 24 characters. |
+| **Prefix** | Text put in front of the player's name in game. Optional. | Empty | Up to 16 characters. Include a trailing space, as in `[S] `. |
+| **Color** | The tag colour. | `#3B82F6` | A hex colour such as `#3B82F6`. In game it is matched to the nearest colour of the game's HUD palette. |
+| **Priority** | Which tag wins when a player has several. The lowest number is the most important, and is the one shown. | Highest existing priority plus 10, at most 999 | Whole number, 1 to 999 |
+| **Discord Roles** | Players with any of these Discord roles receive the tag when they join, and the tag is kept in sync while they are online. Custom tags only. | None | Valid role IDs of 17 to 20 digits. Disabled unless the Discord bot is enabled. |
+
+The **Discord Roles** field is a picker that lists the roles of your Discord server; it can also be switched to manual entry, where you paste IDs separated by commas, spaces or new lines. A tag with Discord roles is managed by Discord and cannot be given or removed by hand. See [Discord](/docs/discord).
+
+<Callout>
+Removing a tag, or disabling a built-in one, stops it being shown but does not remove it from players. Their assignments stay in the database, and a tag that is added back with the same ID shows again.
+</Callout>
+
+### Saving
+
+Pressing **Save changes** checks the list first and stops at the first problem, with one of these messages:
+
+| Message | Cause and fix |
+| --- | --- |
+| `Each custom tag must have an ID.` | A custom row has an empty **ID**. Fill it in or delete the row. |
+| `Tag "<id>" must have a label.` | A custom row has an empty **Label**. |
+| `Duplicate tag ID: <id>` | Two rows share an ID. IDs must be unique. |
+| `Invalid Discord role ID: <id>` | A role in **Discord Roles** is not 17 to 20 digits. |
+
+## How to…
+
+### Add a VIP tag
+
+<Steps>
+<Step>Open **System → Settings → Player Tags**. You need **Settings: Change**.</Step>
+<Step>Press **Add Tag**. Enter an **ID** such as `vip`, a **Label** such as `VIP`, an optional **Prefix** such as `[VIP] `, a **Color** and a **Priority**.</Step>
+<Step>Optional: to give the tag automatically, choose the **Discord Roles** that should receive it. The Discord bot must be enabled.</Step>
+<Step>Press **Save changes**.</Step>
+</Steps>
+
+Without Discord roles, give the tag from the player's profile or with a resource export. See [Players](/docs/players#player-tags) and [Events API](/docs/events-api).
+
+### Rename a ticket category
+
+<Steps>
+<Step>Open **System → Settings → Game**.</Step>
+<Step>Edit **Categories**, a comma-separated list, and press **Save changes**.</Step>
+</Steps>
+
+The first category is the default. See [Reports](/docs/reports) for how the category shapes the in-game form.
+
+### Hide your admin names from players
+
+<Steps>
+<Step>Open **System → Settings → Game**.</Step>
+<Step>Set **Hide Admin Name In Punishments** and **Hide Admin Name In Messages** to **Hidden**, then press **Save changes**.</Step>
+</Steps>
+
+## How it connects
+
+- **In-game menu.** The menu, overhead and notification options are read by the game resource; see [In-game menu](/docs/in-game-menu).
+- **Reports.** **Player Tickets** is the same switch as **Reports** in **Settings → Panel Features**. See [Settings overview](/docs/settings#panel-features) and [Reports](/docs/reports).
+- **Combat log.** Combat events appear in the [Server log](/docs/server-log#combat-log) and, through the **Combat Logs** route, in [Discord](/docs/discord).
+- **Tags.** Tags appear on [Players](/docs/players#player-tags). Resources assign custom tags with the `addPlayerTag` and `removePlayerTag` exports of the [Events API](/docs/events-api), and [addons](/docs/addon-api) with the `players.write` permission.
+- **Settings log.** Saved changes are recorded with the admin's name in the settings changelog.
+- **Config keys.** The keys are listed in [Configuration](/docs/configuration).
+
+## Limits and edge cases
+
+- Only one card can have unsaved changes at a time; see [Settings overview](/docs/settings#saving).
+- Custom tags are capped at 20. The server also rejects a list with duplicate IDs.
+- `gameFeatures.ticketCategoryDescriptions` and `gameFeatures.customCommands` have no field on these tabs. The first is described in [Reports](/docs/reports); the second is edited on [Chat commands](/docs/chat-commands).
+- The overhead icons and two-row layout apply to FiveM only.
+- The combat log needs OneSync.
