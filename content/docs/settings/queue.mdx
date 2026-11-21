@@ -1,0 +1,195 @@
+---
+title: Connection queue
+description: How the sxPanel connection queue works, how priority rules and reserved slot pools decide who joins first, and every field on the Queue settings tab.
+---
+
+The connection queue holds players in a waiting room when the server is full and lets them in one at a time. Discord roles decide who goes first (**priority rules**) and who may use slots that are held back for them (**slot pools**). Server owners use it to give donators or staff a faster way in without turning the whole server into a private one.
+
+The queue is separate from the [whitelist](/docs/whitelist): the whitelist decides who may join, the queue decides in which order allowed players get in.
+
+## Where to find it
+
+**System → Settings**, then the **Queue** tab (`/settings#queue`) in the **Server** group. For how the page works (tabs, saving, unsaved changes) see [Settings overview](/docs/settings).
+
+Players do not see any setting. They see a **Connection queue** card in the FiveM connection screen while they wait. Its layout is edited on the **Deferral Cards** tab.
+
+## Who can use it
+
+| Permission | Id | What it allows |
+| --- | --- | --- |
+| **Settings: View** | `settings.view` | Opens the tab read-only. |
+| **Settings: Change** | `settings.write` | Edits and saves the card. |
+
+Without **Settings: Change** every control is disabled. Saving without it fails with `You don't have permission to execute this action.` No master-only settings exist on this tab.
+
+## How the queue works
+
+### When it runs
+
+When a player connects, sxPanel first runs its join check (banlist and whitelist). Only a player who passes that check is offered to the queue. Banned or non-whitelisted players are rejected before it.
+
+<Callout type="warn" title="The join check must be on">
+The queue is part of the join check, which sxPanel switches on only when **Ban Checking** (**Settings → Bans**, on by default) or the **Whitelist** is enabled. If you turn off both, the queue is skipped even if **Queue** is enabled.
+</Callout>
+
+A queue step is skipped, and the player continues to the normal join flow, when:
+
+- **Queue** is disabled.
+- The queue already holds **Max users in queue** players. The player skips the queue instead of being refused.
+- The panel's answer is missing or invalid. The player is let through, never blocked by a queue fault.
+
+### Waiting and polling
+
+A queued player's connection screen shows the **Connection queue** card with their position and the queue size. The game server asks the panel for an update every 5 seconds, and the card is only redrawn when its content changed. If the card cannot be built the player sees `[sxPanel] Waiting in queue...`.
+
+The card tokens `{queuePosition}` and `{queueSize}` are filled in. `{queueEta}` is always empty, because sxPanel does not estimate a wait time.
+
+A waiting entry that is not polled for 10 minutes is dropped. The queue lives in the memory of the panel process: restarting sxPanel empties it, and players who were waiting are let through on their next poll instead of being kicked.
+
+### Capacity
+
+sxPanel reads the server's `sv_maxClients`, falling back to `32` until the value is known. Slots are split like this:
+
+- **Reserved slots** are the sum of the **Slots** of all pools.
+- **Public slots** are `sv_maxClients` minus the reserved slots, never below 0.
+
+The panel then looks at how many players are online and who is waiting:
+
+1. If the server is full (online players equal `sv_maxClients`), nobody is let in.
+2. If fewer players are online than there are public slots, every waiting player is eligible.
+3. Otherwise only waiting players who may use a pool that still has a free slot are eligible.
+4. From the eligible players the best one is let in: highest priority first, and for equal priority the one who has waited longest.
+
+Only that first player is admitted by each check, and everyone else keeps waiting. When the public slots are full, players who are not eligible for any open pool are not counted in the position and queue size shown to the others.
+
+### Priority
+
+Each rule has an integer **Priority**. A player's priority is the highest **Priority** among the rules whose Discord roles they hold. Without a match it is `0`. A rule with no roles has no effect, and a negative priority never ranks below 0, so use positive numbers for priority rules.
+
+Priority only orders the waiting line. It does not give a player a slot by itself.
+
+### Pools
+
+A pool holds back a number of slots for certain players. A player may use a pool when:
+
+- the pool has **Panel staff can use this pool** on and the player is a sxPanel admin (any account in the Admin Manager, matched by the player's identifiers), or
+- the player holds a Discord role of a queue rule that is linked to the pool.
+
+Pools are checked in the order they appear on the tab. To count how full a pool is, sxPanel walks through the online players and puts each one into the first pool they may use that still has room. Online players that qualify for no pool are not counted against any pool. A player who may use several pools is let in when any of them has room, and they can also take a public slot.
+
+<Callout type="info" title="Example">
+`sv_maxClients` is 48. You create a **Staff** pool with 8 slots (staff on) and a **Donators** pool with 20 slots linked to the **Donator** rule. The public pool has 48 − 28 = 20 slots. While fewer than 20 players are online, everybody queues by priority. After that only staff and donators, up to their pool sizes, get in. Regular players wait until somebody leaves and the count drops below 20.
+</Callout>
+
+### Discord roles
+
+Roles are read from the Discord server through the sxPanel [Discord bot](/docs/discord), using the Discord identifier of the connecting player. If the player has no Discord identifier, is not in the server, or the bot is not connected, they have no roles: priority `0` and no role-based pools. Panel staff access to a pool does not need the bot.
+
+## The tab
+
+### Settings
+
+| Setting | What it does | Default | Limits / values |
+| --- | --- | --- | --- |
+| **Queue** | Turns the join queue on. The description reads "Role-based join queue with slot pools and priority. Separate from Whitelist." | **Disabled** | **Enabled** or **Disabled**. |
+| **Max users in queue** | The most players that can wait at the same time. When it is full, new connections skip the queue and use the normal join flow. | `100` | Whole number from 1 to 500. |
+
+When at least one pool has slots, a **Slot summary** line appears, for example `28 slots reserved across 2 pools. Remaining capacity is the public pool.`
+
+Changes apply at the next connection attempt, without restarting the server. Players who are already waiting use the new settings on their next poll, and if you disable the queue they are let in.
+
+### Slot pools
+
+Each pool is a bordered block. **Add pool** appends an empty one; the trash button (**Remove pool**) deletes it. With none, the tab shows `No slot pools yet. Example: 8 slots staff-only, 20 slots for donators + staff.`
+
+| Field | What it does | Default | Limits / values |
+| --- | --- | --- | --- |
+| **Pool name** | Label of the pool. Placeholder `Staff only`. | empty | Required, up to 64 characters. |
+| **Slots** | Player slots held for this pool. | `0` | Whole number, 0 or more. A pool with 0 slots reserves nothing. |
+| Staff switch | **Panel staff can use this pool** or **Staff cannot use this pool**. Lets sxPanel admins use the pool. | **Staff cannot use this pool** | On or off. |
+| **Queue rules in this pool** | A checkbox per queue rule. Players holding a linked rule's Discord roles may use the pool. | none linked | A rule can be ticked only once it has Discord roles (`Add Discord roles to this rule first`). |
+
+Under the checkboxes the tab explains: "Players matching a linked rule's Discord roles may use this pool when public slots are full. Staff with the toggle above can also use it." With no rules defined, the block says `Add queue rules below, then link them to this pool.`
+
+### Queue rules
+
+Rules give players priority and decide who matches a pool. **Add rule** appends one; the trash button (**Remove rule**) deletes it and unlinks it from every pool. With none, the tab shows `Define roles for queue priority, then assign them to slot pools above.`
+
+| Field | What it does | Default | Limits / values |
+| --- | --- | --- | --- |
+| **Label** | Name of the rule. Placeholder `Donator`. | empty | Required, up to 64 characters. |
+| **Discord Role IDs** | The roles that make a player match the rule. Holding any one of them is enough. | none | Each ID is a Discord snowflake of 17 to 20 digits. |
+| **Priority** | `Higher value = earlier in queue.` | `0` | Whole number. |
+
+The **Discord Role IDs** field is disabled until the Discord bot is enabled. Use **Choose Discord roles** to search the server's roles, **Refresh Discord roles** to reload them, or **Enter role IDs manually** to paste IDs separated by commas, spaces or new lines (switch back with **Use role picker**). A role that is no longer in the server is shown as `Unknown role (<id>)`.
+
+### Save checks
+
+Pressing **Save changes** checks the card in the browser first and refuses with a toast when:
+
+| Message | Cause and fix |
+| --- | --- |
+| `Each queue rule needs a label.` | A rule has an empty **Label**. |
+| `Each slot pool needs a label.` | A pool has an empty **Pool name**. |
+| `Invalid Discord Role ID.` with `Invalid role: <id>` | A role ID is not 17 to 20 digits. |
+| `Discord Bot is required.` with `Enable the Discord Bot in the Discord tab to use role-based queue rules.` | **Queue** is on, a rule has roles, and the Discord bot is not enabled. Enable it on the **Discord** tab first. |
+| `Pool "<name>" needs staff access and/or at least one queue rule.` | A pool with slots above 0 has the staff switch off and no linked rules. |
+| `Pool "<pool>": linked rule "<rule>" has no Discord roles.` | A pool with slots above 0 is linked to a rule that has no roles. |
+
+Labels are trimmed, and links to rules that no longer exist are removed when saving.
+
+## Common tasks
+
+### Give donators priority
+
+<Steps>
+<Step>Enable the Discord bot on the **Discord** tab and check it is online. See [Discord](/docs/discord).</Step>
+<Step>Open **Settings → Queue**. Under **Queue rules (priority)**, press **Add rule**, set **Label** to `Donator`, choose the role in **Discord Role IDs** and set **Priority** to `10`.</Step>
+<Step>Switch **Queue** to **Enabled** and press **Save changes**.</Step>
+</Steps>
+
+Donators now go ahead of everyone with a lower priority. They do not get reserved slots until you add a pool.
+
+### Reserve slots for staff
+
+<Steps>
+<Step>Under **Slot pools**, press **Add pool** and set **Pool name** to `Staff`.</Step>
+<Step>Set **Slots** to the number you want held back, for example `8`, and switch on **Panel staff can use this pool**.</Step>
+<Step>Make sure **Queue** is **Enabled** and press **Save changes**.</Step>
+</Steps>
+
+Everyone in the [Admin Manager](/docs/permissions) can now enter when the public slots are full. Check **Slot summary** to confirm the split.
+
+### Reserve slots for a Discord role
+
+<Steps>
+<Step>Create a rule with the role, as in *Give donators priority*.</Step>
+<Step>Add a pool, set **Slots**, and tick the rule under **Queue rules in this pool**.</Step>
+<Step>Save. Players with that role can use the pool when the public slots are full.</Step>
+</Steps>
+
+## How it connects
+
+- The waiting screen is the **Connection queue** scenario of the **Deferral Cards** tab, where you edit its layout and text.
+- Discord roles come from the [Discord bot](/docs/discord). Bans and the whitelist are checked first, see [Bans, warnings and history](/docs/history) and [Whitelist](/docs/whitelist).
+- The config keys are `queue.enabled`, `queue.rules`, `queue.pools` and `queue.maxConcurrentDeferrals`, see [Configuration](/docs/configuration).
+- Settings imported from txAdmin are converted: whitelist tiers become queue rules with reserved slot pools. See [Migrating from txAdmin](/docs/migrating-from-txadmin).
+
+## Limits and edge cases
+
+- The queue keeps no history and sends no Discord notification or log entry.
+- `sv_maxClients` is read from the running server. Until it is known, 32 is used, so start the server once before judging the slot split.
+- Players are counted from the server's player list, so a player who is still connecting does not count as online yet.
+- Roles of online players are looked up again on every check. If the Discord bot is down, those players count as having no roles, so pool usage can read lower than it is.
+- The queue only decides when players may pass. FXServer's own `sv_maxClients` limit still applies.
+- Queue settings do not need an FXServer restart.
+
+## Problems
+
+| Problem | Cause and fix |
+| --- | --- |
+| Players are never queued | **Queue** is disabled, or both **Ban Checking** and the **Whitelist** are off, so the join check does not run. |
+| Players skip the queue at busy times | **Max users in queue** is reached, or the server is not full yet: while there are free public slots the queue lets players through at once. |
+| Role members get no priority or pool access | The Discord bot is off or not connected, the player has no linked Discord identifier or is not in the server, or the role ID is wrong. |
+| `Discord Bot is required.` | See [Save checks](#save-checks). |
+| Waiting players vanish after a panel restart | The queue is in memory. They are let through on their next poll. |

@@ -399,7 +399,9 @@
         "core/modules/ConfigStore/schema/queue.ts"
       ],
       "notes": "How the connection queue works, priorities, every setting.",
-      "status": "todo"
+      "status": "done",
+      "writtenAt": "2026-11-21",
+      "sourceSha": "a21e752720dac257eafa73132d5d73599ec76ff2"
     },
     {
       "id": "settings-game",
