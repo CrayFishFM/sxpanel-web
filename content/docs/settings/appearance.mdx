@@ -1,0 +1,213 @@
+---
+title: Appearance and custom themes
+description: Switch between light, dark and custom themes, and build your own colour themes for the sxPanel web panel with the Theme Studio.
+---
+
+The **Appearance** tab controls how the web panel looks to you. You can pick the built-in **Light** or **Dark** theme, or any custom theme your team has built. The **Theme Studio** lets an admin with **Settings: Change** build custom themes by editing every colour of the panel with a live preview.
+
+## Where to find it
+
+- Pick a theme: **System → Settings → Appearance** (`/settings#appearance`), or the account menu in the top bar: **Appearance**.
+- Build themes: **Custom Themes** card on the same tab, then **New theme** (`/settings/theme-studio/new`) or the pencil button on an existing theme (`/settings/theme-studio/<theme id>`).
+
+![Settings page on the Appearance tab with the row of section tabs](/docs/settings.webp)
+
+## Who can use it
+
+| Action | Needs |
+| --- | --- |
+| Choose a theme for yourself | Any signed-in admin. The choice is stored in your browser, not on the server. |
+| See the **Appearance** tab and the list of custom themes | **Settings: View** (`settings.view`). |
+| Create, edit, duplicate or remove custom themes | **Settings: Change** (`settings.write`). The Theme Studio page itself requires it, and the server answers `You do not have permission to change the settings.` to a save without it. |
+
+Choosing a theme never needs **Settings: Change**, so every admin can use a custom theme that someone else built.
+
+## Choosing a theme
+
+The **Theme** card on the tab lists a radio option for each theme. Selecting one applies it immediately; there is no **Save changes** button for this card.
+
+| Option | Description shown |
+| --- | --- |
+| **Light** | Bright interface, easier to read in daylight. |
+| **Dark** | Dark interface, easier on the eyes at night. |
+| Each custom theme, by its name | Custom dark theme provided by your host, or custom light theme provided by your host, depending on the theme's **Dark** switch. |
+
+The account menu in the top bar has the same choices under **Appearance**: **Light**, **Dark**, then a separator and the custom themes.
+
+### Where your choice is stored
+
+Your choice is a browser cookie (`fxpAdmin-theme`, kept for one year, refreshed on every page load). It is personal: it does not change what other admins see, and a different browser or a cleared cookie starts from **Dark** again. A custom theme is remembered by its internal id, so renaming it does not reset anyone's choice.
+
+If the theme in your cookie no longer exists, for example because it was removed, the panel falls back to **Dark**.
+
+The theme also sets whether the panel uses its light or dark scheme. For a custom theme this follows the theme's **Dark** switch.
+
+## Custom themes
+
+Custom themes belong to the server, not to one admin. Any admin can select them, but only admins with **Settings: Change** can manage them. They are stored in the panel configuration as `appearance.customThemes` and saved changes are recorded in the system log as a config change labelled **Custom Themes**.
+
+### The Custom Themes card
+
+The card sits below the theme picker. Each theme is a row with a strip of six colour dots (**Background**, **Card**, **Accent**, **Destructive**, **Warning**, **Success**), its name and a **Dark** or **Light** badge, plus three buttons:
+
+| Button | What it does |
+| --- | --- |
+| **Edit** (pencil) | Opens the theme in the Theme Studio. |
+| **Duplicate** (copy) | Immediately saves a copy named `<name> (copy)` with a new id. A toast confirms with **Theme saved**. |
+| **Remove** (bin) | Asks **Remove theme**: `Are you sure you want to remove this custom theme?` Confirming deletes it at once. A toast confirms with **Theme removed**. |
+
+With no themes the card shows **No custom themes yet** and `Create one to fully restyle the panel for your server.` The **New theme** button below the list opens an empty Theme Studio.
+
+Duplicate and remove save to the server straight away; there is no separate save step. They need **Settings: Change**; without it you get a **Failed to save theme** toast.
+
+### The Theme Studio
+
+The studio page has a header with **Remove** (only when editing) and **Save theme**, a column of editing controls on the left and a sticky **Live preview** on the right (below the controls on narrow screens). The preview shows a card, accent, primary, secondary and outline buttons, destructive, warning, success and info chips and a popover surface, all painted with the colours you are editing. It does not change the panel itself until you save and reload.
+
+| Control | What it does | Default | Limits |
+| --- | --- | --- | --- |
+| **Name** | The name shown in the theme picker. | Empty (placeholder `My Theme`) | 1 to 30 characters. Leading and trailing spaces are trimmed. |
+| **Dark** switch | Marks the theme as a dark theme (on) or a light theme (off). Decides the badge, the description in the picker and which colour scheme the panel uses. | On | |
+| **Dark** and **Light** buttons under "Only sets the starting colors below — every value is fully editable regardless of this choice." | Replaces every colour with the built-in dark or light starting colours and sets the **Dark** switch to match. | A new theme starts from the dark colours | Overwrites all colours you have edited so far. |
+| Colour fields | One per token, grouped as below. | Dark starting colours | Each value must be an HSL triple. |
+
+Nothing is saved until you press **Save theme**. Leaving the page discards unsaved edits without asking.
+
+### Colour fields
+
+Each field has a colour swatch and a text box. The swatch opens the browser's colour picker and writes the picked colour into the text box. The text box holds the value as an HSL triple in the form `H S% L%`, for example `217 91% 60%`: hue 0 to 360 without a unit, then saturation and lightness as percentages. Decimals are allowed (`217.5 91% 60%`). Do not write `hsl(` or commas.
+
+A value that does not match is marked invalid, the swatch shows black, and **Save theme** fails with `One or more colors are invalid. Expected format "H S% L%", eg 217 91% 60%.` Typing in the text box lets you fine-tune what the picker produced.
+
+<Callout type="info">
+The studio checks the format, not the range. A value such as `500 200% 10%` has the right shape and is accepted, but the browser may render it differently than you expect. Use the live preview to check.
+</Callout>
+
+## Tokens
+
+There are 33 tokens in six groups. Each one overrides a CSS custom property of the same id. The "start" columns show the colours the **Dark** and **Light** buttons load.
+
+The **hint** tokens are the soft, tinted backgrounds used behind notices and chips of that kind. The **inline** tokens are used for text and icons of that colour on normal backgrounds, so they must stay readable against **Background** and **Card**.
+
+### Base
+
+| Token | Id | Start (dark) | Start (light) |
+| --- | --- | --- | --- |
+| **Background** | `background` | `240 6% 6%` | `0 0% 100%` |
+| **Foreground** | `foreground` | `0 0% 98%` | `240 6% 10%` |
+| **Card** | `card` | `240 5% 9%` | `0 0% 100%` |
+| **Card Text** | `card-foreground` | `0 0% 98%` | `240 6% 10%` |
+| **Popover** | `popover` | `240 5% 10%` | `0 0% 100%` |
+| **Popover Text** | `popover-foreground` | `0 0% 98%` | `240 6% 10%` |
+
+### Controls & Accent
+
+| Token | Id | Start (dark) | Start (light) |
+| --- | --- | --- | --- |
+| **Primary Button** | `primary` | `0 0% 98%` | `240 6% 10%` |
+| **Primary Button Text** | `primary-foreground` | `240 6% 6%` | `0 0% 98%` |
+| **Secondary Button** | `secondary` | `240 4% 15%` | `240 5% 94%` |
+| **Secondary Button Text** | `secondary-foreground` | `0 0% 98%` | `240 6% 10%` |
+| **Muted Background** | `muted` | `240 4% 13%` | `240 5% 94%` |
+| **Muted Text** | `muted-foreground` | `240 5% 65%` | `240 4% 40%` |
+| **Accent** | `accent` | `217 91% 60%` | `217 91% 55%` |
+| **Accent Text** | `accent-foreground` | `0 0% 100%` | `0 0% 100%` |
+| **Border** | `border` | `240 4% 16%` | `240 6% 88%` |
+| **Input Border** | `input` | `240 4% 18%` | `240 6% 85%` |
+| **Focus Ring** | `ring` | `217 91% 60%` | `217 91% 55%` |
+
+### Destructive
+
+| Token | Id | Start (dark) | Start (light) |
+| --- | --- | --- | --- |
+| **Destructive** | `destructive` | `0 76% 54%` | `0 76% 48%` |
+| **Destructive Text** | `destructive-foreground` | `0 0% 100%` | `0 0% 100%` |
+| **Destructive Hint Background** | `destructive-hint` | `0 50% 15%` | `0 70% 94%` |
+| **Destructive Inline Text** | `destructive-inline` | `0 76% 54%` | `0 76% 42%` |
+
+### Warning
+
+| Token | Id | Start (dark) | Start (light) |
+| --- | --- | --- | --- |
+| **Warning** | `warning` | `41 100% 50%` | `41 96% 45%` |
+| **Warning Text** | `warning-foreground` | `41 100% 8%` | `41 100% 10%` |
+| **Warning Hint Background** | `warning-hint` | `35 60% 14%` | `41 90% 92%` |
+| **Warning Inline Text** | `warning-inline` | `41 100% 50%` | `32 90% 38%` |
+
+### Success
+
+| Token | Id | Start (dark) | Start (light) |
+| --- | --- | --- | --- |
+| **Success** | `success` | `161 99% 32%` | `161 90% 30%` |
+| **Success Text** | `success-foreground` | `161 80% 95%` | `161 80% 97%` |
+| **Success Hint Background** | `success-hint` | `161 70% 12%` | `161 70% 92%` |
+| **Success Inline Text** | `success-inline` | `161 99% 32%` | `161 90% 26%` |
+
+### Info
+
+| Token | Id | Start (dark) | Start (light) |
+| --- | --- | --- | --- |
+| **Info** | `info` | `193 70% 50%` | `193 75% 42%` |
+| **Info Text** | `info-foreground` | `193 60% 95%` | `193 60% 97%` |
+| **Info Hint Background** | `info-hint` | `200 50% 14%` | `193 70% 92%` |
+| **Info Inline Text** | `info-inline` | `193 70% 50%` | `193 75% 36%` |
+
+## How a theme is applied
+
+When the panel loads, the server writes a `.theme-<id>` style block for every custom theme into the page, and the panel adds the class of your selected theme to the page. A theme therefore only takes effect after a page load.
+
+After **Save theme**, the dialog **Reload to apply** asks: `New and edited theme colors are baked into the page on load. Reload now to make them available in the theme picker?` **Reload now** reloads the browser tab; **Later** returns you to the **Appearance** tab. Other admins see new, edited and removed themes after they reload.
+
+## Common tasks
+
+### Create a theme
+
+<Steps>
+<Step>Open **System → Settings → Appearance** and press **New theme**.</Step>
+<Step>Enter a **Name** and set the **Dark** switch. Press **Dark** or **Light** under the base description to start from that palette.</Step>
+<Step>Edit colours with the swatches or by typing HSL triples. Check the **Live preview**, in particular **Muted Text** and the **inline** tokens against your background.</Step>
+<Step>Press **Save theme** and choose **Reload now**.</Step>
+<Step>Back on the **Appearance** tab, select the new theme in **Theme**.</Step>
+</Steps>
+
+### Make a variant of an existing theme
+
+<Steps>
+<Step>On the **Custom Themes** card, press **Duplicate** next to the theme. The copy is saved at once as `<name> (copy)`.</Step>
+<Step>Press **Edit** on the copy, rename it and change the colours.</Step>
+<Step>Press **Save theme**.</Step>
+</Steps>
+
+### Remove a theme
+
+<Steps>
+<Step>Press **Remove** on the card, or inside the studio when editing the theme.</Step>
+<Step>Confirm **Remove theme**.</Step>
+</Steps>
+
+Admins who had the removed theme selected fall back to **Dark** the next time they load the panel.
+
+## How it connects
+
+- The **Appearance** tab is one of the tabs described in [Settings overview](/docs/settings). It is the only tab whose choice is personal; the custom theme list is server-wide.
+- Custom themes are stored as `appearance.customThemes` in the panel configuration; see [Configuration](/docs/configuration).
+- Addons can also supply theme colours. See [Addons](/docs/addons).
+- The account menu in the top bar is described in [Overview](/docs/overview).
+
+## Limits and edge cases
+
+- Names are 1 to 30 characters. If two themes end up with the same name, the server renames the later one to `<name> (2)`, `<name> (3)` and so on; a repeated id is replaced with a new one.
+- Saving themes counts towards the panel's rate limit for changes: 30 requests per minute. Beyond that the server answers `Too many requests. Please slow down.`
+- All themes are saved together as one list. If two admins edit themes at the same time, the later save wins and can overwrite the other's changes.
+- Opening a theme that does not exist, for example from an old link or after someone removed it, sends you back to the **Appearance** tab.
+- The theme picker only lists custom themes that existed when the page was loaded. Reload after someone else adds one.
+
+## Problems
+
+| Message | Cause and fix |
+| --- | --- |
+| `Give the theme a name before saving.` | **Name** is empty or only spaces. |
+| `One or more colors are invalid. Expected format "H S% L%", eg 217 91% 60%.` | A colour box does not match the triple format. Fields with a bad value are marked invalid. |
+| **Failed to save theme** | The server refused the save. The message below the title says why, for example `You do not have permission to change the settings.` or `Too many requests. Please slow down.` |
+| A new theme is missing from the picker | Reload the browser tab. |
+| The panel is dark after a theme disappeared | The saved theme no longer exists; choose another one. |

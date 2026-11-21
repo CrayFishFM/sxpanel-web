@@ -431,7 +431,9 @@
         "core/modules/ConfigStore/schema/appearance.ts"
       ],
       "notes": "Light and dark mode, the theme studio, every token you can change, sharing and applying themes.",
-      "status": "todo"
+      "status": "done",
+      "writtenAt": "2026-11-21",
+      "sourceSha": "a21e752720dac257eafa73132d5d73599ec76ff2"
     },
     {
       "id": "deferral-cards",
