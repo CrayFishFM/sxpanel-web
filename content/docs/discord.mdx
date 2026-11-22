@@ -3,7 +3,7 @@ title: Discord Bot
 description: Create and invite the sxPanel Discord bot, configure it, customise the status and player list embeds, map Discord roles to permissions and use the slash commands.
 ---
 
-sxPanel ships with a Discord bot. It keeps a status embed and a live player list embed up to date in a channel, shows server stats as its Discord presence, lets admins moderate with slash commands, posts your [log routes](#discord-logging) to channels and can give admins permissions based on their Discord roles. The same Discord application can also power the **Login with Discord** button on the panel login page.
+sxPanel ships with a Discord bot. It keeps a status embed and a live player list embed up to date in a channel, shows server stats as its Discord presence, lets admins moderate with slash commands, posts your [log routes](/docs/discord-logs) to channels and can give admins permissions based on their Discord roles. The same Discord application can also power the **Login with Discord** button on the panel login page.
 
 This page covers creating and inviting the bot, every Discord setting, the embeds and their editor, role permissions and the slash commands.
 
@@ -67,7 +67,7 @@ The **Discord** tab holds the settings below. They are saved together with **Sav
 | **Discord Bot** | Starts or stops the bot. | Disabled | Enabled / Disabled. |
 | **Token** | The bot token from the Developer Portal. | Empty | Required when the bot is enabled. At most 96 characters in the field. Hidden in the panel after saving. |
 | **Guild/Server ID** | The Discord server the bot works in. Slash commands are registered on this server only. | Empty | Required when the bot is enabled. A numeric Discord ID of 17 to 20 digits. |
-| **Discord Logging** → **Edit Logging** | Opens the log routes editor. See [Discord logging](#discord-logging). | No routes | |
+| **Discord Logging** → **Edit Logging** | Opens the log routes editor. See [Discord log routes](/docs/discord-logs). | No routes | |
 | **Bot Presence** → **Activity Status** | The bot's online state. | **Online** | **Online**, **Idle**, **Do Not Disturb**, **Invisible**. |
 | **Bot Presence** → **Activity Type** | The verb in front of the activity text. | **Watching** | **Playing**, **Watching**, **Listening**, **Competing**, **Custom**. |
 | **Bot Presence** → **Activity Text** | The text of the activity. Supports `{playerCount}`, `{maxPlayers}`, `{serverName}` and `{uptime}`. | `[{playerCount}/{maxPlayers}] on {serverName}` | At most 128 characters. |
@@ -311,22 +311,7 @@ Discord role changes also refresh the player tags that are tied to Discord roles
 
 ## Discord logging
 
-**Edit Logging** opens the **Discord Log Routes** page (`/settings/discord-logs`). Each route below has an on/off switch, a channel and an optional filter on which log entries it sends. The page also holds the warnings channel (`warningsChannel`, where announcements go) and a log guild override (`logGuildOverride`, a different Discord server for logs than the main one). Messages are sent as cards and grouped per channel, so busy streams do not hit Discord's rate limit.
-
-| Route | Sends |
-| --- | --- |
-| **Panel Action Logs** | Panel actions, moderation activity and ticket workflow events. |
-| **Whitelist Logs** | Whitelist applications, approvals, grants and revocations. |
-| **Panel Command Logs** | Server control commands and live console commands. |
-| **Login Logs** | Successful admin sign-ins. |
-| **Config Change Logs** | Configuration changes saved in the panel. |
-| **Monitor Logs** | Restarts, crash handling and health alerts. |
-| **Scheduler Logs** | Scheduled actions. |
-| **System Logs** | Other sxPanel system events. |
-| **Admin Command Logs** | In-game admin menu actions such as noclip and teleport. |
-| **Combat Logs** | Kills, other deaths and fight summaries. See [Combat log](/docs/server-log#combat-log). |
-| **Player Connection Logs** | Joins, leaves and joins denied by a ban or the whitelist. |
-| **Chat Logs** | In-game chat. Use a dedicated channel on busy servers. |
+**Edit Logging** opens the **Discord Log Routes** page, which sends panel actions, admin menu use, combat, connections and chat to Discord channels. It also holds the warnings channel and the log guild override. See [Discord log routes](/docs/discord-logs) for every route, its filters and the rate limits.
 
 Reports can also open a Discord thread per ticket. That channel is set under the report settings in [Game settings](/docs/settings/game).
 

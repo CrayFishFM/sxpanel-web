@@ -1,0 +1,224 @@
+---
+title: Discord Log Routes
+description: Send sxPanel activity, admin menu actions, combat, connections and chat to Discord channels. Every log route, what each card contains, the per-event filters, the editor, batching and rate limits.
+---
+
+Log routes copy what sxPanel records into Discord channels. Each route is one log stream (panel actions, logins, combat, chat and so on) with its own switch, channel and optional filter on which events it sends. Server owners use them to keep a staff-only audit channel without opening the panel.
+
+Routes only mirror logs. The [Action Log](/docs/system) and [Server Log](/docs/server-log) in the panel keep recording whether or not a route is enabled.
+
+## Where to find it
+
+- Panel: **Settings → Discord → Discord Logging → Edit Logging** (`/settings#discord`), which opens the **Discord Log Routes** page at `/settings/discord-logs`.
+- Setup of the bot itself (token, server ID, invite) is on the [Discord bot](/docs/discord) page. Routes do nothing until the bot is enabled and running.
+
+## Who can use it
+
+| Action | Permission |
+| --- | --- |
+| Open the editor and save routes | **Settings: Change** (`settings.write`). |
+| See the **Edit Logging** button | **Settings: View** (`settings.view`) shows the **Discord** tab. Without **Settings: Change** the **Edit Logging** button is disabled, and the editor page is not available. |
+
+Master admins and admins with **All Permissions** (`all_permissions`) pass every check. See [Admins and permissions](/docs/permissions).
+
+The editor opens only from the **Discord** tab. If you load `/settings/discord-logs` directly, you are sent back to `/settings#discord`.
+
+## Routes
+
+There are 12 routes. All start disabled, with no channel. A route sends only while it is **Enabled**, has a **Channel ID**, the bot is enabled and connected, and the event passes the route's [entry filter](#entry-filters).
+
+| Route | Key | What it sends | Entry filter |
+| --- | --- | --- | --- |
+| **Panel Action Logs** | `system.action` | Panel-side actions, moderation activity and ticket workflow events. | Yes |
+| **Whitelist Logs** | `whitelist` | Whitelist applications, approvals, grants and revocations. | Yes |
+| **Panel Command Logs** | `system.command` | Server control commands and live console commands executed through sxPanel. | Yes |
+| **Login Logs** | `system.login` | Successful administrator sign-ins. | Yes |
+| **Config Change Logs** | `system.config` | Configuration changes saved through sxPanel. | Yes |
+| **Monitor Logs** | `system.monitor` | Monitor events such as restarts, crash handling and health alerts. | Yes |
+| **Scheduler Logs** | `system.scheduler` | Scheduled actions handled by the server scheduler. | Yes |
+| **System Logs** | `system.system` | Other sxPanel system events that do not fall into a more specific category. | Yes |
+| **Admin Command Logs** | `server.menu` | In-game admin menu actions such as noclip, teleport, heal, spectate, vehicle tools and troll actions. | Yes |
+| **Combat Logs** | `server.combat` | Player kills, other deaths and non-lethal combat summaries. | Yes |
+| **Player Connection Logs** | `server.connection` | Players joining and leaving, and joins denied by bans or the whitelist. | Yes |
+| **Chat Logs** | `server.chat` | In-game chat messages. | No |
+
+The first eight routes mirror the [Action Log](/docs/system). The last four mirror the in-game [Server Log](/docs/server-log). Several routes can point at the same channel.
+
+<Callout type="info" title="Whitelist events go to Whitelist Logs only">
+  An action whose id starts with `whitelist.` or `player.whitelist.` is sent by **Whitelist Logs**, never by **Panel Action Logs**, even when both routes are enabled.
+</Callout>
+
+### What a card contains
+
+Every message is a card with a coloured side bar, a title and a description. Player names and chat text are escaped so they cannot add Discord formatting or `@` pings, and no message is allowed to ping anyone. Where a player has a Discord ID, the card shows it as a mention (`<@id>`), which displays the name without notifying them. Times are Discord timestamps, shown in each reader's own time zone.
+
+| Routes | Title | Fields |
+| --- | --- | --- |
+| The eight panel routes | The route name, for example **Login Logs** | **Username** (the admin), **Category** and **Time**. The description is the log text. |
+| **Admin Command Logs** | **Admin Command Logs** | **Username**, **Command** (the label of the menu action), **Permission** (the label of the permission used), **Location** as `X: , Y: , Z:` with two decimals or `Unknown`, and **Time**. |
+| **Combat Logs**, a kill | **Player Kill** | **Players** (killer and victim, each with ID and Discord mention) and **Details** (cause, then hits, headshots, damage and distance when recorded, **Weapons Used** when more than one weapon, and time). |
+| **Combat Logs**, a death | **Player Death** | **Details**: victim, cause and time. |
+| **Combat Logs**, a fight | **Combat Damage** | **Players** (attacker and victim) and **Details** (weapon, hits, headshots, damage, distance, time). |
+| **Player Connection Logs** | **Player Joined**, **Player Left** or **Join Denied** | **Details**: the player (not shown for a denied join), the reason (for example the drop reason) and time. |
+| **Chat Logs** | **Chat Message** | The message text, with colour codes such as `^1` removed, then the author with ID and Discord mention, and the time. Messages that are empty after cleaning are skipped. |
+
+Long text is cut with `...`: descriptions at 2048 characters, player names at 75, reasons at 512, field values at 1024.
+### Combat Logs
+
+Hits, damage and distance details appear only when **Combat Log** is enabled under [Game settings](/docs/settings/game#combat-log) (master admin only). Damage summaries additionally need **Combat Log Damage Summaries**. How fights are tracked is on [Server log](/docs/server-log#combat-log).
+
+## Entry filters
+
+Every route except **Chat Logs** has an entry filter. By default a route sends every event in its stream. A filter lets you keep only some of them: unchecked events stay silent even while the route is enabled.
+
+| Route | Entries you can choose from |
+| --- | --- |
+| **Panel Action Logs** | Panel actions by id: admin and permission preset changes, announcements, 2FA enable, deployer and setup steps, Discord embed location saves, history changes (revoke, delete, ban duration), player actions (ban, kick, kick all, warn, heal, delete record, wipe IDs or HWIDs, notes, tags, messages, screenshots, spectate, whitelist add or remove), resource actions (ensure, refresh, start, stop, restart, download, edit config), scheduler actions (skip, schedule, re-enable restart), tickets (create, assign, claim, unclaim, reply, notes, in review, resolve, close, reopen, delete, retention) and whitelist actions. |
+| **Whitelist Logs** | Only the whitelist entries: **Add Whitelist Approval**, **Create Whitelist Application**, **Remove Whitelist Approval**, **Approve Whitelist Request**, **Deny Whitelist Request**, **Deny All Whitelist Requests**, **Add Player Whitelist**, **Remove Player Whitelist**. |
+| **Panel Command Logs** | **Apply FXServer Update**, **Download FXServer Artifact**, **Apply sxPanel Update**, **Download sxPanel Update**, **Live Console Command**, **Restart Server**, **Start Server**, **Stop Server**. |
+| **Login Logs** | **Discord Login**, **Cfx.re Login**, **Password Login**, **Password + 2FA Login**. |
+| **Config Change Logs** | **Disable 2FA**, plus one entry per saved setting (for example **Server Name**, **Whitelist Enabled**, **Discord Log Routes**). |
+| **Monitor Logs** | **Automatic Monitor Restart**. |
+| **Scheduler Logs** | **Scheduled Restart Triggered**. |
+| **System Logs** | **Correct Max Clients**. |
+| **Admin Command Logs** | One entry per in-game menu action, such as **NoClip**, **God Mode**, **Super Jump**, **Teleport To Waypoint**, **Teleport To Coordinates**, **Teleport To Player**, **Summon Player**, **Spectate Player**, **Freeze Player**, the four **Heal** actions, **Spawn Vehicle**, **Delete Vehicle**, **Repair Vehicle**, **Boost Vehicle**, **Clear Area**, **Announcement**, **Show Player IDs**, **Show Map Blips**, **Invisibility**, **Return Player**, **Disarm Player**, **Developer Tools**, **Delete Aimed Entity**, **Clean Up Vehicles**, **Staff Chat** and the troll actions **Drunk Effect**, **Set On Fire** and **Wild Attack**. |
+| **Combat Logs** | **Player Kills**, **Other Deaths**, **Damage Summaries**. |
+| **Player Connection Logs** | **Player Joined**, **Player Left**, **Join Denied**. |
+
+The editor shows each entry with its description.
+
+<Callout type="warn" title="A filter blocks events without an id">
+  With a filter on, a panel event that carries no action id is not sent, because it cannot match any checked entry. Turn the filter off if you want the whole stream.
+</Callout>
+
+## The editor
+
+The **Discord Log Routes** page has a **Log Guild Override** field at the top, a list of streams on the left and the selected stream on the right.
+
+### Log Guild Override
+
+| Setting | What it does | Default | Limits / values |
+| --- | --- | --- | --- |
+| **Log Guild Override** (`discordBot.logGuildOverride`) | The Discord server that all log routes send to. Leave blank to use the main **Guild/Server ID** from the **Discord** tab. The field shows the main server ID as its placeholder. | Blank | A 17 to 20 digit Discord ID, or blank. |
+
+Each log channel must belong to this server. A channel in another server is refused and the message is not delivered.
+
+### Stream list
+
+The list has **Warnings Channel** first, then the 12 routes. Each entry shows its name, **Enabled** or **Disabled** and the channel ID, or `No channel configured`. Click an entry to edit it.
+
+### Warnings Channel
+
+| Setting | What it does | Default | Limits / values |
+| --- | --- | --- | --- |
+| **Warnings Channel ID** (`discordBot.warningsChannel`) | The channel for announcements such as server restarts and warning-style bot messages. Blank turns them off, and the list shows **Disabled**. | Blank | A 17 to 20 digit Discord ID, or blank. |
+
+This is not a log route: it has no switch or filter. It is saved together with the routes.
+
+### Route settings
+
+| Setting | What it does | Default | Limits / values |
+| --- | --- | --- | --- |
+| **Enabled** / **Disabled** switch | Turns the route on or off. | **Disabled** | |
+| **Channel ID** | The channel that receives the route. | Blank | A 17 to 20 digit Discord ID. Required while the route is enabled. |
+| **Show Entry Filters** / **Hide Entry Filters** | Shows the checkbox list described in [Entry filters](#entry-filters). Not shown for **Chat Logs**. | Hidden, unless the route already has a filter | |
+| Entry checkboxes | Which events the route sends. | All checked | At least one must stay checked to send anything. |
+
+Checking or unchecking one entry turns the filter on, starting from "everything checked". **Hide Entry Filters** turns the filter off, so the route sends everything again, but the panel remembers your selection until you save. If you uncheck every entry and then hide and show the filters again, all entries come back checked.
+
+### Buttons
+
+| Button | What it does |
+| --- | --- |
+| **Back to Settings** | Returns to the **Discord** tab. Unsaved changes are lost. |
+| **Discard Changes** | Resets the page to the last saved routes, warnings channel and guild override. |
+| **Reset to Default** | Fills the page with the defaults: every route disabled, no channel, no filter, and no warnings channel or guild override. Nothing is saved until you click **Save Changes**. |
+| **Save Changes** | Saves the routes, warnings channel and guild override together. Disabled while there is an error shown above the buttons, or while saving. On success you return to the **Discord** tab. |
+
+### Validation
+
+Before saving, the page checks the fields and shows the first error above the buttons:
+
+| Message | Cause and fix |
+| --- | --- |
+| `Invalid channel ID for <route name>.` | An enabled route has a channel ID that is not 17 to 20 digits. |
+| `Invalid Warnings Channel ID.` | The warnings channel is not 17 to 20 digits. |
+| `Invalid Log Guild Override.` | The override is not 17 to 20 digits. |
+| `<route name> needs a channel ID.` | A route is enabled with no channel. |
+
+Channel IDs are not checked for existence until a message is sent. A disabled route keeps whatever ID you typed, and it is not validated.
+
+Saving uses the same request as the rest of the **Discord** tab (`/settings/configs/discord`). A failed save shows `Error saving Discord logging settings:` followed by the reason. When the bot is enabled, saving restarts it and validates the token and server ID again, with the same errors as listed on the [Discord bot](/docs/discord#saving-and-errors) page. The change is written to the Action Log as a **Discord Log Routes** config change, which **Config Change Logs** can itself send to Discord.
+
+## How to send logs to Discord
+
+<Steps>
+<Step>
+Set up and enable the bot first, as described in [Create and invite the bot](/docs/discord#create-and-invite-the-bot). It needs permission to view and send messages in each log channel.
+</Step>
+<Step>
+In Discord, enable **Developer Mode** (user settings → Advanced), right-click the channel and choose **Copy Channel ID**.
+</Step>
+<Step>
+In sxPanel open **Settings → Discord** and click **Edit Logging**.
+</Step>
+<Step>
+Select a route in the list, paste the ID into **Channel ID** and switch it to **Enabled**.
+</Step>
+<Step>
+Optionally click **Show Entry Filters** and uncheck the events you do not want.
+</Step>
+<Step>
+Repeat for other routes, then click **Save Changes**.
+</Step>
+</Steps>
+
+### Keep a quiet audit channel
+
+<Steps>
+<Step>
+Enable **Panel Action Logs**, **Panel Command Logs**, **Config Change Logs** and **Login Logs** on one private channel.
+</Step>
+<Step>
+On **Panel Command Logs** open **Show Entry Filters** and uncheck **Live Console Command** if you only care about start, stop and update commands.
+</Step>
+<Step>
+Give **Chat Logs** and **Player Connection Logs** a separate channel, so a busy server does not push the audit entries out of view.
+</Step>
+</Steps>
+
+### Log logs to a different server
+
+Paste that server's ID into **Log Guild Override**. The bot must be a member of it, and every log channel must be in it. The main **Guild/Server ID** keeps being used for slash commands, embeds and role mappings.
+
+## Batching and rate limits
+
+Discord limits how fast a bot can post to one channel (about 5 messages per 5 seconds). Busy streams such as chat, combat and joins would fall behind, so sxPanel queues cards per channel and sends them in groups.
+
+- Cards for the same channel are packed into one message. A message holds at most 10 cards, 40 components and 4000 characters of text, whichever is reached first.
+- Every 2 seconds, each channel with waiting cards gets up to 2 messages. On a quiet channel a card goes out at the next 2 second flush.
+- Each channel keeps at most 150 waiting cards. If more arrive, the oldest are dropped, and the next message for that channel starts with `-# <n> log entries were skipped due to high volume.` (`entry was` for one).
+- Cards are never merged across channels, so a busy chat route does not delay a different channel. Two routes that share a channel share the queue.
+
+To keep every entry on a busy server, give **Chat Logs** and **Combat Logs** their own channels, and use entry filters to drop events you do not need.
+
+## Limits and edge cases
+
+- **Bot required.** Routes send only while the bot is enabled and connected to sxPanel. Events that happen while it is stopped or still starting are not queued and are lost.
+- **Restart loses the queue.** Waiting cards are discarded when the bot is disabled or restarted.
+- **Wrong channel or server.** If a channel does not exist, is not a text channel, or is not in the log server, the message is not delivered and nothing is retried. Fix the ID and save.- **Missing permission.** The bot needs to view the channel and send messages there. Without it, Discord refuses the message.
+- **Order.** Cards are sent in the order events happened, per channel.
+- **Chat Logs** have no filter and send every message that has text.
+
+## Problems
+
+| Symptom | Cause and fix |
+| --- | --- |
+| Nothing arrives in the channel | Check that the bot is enabled and ready on **System → Diagnostics → Discord Bot** ([System pages](/docs/system#discord-bot)), the route is **Enabled**, the channel ID is right, and the entry you expect is checked. |
+| `Invalid channel ID for <route name>.` | Use the 17 to 20 digit channel ID, not the channel name or a link. |
+| `<route name> needs a channel ID.` | Fill in **Channel ID** or turn the route off. |
+| Nothing arrives after setting **Log Guild Override** | The channels are in a different server from the override. Use channels from the override server, or clear the override. |
+| Combat cards have no hits or distance | **Combat Log** is off in [Game settings](/docs/settings/game#combat-log), or the fight had no recorded damage. |
+| `-# <n> log entries were skipped due to high volume.` | The channel got more than it could carry. Use a separate channel for noisy routes, or filter entries. |
+| A whitelist action is missing from **Panel Action Logs** | It is sent by **Whitelist Logs** instead. |
+| The editor opens then returns to the **Discord** tab | It was opened without going through **Edit Logging**. Open it from the tab. |
