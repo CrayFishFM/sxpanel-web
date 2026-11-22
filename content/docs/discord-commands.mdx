@@ -1,0 +1,291 @@
+---
+title: Discord Slash Commands
+description: Every sxPanel slash command in Discord — options, who can run it, what it replies with and the panel permission it maps to — for embeds, player lookup, moderation, notes, whitelist and reports.
+---
+
+The sxPanel bot registers slash commands on your Discord server so staff can look up players, moderate, manage the whitelist and triage reports without opening the panel. Every command runs as an sxPanel admin: the bot checks the same permissions the panel does, and the result lands in the same [History](/docs/history) and [Action Log](/docs/system).
+
+This page covers every command, the way targets are chosen, how permissions are resolved, what each command replies with and what goes wrong. Setting up the bot itself is on the [Discord Bot](/docs/discord) page.
+
+## Where to find it
+
+- Discord: type `/` in any channel of the server you configured as **Guild/Server ID**, then pick an sxPanel command.
+- Panel: the bot's state and recovery buttons are in **System → Diagnostics → Discord Bot**, see [System pages](/docs/system#discord-bot).
+
+The commands are registered on your server only (not globally) when the bot becomes ready, and again when the addon list or the **Player Tickets** setting changes. `/reports` is not registered while **Player Tickets** is off. Addon commands are listed alongside them; see [Addons](/docs/addons).
+
+## Command overview
+
+| Command | Subcommands | Permission | Account needed |
+| --- | --- | --- | --- |
+| [`/status`](#status-and-players) | `add`, `remove` | **Settings: Change** (`settings.write`) | Linked admin or mapped role |
+| [`/players`](#status-and-players) | `add`, `remove` | **Settings: Change** (`settings.write`) | Linked admin or mapped role |
+| [`/info`](#info-and-admininfo) | `self`, `member`, `id` | None | None |
+| [`/admininfo`](#info-and-admininfo) | `self`, `member`, `id` | None | Linked admin |
+| [`/history`](#history) | `self`, `member`, `id`, `serverid` | None | Linked admin |
+| [`/notes`](#notes) | `view` and `set`, each with `self`, `member`, `id`, `serverid` | None | Linked admin |
+| [`/warn`](#warn-kick-and-ban) | `member`, `id`, `serverid` | **Warn** (`players.warn`) | Linked admin |
+| [`/kick`](#warn-kick-and-ban) | `member`, `id`, `serverid` | **Kick** (`players.kick`) | Linked admin |
+| [`/ban`](#warn-kick-and-ban) | `member`, `id`, `serverid` | **Ban** (`players.ban`), plus **Ban: Permanent** (`players.ban.permanent`) for permanent bans | Linked admin |
+| [`/unban`](#unban) | `action`, `member`, `id`, `serverid` | **Unban** (`players.unban`) | Linked admin |
+| [`/whitelist`](#whitelist) | `member`, `application`, `request` | **Whitelist** (`players.whitelist`) | Linked admin or mapped role |
+| [`/reports`](#reports) | `summary`, `claim`, `assign`, `resolve`, `reopen` | **Reports** (`players.reports`) | Linked admin or mapped role |
+
+## Who can use it
+
+### Linked admin account
+
+A Discord user is a **linked admin** when an admin in the [Admin Manager](/docs/permissions) has their numeric Discord user ID as **Discord ID**. The bot reads the ID of whoever runs the command, finds that admin and checks its permissions.
+
+Master admins, and admins with **All Permissions** (`all_permissions`), pass every permission check.
+
+### Mapped Discord roles
+
+`/status`, `/players`, `/whitelist` and `/reports` also accept someone with no admin account, if one of their Discord roles is in a **Role Permission Mapping** whose preset grants the permission. A linked admin gets the mapped permissions on top of their own. Actions by a role-only member are logged as `[Discord] <mapping labels>`. See [Role permissions](/docs/discord#role-permissions).
+
+<Callout type="warn" title="Moderation, notes and history ignore mapped roles">
+  `/warn`, `/kick`, `/ban`, `/unban`, `/history`, `/notes` and `/admininfo` only look at the linked admin account. A member who holds a mapped role but has no admin account, or whose permission only comes from a role mapping, is refused. Give the permission to the admin account itself.
+</Callout>
+
+### What a refused user sees
+
+Refusals are private to the person who ran the command.
+
+| Message | Cause and fix |
+| --- | --- |
+| `Your account does not have sxPanel access.` followed by `If you are already registered in sxPanel, make sure your Discord ID is set to <id>.` | No admin has that Discord ID and no mapped role applies. Set the admin's **Discord ID** in the Admin Manager to the number shown. |
+| `Your linked sxPanel account does not have the "<permission>" permission required for this action.` | The admin lacks the permission. The name is the label from the Admin Manager, for example `Kick`. |
+| `Your linked sxPanel account and mapped Discord role presets do not have the "<permission>" permission required for this action.` | Same, for a command that accepts mapped roles, when the member also holds a mapped role. |
+| `Your Discord roles do not grant the "<permission>" permission required for this action.` | No admin account, and the member's mapped roles do not include the permission. |
+| `Could not resolve the Discord user for this command.` | The bot did not receive a user ID. Run the command again. |
+| `Reports are disabled.` | **Player Tickets** is off. See [Game settings](/docs/settings/game). |
+
+## Choosing a target
+
+Commands that act on a player take a subcommand that says how to find them.
+
+| Subcommand | Option | How the player is found |
+| --- | --- | --- |
+| `self` | None | The player whose `discord:` identifier is your own Discord ID. Only on `/info`, `/admininfo`, `/history` and `/notes`. |
+| `member` | **member**: a Discord member | The player with that member's `discord:<id>` identifier. |
+| `id` | **id**: an identifier, at least 5 characters | A player with that identifier, for example `license:…`, `fivem:271816` or `discord:…`. The text is lower-cased. |
+| `serverid` | **serverid**: a whole number, 1 or more | The player currently connected with that server ID. Not on `/info`, `/admininfo` or `/whitelist`. |
+
+If the target matches nothing, the reply is `Identifier (<id>) does not seem to be associated with any player in the sxPanel database.` If an identifier matches several different players (counted by license), the reply is `Identifier (<id>) matches multiple players. Use a more specific identifier, preferably a license.` with up to five of them listed and `...and N more.` after that. Use a `license:` identifier to be exact.
+
+`/info` and `/admininfo` are more lenient than the moderation commands. They show every match, up to 10 players, and answer `The identifier (<id>) is associated with more than 10 players, please use the sxPanel web panel to search for it.` above that.
+
+For `serverid`, a number that is not in the current player list gives `Server ID (<n>) could not be resolved from the current playerlist.` with the reason.
+
+## Replies
+
+Every command is acknowledged as soon as it arrives, so a slow lookup never shows Discord's "The application did not respond". Replies are cards: a coloured edge shows blue for information, green for success, yellow for a warning and red for a failure.
+
+Replies are visible only to you, with these exceptions, which everyone in the channel can see: the player cards from `/info` and `/admininfo` and their "no player found" and "too many players" answers, and the replies to `/whitelist`.
+
+<Callout type="warn" title="/admininfo output is not private">
+  The player card from `/admininfo` includes the player's notes and every identifier, and it is posted in the channel rather than shown only to you. Run it in a staff-only channel. The same applies to `/info`, which shows less.
+</Callout>
+
+If a command cannot finish, you see `/<command> failed: <message>` in a private reply. If the bot itself throws, the message is `Error executing /<command>: <message>`.
+
+## Commands
+
+### Status and players
+
+`/status` and `/players` place and remove the two auto-updating embeds: the server status embed and the live player list. What the embeds show and how to edit them is on the [Discord Bot](/docs/discord#embeds) page. Both need **Settings: Change** (`settings.write`).
+
+| Command | Options | What it does |
+| --- | --- | --- |
+| `/status add` | None | Posts the status embed in this channel, or updates it in place if it is already here. |
+| `/status remove` | None | Deletes the status embed message and forgets its location. |
+| `/players add` | None | Posts the player list embed in this channel, or updates it in place if it is already here. |
+| `/players remove` | None | Deletes the player list embed message and forgets its location. |
+
+`add` only works in a text or announcement channel; anywhere else the reply is `Channel type not supported.` There is one status embed and one player list embed at a time. Running `add` in a different channel deletes the old message and posts a new one, and running it in the same channel edits the existing message. Adding the player list also resets its page to 1.
+
+The private reply on success is `Status embed saved.`, `Player list embed saved.`, `Old status embed removed.` or `Old player list embed removed.`
+
+The change is written to the Action Log as **Save Status Embed Location**, **Clear Status Embed Location**, **Save Player List Embed Location** or **Clear Player List Embed Location**. Moving an embed to another channel logs only the save.
+
+| Reply | Cause and fix |
+| --- | --- |
+| `Failed to remove old status embed: no saved message id was found.` | `/status remove` with no saved embed. The player list version says `player list embed`. |
+| `Failed to remove old status embed: <reason>` | Discord refused to delete or edit the old message, usually missing permissions in that channel. |
+| `Failed to remove old status embed: Channel <id> not found.` | `/status remove` when the saved channel no longer exists. Run `/status add` in a channel, then remove it. `add` handles a deleted channel by posting a new message. |
+| `Stored status embed channel is not a text or announcement channel.` | The saved location is a thread, forum or voice channel. Run `add` in a text channel. |
+| `**Failed to generate new status embed:**` and the error | The embed JSON, a URL or a button emoji is invalid. Fix it in the embed editor; see [Embed errors](/docs/discord#embed-errors). |
+| `placeholder message, attempting to edit with embed...` posted in the channel | Discord rejected the embed. The message stays until you fix the embed and run `add` again. |
+
+#### Player list pages
+
+The **Prev** and **Next** buttons on the player list embed change the page for everyone who is looking at it. A button on an old message that is no longer the active player list replies `This player list embed is no longer active.` If no player list is saved it replies `Player list embed is not configured.`
+
+### Info and admininfo
+
+Look a player up in the sxPanel database.
+
+| Command | Options | What it shows |
+| --- | --- | --- |
+| `/info self` | None | The player linked to your own Discord ID. |
+| `/info member` | **member** (required) | The player linked to that Discord member. |
+| `/info id` | **id** (required, at least 5 characters) | Players matching an identifier. |
+| `/admininfo self`, `member`, `id` | As for `/info` | The same card with notes, identifiers and action counts added. |
+
+`/info` needs no sxPanel account and no permission: anyone in the server who can see the command can use it. `/admininfo` needs a linked admin account but no particular permission.
+
+Each player is one card titled with their display name, listing **Play time**, **Join date**, **Last connection** and **Whitelisted** (the approval date, or `not yet`). `/admininfo` adds **Log** (for example `1 ban, 2 warns, 0 kicks`), **• Notes:** and **• Identifiers:**, each in a code block and cut to 1000 characters. An empty note or identifier list shows `nothing here`.
+
+If the identifier has no match the reply is `Identifier (<id>) does not seem to be associated to any player in the sxPanel database.`
+
+### History
+
+`/history` shows a player's recent warns, kicks and bans.
+
+| Subcommand | Options |
+| --- | --- |
+| `self`, `member`, `id`, `serverid` | The target as in [Choosing a target](#choosing-a-target), and an optional **limit**: a whole number from 1 to 10, default 5. |
+
+Needs a linked admin account, with no extra permission. The reply is titled `History · <player>` and says `Showing the N most recent moderation actions for <license>.` Each action is a field headed by its ID and type (for example `B1234 · BAN`) with who did it and when, the reason (cut to 700 characters) and a status:
+
+| Status | Meaning |
+| --- | --- |
+| `Revoked by <admin> on <date> (<reason>)` | The action was revoked. |
+| `Permanent` | A ban with no end. |
+| `Expires <date> (<time> left)` | An active temporary ban. |
+| `Expired on <date>` | A temporary ban that has ended. |
+| `Acknowledged in game` / `Pending acknowledgement` | A warn that the player has or has not confirmed. |
+| `Executed` | A kick. |
+
+A player with no actions gets `No action history was found for <player>.`
+
+### Notes
+
+`/notes` reads or replaces the note on a player's profile. The note is the same one shown on the player's page in the panel.
+
+| Command | Options | What it does |
+| --- | --- | --- |
+| `/notes view self` / `member` / `id` / `serverid` | The target | Shows the note, the player's license and who last edited it and when. |
+| `/notes set self` / `member` / `id` / `serverid` | The target, and **note** (required, up to 1000 characters) | Replaces the whole note with the text. |
+
+Both need a linked admin account; neither checks a further permission, the same as saving a note in the panel. A `set` replaces any previous note, and an empty note is refused with `Note cannot be empty.` The reply is `Updated notes for <player>.` and the Action Log gets a `Set notes for <license>` entry under your admin name. A note with nothing saved shows `No notes saved for this player.`
+
+Notes shown by `view` are cut to 3500 characters.
+
+### Warn, kick and ban
+
+These run the same code as the buttons on the player window in the panel, so the permissions, records, in-game messages and [addon events](/docs/addon-api) are identical. Each needs a linked admin account with the permission shown.
+
+| Command | Options | Permission | Notes |
+| --- | --- | --- | --- |
+| `/warn member` / `id` / `serverid` | **reason** (required, up to 300 characters) | **Warn** (`players.warn`) | Saves a warn and shows it in game. Works on offline players too, as long as they have identifiers. |
+| `/kick member` / `id` / `serverid` | **reason** (required, up to 300 characters) | **Kick** (`players.kick`) | Only works on a connected player. |
+| `/ban member` / `id` / `serverid` | **duration** (required, up to 40 characters), **reason** (required, up to 300 characters) | **Ban** (`players.ban`) | Permanent bans also need **Ban: Permanent** (`players.ban.permanent`). |
+
+Success replies are `Warned <player>.`, `Kicked <player>.` and `Banned <player> for <duration>.`
+
+**Duration** is `permanent`, or a number and a unit with a space: `1 hour`, `12 hours`, `1 day`, `2 weeks`, `1 month`. A month counts as 30 days. Anything else is refused with `The duration number must be at least 1.` or `Invalid ban duration. Supported units: hours, days, weeks, months`. Fractions and shorthand such as `1d` are not accepted.
+
+| Reply | Cause and fix |
+| --- | --- |
+| `You don't have permission to apply permanent bans.` | The ban was `permanent` and the admin lacks **Ban: Permanent**. Use a duration, or grant the permission. |
+| `The server is not running.` | `/kick` while the server is stopped. |
+| `This player is not connected to the server.` | `/kick` on a player who is offline, or a `serverid` not in use. |
+| `Cannot warn a player with no identifiers.` / `Cannot ban a player with no identifiers.` | The player record has no identifiers to act on. |
+| `Warn saved, but likely failed to send the warn in game (stdin error).` / `Player banned, but likely failed to kick player (stdin error).` | The action is recorded but the server did not receive the command. Check that the server is running. |
+
+An `id` or `member` target that matches a player who is not online is still warned or banned. The ban is stored and is enforced when they next try to connect. If the server is stopped the ban is stored with no in-game message.
+
+### Unban
+
+`/unban` revokes a ban. Needs a linked admin account with **Unban** (`players.unban`).
+
+| Subcommand | Options | What it does |
+| --- | --- | --- |
+| `action` | **action_id** (required, 2 to 16 characters, for example `B1234`), **reason** (optional, up to 300 characters) | Revokes that action. The ID is made upper-case. |
+| `member` / `id` / `serverid` | The target, and an optional **reason** | Revokes the target's active ban. |
+
+For the target forms the player must have exactly one active ban (not revoked and not expired). If there is none the reply is `No active bans were found for <player>.` If there are several the reply is `Multiple active bans match <player>. Use the /unban action subcommand with one of these IDs:` and lists up to five with the admin that issued them and when they end. Rerun with `/unban action`.
+
+The success reply is `Revoked ban B1234 for <player>.` If sxPanel refuses the revoke, for example for an unknown action ID, the reply is `Failed to revoke action: <reason>`. The revocation is logged in the Action Log and sent to the game server as the `actionRevoked` event, the same as revoking from [History](/docs/history).
+
+### Whitelist
+
+`/whitelist` approves players. It needs **Whitelist** (`players.whitelist`) on a linked admin account or a mapped role. The whitelist itself is explained on the [Whitelist](/docs/whitelist) page.
+
+| Subcommand | Options | What it does |
+| --- | --- | --- |
+| `member` | **member** (required) | Pre-approves the Discord member. The approval is for `discord:<id>`, named after their server nickname, global name or username, with their avatar. |
+| `application` | **id** (required, exactly 5 characters) | Approves the open request with that ID, for example `R7K2M`. |
+| `request` | **id** (required, exactly 5 characters) | The same as `application`. |
+
+Request IDs start with `R`. The reply is `Added whitelist approval for <name>.` or `Approved whitelist request R7K2M from <name>.`, shown to everyone in the channel. The Action Log records **Add Whitelist Approval** or **Approve Whitelist Request**, and the in-game event `whitelistPreApproval` is sent for `member`.
+
+Other replies: `Invalid request ID.` (the ID is not `R` plus four characters), `Whitelist request ID R7K2M not found.`, `Failed to resolve member ID.`, `Failed to save whitelist approval: <reason>` and `Failed to save wl approval: <reason>`.
+
+Reactions on a whitelist review thread approve or deny requests and need the same permission. See [Review threads](/docs/whitelist#review-threads).
+
+### Reports
+
+`/reports` triages tickets. It needs **Reports** (`players.reports`) on a linked admin account or a mapped role, and **Player Tickets** turned on. The ticket system is explained on the [Reports](/docs/reports) page.
+
+| Subcommand | Options | What it does |
+| --- | --- | --- |
+| `summary` | **id** (optional) | With an ID, or inside a ticket thread: the ticket card with buttons. With neither: the queue summary. |
+| `claim` | **id** (optional) | Claims the ticket for you, or unclaims it if you already hold it. |
+| `assign` | **member** (required), **id** (optional) | Assigns the ticket to that Discord member. |
+| `resolve` | **id** (optional) | Sets the ticket to **Resolved**. |
+| `reopen` | **id** (optional) | Sets a resolved or closed ticket back to **Open**. |
+
+**id** is the ticket ID and is not case-sensitive. When you leave it empty inside a ticket's Discord thread, the command acts on that thread's ticket. Outside a thread an empty ID gives `Provide a ticket ID or run this command inside a linked ticket thread.`; a thread without a ticket gives `This Discord thread is not linked to a ticket.`
+
+The **queue summary** is titled `Report Queue Summary` with three fields: **Queue** (total, open, in review, resolved, closed and average resolution), **Priority Mix** and **Active Tickets** (open and in-review tickets, newest activity first, or `No open or in-review tickets right now.`).
+
+A ticket card shows status, priority, who has claimed it, the reporter, the number of messages and staff notes, the dates and the targets. Its buttons are **Refresh**, **Claim / Unclaim**, **Assign**, **Resolve** and **Reopen**. They run the same actions as the commands. **Assign** opens a private picker, **Choose a staff member**, and the ticket card is updated when you choose.
+
+| Situation | Reply |
+| --- | --- |
+| `assign` to someone with no admin account | `That Discord account is not linked to an sxPanel admin, so it cannot own ticket assignments.` |
+| `assign` to the current owner | `This ticket is already assigned to <admin>.` |
+| `resolve` on a resolved ticket | `This ticket is already resolved.` |
+| `resolve` on a closed ticket | `This ticket is closed. Reopen it before resolving it again.` |
+| `reopen` on an open ticket | `This ticket is already open.` |
+| Any ID that does not exist | `Ticket <id> was not found.` |
+
+Claims, assignments, resolves and reopens are added to the ticket's activity trail and logged under your admin name (or `[Discord] <labels>` for a role-only member). Resolving, from a command or a button, also posts the `Ticket <id> Resolved` announcement to the Discord warnings channel. There is no Discord command to close a ticket or to add a staff note. Messages a person writes in a ticket thread are copied into the ticket as `discord` messages with up to three attachments.
+
+## Without a command
+
+The bot also reacts to some things that are not commands:
+
+| Event | What it does |
+| --- | --- |
+| A message in a ticket thread | Added to the ticket as a reply, with up to three image attachments. Bots are ignored. |
+| ✅, ☑️, 👍 on a whitelist review thread | Approves the request. Needs **Whitelist**. |
+| ❌, ✖️, 👎 on a whitelist review thread | Denies the request. Needs **Whitelist**. |
+| A role added to or removed from a member in the Discord server | Re-reads the mapped permissions of the matching admin. See [Role sync](/docs/discord#role-sync-for-linked-admins). |
+
+## Limits and edge cases
+
+- **Server only.** Commands are registered on the server you configured. They do not appear in direct messages or other servers.
+- **Registration lag.** The bot reports ready before it registers commands. After a start or a settings change, new or removed commands can take a few seconds to show. If registration fails, the bot stays online but commands are missing or out of date; the error is in **System → Console Log**.
+- **Reports.** Turning **Player Tickets** off removes `/reports` the next time commands are registered. Turning it on adds it back.
+- **Result sizes.** `/info` and `/admininfo` show at most 10 matching players; `/history` shows at most 10 actions; a list of several matching targets shows five.
+- **Bot off or not ready.** The commands do not exist while the bot is disabled and cannot reach sxPanel while it is restarting. Wait for it to be ready again. See [Limits and edge cases](/docs/discord#limits-and-edge-cases) on the Discord Bot page.
+- **Duplicate bots.** If two bot processes use the same token, the second logs that the interaction was already acknowledged and leaves it to the first.
+- **Addon commands.** Addons can add their own commands and buttons. Those are rate limited per addon and are not covered here; see [Addon API](/docs/addon-api).
+
+## Problems
+
+| Symptom | Cause and fix |
+| --- | --- |
+| Slash commands are not in the list | The bot was invited without the `applications.commands` scope, or registration failed. Re-invite it with both scopes. See [Create and invite the bot](/docs/discord#create-and-invite-the-bot). |
+| `/reports` is missing but the others are there | **Player Tickets** is off. |
+| `No handler available for /<command>.` | Discord still lists a command that the bot no longer has, for example from an addon that was removed. Restart the bot from **System → Diagnostics → Discord Bot** to register again. |
+| `No handler available for this interaction (<type> > <id>).` | A button or menu from an old message the bot no longer handles. |
+| `Your account does not have sxPanel access.` | The admin's **Discord ID** is not the numeric Discord user ID. Copy it with Developer Mode on. |
+| `/kick` says the player is not connected | Use `/ban` to act on an offline player, or check the server ID. |
+| `/ban` fails with `You don't have permission to apply permanent bans.` | Grant **Ban: Permanent**, or use a duration. |
+| A role-based moderator cannot use `/ban` | Moderation commands do not use role mappings. Link them to an admin account that has the permission. |
+| `This addon <type> is being rate limited. Try again in <n>s.` | An addon command was used too often. Wait. |
+| Reply in Discord says `<command> failed: ...` | The panel side returned an error. The text after the colon says why; the Console Log has more. |

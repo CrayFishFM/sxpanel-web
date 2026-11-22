@@ -332,25 +332,15 @@ Reports can also open a Discord thread per ticket. That channel is set under the
 
 ## Slash commands
 
-The bot registers these commands on your server when it starts and when the addon list or the reports setting changes. `/reports` only exists while **Reports** is enabled.
+The bot registers its commands on your server when it starts. The [Discord slash commands](/docs/discord-commands) page is the full reference: every option, the permission each command needs and what it replies with.
 
 | Command | Description |
 | --- | --- |
-| `/status add` / `/status remove` | Create, move or remove the status embed. |
-| `/players add` / `/players remove` | Create, move or remove the player list embed. |
-| `/info self`, `member`, `id` | Look up a player in the sxPanel database. |
-| `/admininfo self`, `member`, `id` | The same lookup with identifiers, notes and action history. Needs a linked admin account. |
-| `/history` | Recent actions for a player. Options for who to look up (`self`, `member`, `id`, `serverid`) and `limit` (default 5, maximum 10). |
-| `/notes view` / `/notes set` | Read or replace a player's note (maximum 1000 characters). |
-| `/warn`, `/kick` | Warn or kick a player, with a reason. |
-| `/ban` | Ban a player with a duration such as `1 day`, `2 weeks` or `permanent`, and a reason. |
-| `/unban action`, `member`, `id`, `serverid` | Revoke a ban by action ID (for example `B1234`) or for a player, with an optional reason. |
-| `/whitelist member`, `application` / `request` | Pre-approve a Discord member, or approve an application by ID (for example `R1234`). |
-| `/reports summary`, `claim`, `assign`, `resolve`, `reopen` | Triage reports. Leave the ticket ID empty inside a ticket thread. |
-
-Target options accept a Discord member, an identifier such as `license:…` or `discord:…`, or a connected player's server ID. The actions are recorded in the [History](/docs/history) and the [Action Log](/docs/system) under the admin's name.
-
-When someone without access runs a command, they see `Your account does not have sxPanel access.` with their Discord ID, `Your linked sxPanel account does not have the "<permission>" permission required for this action.`, or `Your Discord roles do not grant the "<permission>" permission required for this action.`. Make sure the admin's **Discord ID** in the Admin Manager is the numeric user ID.
+| `/status`, `/players` | Add, move or remove the status and player list embeds. |
+| `/info`, `/admininfo`, `/history`, `/notes` | Look up a player, read their history, read or replace their note. |
+| `/warn`, `/kick`, `/ban`, `/unban` | Moderate players. |
+| `/whitelist` | Pre-approve a member or approve a request. |
+| `/reports` | Triage tickets. |
 
 ## Limits and edge cases
 

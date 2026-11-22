@@ -491,7 +491,9 @@
         "core/modules/DiscordBot/persistentEmbedCommandHandlers.ts"
       ],
       "notes": "Every slash command: options, who can run it, what it replies with, and the panel permission it maps to.",
-      "status": "todo"
+      "status": "done",
+      "writtenAt": "2026-11-22",
+      "sourceSha": "a21e752720dac257eafa73132d5d73599ec76ff2"
     },
     {
       "id": "discord-logs",
