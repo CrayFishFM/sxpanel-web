@@ -1,0 +1,289 @@
+---
+title: Deferral cards
+description: The cards players see when they cannot join or have to wait, every scenario, the Deferral Card Studio editor, placeholders, images, buttons, import and export, and how addons add their own cards.
+---
+
+When a player connects, FiveM holds them in a "deferral" while sxPanel decides whether to let them in. If the answer is no, or the player has to wait, sxPanel shows a **card** on the connection screen. Deferral cards let you change what each of those screens looks like and says: bans, every whitelist outcome, the connection queue and a generic fallback. Server owners and admins with settings access use them.
+
+## Where to find it
+
+- **Settings → Deferral Cards** (`/settings#deferral-cards`): shared options, import and export, and the button that opens the studio.
+- **Deferral Card Studio** (`/settings/deferral-studio`): the visual editor. Open it with **Open deferral card studio** on the tab. You cannot open the address directly; without having come from the tab the page sends you back to `/settings#deferral-cards`.
+
+![Settings page with the row of section tabs](/docs/settings.webp)
+
+## Who can use it
+
+| Permission | Id | What it allows |
+| --- | --- | --- |
+| **Settings: View** | `settings.view` | See the **Deferral Cards** tab and use **Export all**. |
+| **Settings: Change** | `settings.write` | Edit the tab, open the studio, import and save. The studio route and the addon metadata request both need it. |
+
+With only **Settings: View**, the **Discord invite** field is read-only, **Save changes** is disabled, and **Open deferral card studio** and **Import** are disabled. See [Settings overview](/docs/settings) for how saving and permissions work on the page.
+
+## Scenarios
+
+A scenario is one situation with its own card. Each has its own layout, size and text. The studio lists them in its scenario selector under **Core**.
+
+| Scenario (as shown) | Id | When the player sees it |
+| --- | --- | --- |
+| **Ban — temporary** | `ban_temporary` | The player has an active ban with an expiration. |
+| **Ban — permanent** | `ban_permanent` | The player has a ban without an expiration. |
+| **Whitelist — pending approval** | `whitelist_pending` | Manual review: the player is not approved. Includes their request ID. |
+| **Whitelist — applications closed** | `whitelist_schedule_closed` | The player tried to join outside the application schedule. |
+| **Whitelist — admin-only denied** | `whitelist_admin_denied` | Admin-only mode: the player is not an sxPanel admin. |
+| **Whitelist — admin-only missing IDs** | `whitelist_admin_insufficient_ids` | Admin-only mode: the player has no usable license or Discord identifier. |
+| **Whitelist — not in Discord** | `whitelist_discord_member_denied` | Discord member mode: the player is not in your Discord server. |
+| **Whitelist — Discord member missing ID** | `whitelist_discord_member_insufficient_ids` | Discord member mode: no `discord:` identifier. |
+| **Whitelist — roles: not in guild** | `whitelist_discord_roles_not_member` | Discord roles mode: the player is not in the server. |
+| **Whitelist — roles: missing role** | `whitelist_discord_roles_no_roles` | Discord roles mode: the member has none of the required roles. |
+| **Whitelist — roles: missing ID** | `whitelist_discord_roles_insufficient_ids` | Discord roles mode: no `discord:` identifier. |
+| **Whitelist — missing license** | `whitelist_insufficient_license` | Manual review: no `license:` identifier on connect. |
+| **Whitelist — validation error** | `whitelist_error` | Discord or an internal check failed while checking the whitelist. |
+| **Connection queue** | `connection_queue` | The player is waiting in the [connection queue](/docs/settings/queue). |
+| **Access denied (generic)** | `access_denied` | Described in the studio as the fallback when no specific scenario matches. |
+
+<Callout type="info">
+Which whitelist cards can appear depends on the active join workflow. See [Whitelist](/docs/whitelist) for the workflows. Bans only produce a card while ban checking is enabled; see [History](/docs/history) for how bans are created and what a player sees.
+</Callout>
+
+Each scenario starts from a built-in layout whose wording follows the txAdmin style. Edits are saved per scenario, and **Restore default** in the studio puts one back.
+
+### Ban cards
+
+For bans the card is a visual layout filled with the ban's data. Extra text on a ban card, available through the **Rejection message** element and `{customMessage}`, is made of the "banned by" line, the rejection message from the **Bans** tab and the ban note, when present. For a temporary ban, the **Ban expiry** element and `{banExpires}` are filled; for a permanent ban they stay empty and the element is hidden.
+
+## The Deferral Cards tab
+
+The tab has these controls. It follows the usual per-card **Save changes** behaviour of the [Settings page](/docs/settings#saving).
+
+| Setting | What it does | Default | Limits / values |
+| --- | --- | --- | --- |
+| **Discord invite** | The link substituted for `{discordInvite}` in every card, and the default target of the **Button (link)** element. The line below the field shows a **Preview:** of the value that will be used. | `https://discord.gg/example` | Free text. An empty value falls back to the default. |
+| **Custom placeholders** | Extra static tokens you can use as `{key}` in any card text. The same list applies to every scenario. Lists the built-in tokens and any addon tokens too. See [Custom placeholders](#custom-placeholders). | None | See below |
+| **Deferral card studio** | **Open deferral card studio** opens the visual editor. | — | Needs **Settings: Change** |
+| **Import and export** | **Export all** downloads every card as JSON. **Import** reads such a file. See [Import and export](#import-and-export). | — | `.json` files |
+
+These values are stored in the `whitelist.deferralCards` config key (see [Configuration](/docs/configuration)). The watermark logo is on by default (`skin.showLogo`); you switch it per card in the studio.
+
+Saving the tab fails with the toast **Deferral body template is too long.** and `Keep "<scenario id>" under 2048 characters.` if a scenario's body text exceeds 2048 characters.
+
+<Callout type="warn">
+The tab and the studio save separately. **Save changes** on the tab saves everything on it. In the studio, **Save card** saves only the open scenario, together with the **Discord invite** and custom placeholders as they stand when the studio opened. Open the studio after saving the tab, or the values you typed on the tab are carried into the studio's first save.
+</Callout>
+
+## Deferral Card Studio
+
+The studio is a FiveM-sized canvas with a toolbar above it, a **Layers** list on the left and a properties panel on the right. It opens on **Whitelist — pending approval**. The preview is labelled **FiveM connection preview** and shows the size of the card and the current snap setting.
+
+### Toolbar
+
+| Control | What it does |
+| --- | --- |
+| **Scenario…** | Selects the scenario to edit. Cards with unsaved changes are marked with a dot. Addon scenarios appear in a second group, **Addons**. Switching away from a card with unsaved changes asks **Discard unsaved changes?**. |
+| Card size | **Wide (640×220)**, **Compact (400×160)**, **Tall (520×320)** or **Custom**. The size in pixels is shown next to it. |
+| Width × height | Shown with **Custom**. Width 320–720, height 120–480. Values outside the range are clamped. |
+| **Add** | Adds an element at the bottom of the card. See [Elements](#elements). |
+| **Watermark logo** | Toggle. Shows or hides the sxPanel logo on this card. |
+| **Snap to grid** | Toggle, on by default. Snaps dragging and coordinates to an 8 px grid. When off, placement is free. |
+| **Show grid** | Toggle, off by default. Draws the 8 px grid. |
+| **File** | **Export all**, **Export scenario**, **Restore default** and **Import**. See [Import and export](#import-and-export). |
+| **Save card** / **Saved** | Saves the open scenario. It reads **Saved** and is disabled when there is nothing to save. |
+| **Back** | Returns to the tab. If any scenario has unsaved changes you are asked **Leave without saving?**. |
+
+The snap and grid toggles are remembered in your browser, not on the server.
+
+### Layers
+
+The **Layers** list shows every element of the card, front to back from the top. Click one to select it, drag to change the stacking order, and use the eye icon to hide or show an element without deleting it. A hidden element is not shown to players. An empty card shows `No elements yet.`
+
+### Editing on the canvas
+
+Click an element to select it and drag it to move it. Press Esc to deselect. The properties panel shows the selected element's name and a trash button to remove it, followed by the controls for its type and **X** and **Y** coordinates. With nothing selected it says `Select an element on the card or in the layers list to edit it.`
+
+The card has a fixed size and anything outside it is clipped, so make the card taller rather than letting content run past the bottom.
+
+### Elements
+
+Use **Add** to put these on a card. The two ban elements are listed only on the two ban scenarios.
+
+| Element | Shows | Properties |
+| --- | --- | --- |
+| **Title** | The card heading. If left empty it uses the scenario title. | Text |
+| **Text line** | A single line of text. | Text |
+| **Paragraph** | Rich text with placeholders. | Text |
+| **Rejection message** | The `{customMessage}` text, the reason for the rejection. | None |
+| **Custom text** | Free text with placeholders and basic HTML. | Text |
+| **Request ID** | The player's whitelist request ID, or the ban ID on a ban card. Hidden when there is none. | None |
+| **Ban ID** | The ban's ID. Hidden when there is none. | None |
+| **Tier name** | The whitelist tier, if the scenario has one. | None |
+| **Custom image** | An uploaded image. See [Images](#images). | Image |
+| **Button (link)** | A clickable link. See [Buttons](#buttons). | Label, link, colors |
+| **Spacer** | A vertical gap. | None |
+| **Divider** | A horizontal line. | None |
+| **Watermark logo** | The sxPanel logo. | **X**, **Y**, **Width** (24–180), **Height** (16–48) |
+| **Ban reason** | The ban reason. Hidden when there is none. Ban scenarios only. | None |
+| **Ban expiry** | Time left on the ban. Hidden for permanent bans. Ban scenarios only. | None |
+
+Text elements accept plain text and basic HTML. Three extra tags work in text: `<guildname>…</guildname>` (highlights your Discord server name), `<code>…</code>` and `<codeid>…</codeid>` (styled boxes, the second for IDs).
+
+If an element's text refers to something empty at connect time, for example `{requestId}` on a ban, it renders as empty text.
+
+### Placeholders
+
+Placeholders are replaced with real values when a player connects. Write them with braces in any text, button label or button link.
+
+| Token | Value |
+| --- | --- |
+| `{requestId}` | The whitelist request ID. |
+| `{tierName}` | The whitelist tier name. |
+| `{customMessage}` | The scenario's message. For whitelist scenarios this is the reason text from your language file; see the ban section above for bans. |
+| `{guildName}` | The name of your Discord server. |
+| `{discordInvite}` | The **Discord invite** from the tab. |
+| `{serverName}` | Your server name from **Settings → General**. |
+| `{playerName}` | The connecting player's name. |
+| `{queuePosition}`, `{queueSize}`, `{queueEta}` | Queue position, queue length and estimated wait. Meaningful on **Connection queue**. |
+| `{banReason}`, `{banExpires}`, `{banId}`, `{banDate}`, `{banAuthor}` | Details of the ban. Meaningful on the ban scenarios. `{banAuthor}` is empty when admin names are hidden in punishments. |
+
+Player-supplied values are escaped, so a player name cannot inject HTML into a card.
+
+In the studio preview these use sample values (for example `SniperSpools`, `Your Server Name`, queue position `3` of `12`, ETA `00:11`, ban ID `A12345`).
+
+### Custom placeholders
+
+On the tab, **Custom placeholders** lists the built-in tokens, any addon tokens, and your own. Press **Add** to create a row with a **key**, a **label** and a **value at connect**. Use `{key}` anywhere in card text.
+
+- A key must start with a letter and contain only letters, numbers and underscores, up to 48 characters. Braces you type are removed. A list containing an invalid key (for example an empty one) is discarded as a whole, so fill every key in before you save.
+- Duplicate keys are dropped on save; the first one wins.
+- Custom placeholders are static text. They are shared by all scenarios.
+- A custom key with the same name as a built-in token is not blocked by the editor; avoid it.
+
+### Images
+
+Select a **Custom image** element, then **Upload image**. Accepted files are SVG (up to 256 KB), PNG and GIF (up to 1024 KB each). GIFs animate. The panel rasterizes an SVG to PNG when you upload it, so SVGs from dubious sources are not embedded as markup. **Remove** clears the image.
+
+Failures show as **Image upload failed** with one of `Only .svg files are supported.`, `SVG must be under 256 KB.`, `Could not read a valid SVG from that file.` or `Could not rasterize SVG for FiveM (try a simpler file).`.
+
+FiveM cannot load images from `data:` addresses, so in game, images are served from the panel at `/deferral-card-assets/<scenario>/<element>`, together with the watermark at `/deferral-card-logo.png`. These two paths are public (no login) because the connecting player has no session.
+
+<Callout type="warn">
+Players' game clients must be able to reach your panel address to see images and the logo. sxPanel builds the address from the configured panel URL (`TXHOST_TXA_URL`), or from the network interface and port. If neither is set, the logo and PNG/GIF images are embedded in the card instead.
+</Callout>
+
+### Buttons
+
+A **Button (link)** element shows a coloured button that opens a web link in the player's browser when clicked.
+
+| Field | What it does | Default | Limits |
+| --- | --- | --- | --- |
+| **Button label** | Text on the button. Placeholders work. | `Join Discord` | 1–64 characters |
+| **Link URL** | Where the button goes. Placeholders such as `{discordInvite}` work. | `{discordInvite}` | 1–2048 characters. Only `http` and `https`. A link without a scheme gets `https://`. |
+| **Background** | Button colour (picker and text). | `#5865F2` | `#rgb`, `#rrggbb`, `rgb()` or `rgba()`. Anything else is replaced with the default on save. |
+| **Text** | Label colour. | `#ffffff` | Same as above |
+
+A button with no usable link is not shown to players. In the studio the card shows `Set a valid https:// URL`.
+
+### Restore default
+
+**File → Restore default** asks **Restore default card?** and replaces the open scenario with its built-in layout and text. Nothing is saved until you press **Save card**. It does not work for addon scenarios: you get **Cannot restore** with `Addon scenarios use the addon default template — re-save from the addon manifest.`
+
+### Saving
+
+**Save card** shows `Saving <scenario>…` and then `<scenario> saved`. Only the open scenario is written; edits to other scenarios you have open stay in the studio until you switch to each one and save it. Changes apply to the next player who connects. No restart is needed.
+
+If the server does not answer the toast reads `No response from server (timeout or connection lost).`, and if it refuses the change `Server rejected the changes.` or the reason it gives.
+
+## Import and export
+
+Cards are exchanged as JSON files with the header `sxPanelDeferralCard`.
+
+| Action | Where | Result |
+| --- | --- | --- |
+| **Export all** | Tab, studio **File** menu | Downloads `deferral-cards-all.json` with every scenario, **Discord invite**, custom placeholders and watermark default. |
+| **Export scenario** | Studio **File** menu | Downloads `deferral-<scenario id>.json` with only the open scenario. |
+| **Import** | Tab, studio **File** menu | Reads a file and merges its scenarios over your current ones. Scenarios that are not in the file are unchanged. |
+
+After import, a toast says **Imported** with the number of scenarios. On the tab you still have to press **Save changes**. In the studio the imported cards are loaded in, and the first imported scenario opens; save each one with **Save card**.
+
+Import fails with **Import failed** and one of:
+
+| Message | Cause |
+| --- | --- |
+| `Invalid JSON` | The file is not valid JSON. |
+| `Invalid deferral card file (missing sxPanelDeferralCard header).` | Not a file exported by sxPanel. |
+| `Export file has no template data.` | A single-scenario file without a usable card. |
+| `Unknown scenario: <id>` | A single-scenario file for a scenario that does not exist. |
+| `No valid scenarios found in export file.` | A full file with nothing importable. |
+| `Addon "<id>" is not installed — cannot import scenario "<scenario>".` | A single addon-scenario file whose addon is not installed. |
+
+Addon scenarios in a full file are skipped with the warning **Some addon cards skipped** listing them, unless the addon is installed.
+
+## Addon scenarios and tokens
+
+[Addons](/docs/addons) that have the `deferral` permission can add their own scenarios and tokens. See [Addon API](/docs/addon-api#deferral-integration) for the code.
+
+- Addon scenarios appear in the studio under **Addons**, identified as `<addon id>:<key>`. The sample text for them is `{customMessage}`.
+- Addon tokens appear on the tab under **Addon tokens (dynamic)** with the owning addon. They are resolved at connect time by the addon, not typed in. An addon has 2 seconds to answer.
+- An addon shows a card to a specific player with `addon.deferPresent`. The card is shown the next time that player's license is checked, within 120 seconds, and only once. An addon's scenario card is shown after the ban check and before the whitelist check.
+- If you have not edited an addon scenario, sxPanel uses the addon's default template, or a plain card with `Access Denied` and `{customMessage}` if it has none.
+- Removing an addon removes its scenarios and tokens from the studio. Your saved edits stay in the config.
+
+## How it connects
+
+- [Whitelist](/docs/whitelist) decides which whitelist scenario applies. Its **Applications closed message** and the language-file messages feed `{customMessage}`.
+- [Connection queue](/docs/settings/queue) uses the **Connection queue** scenario.
+- Bans come from [History](/docs/history) and the **Bans** settings, which supply the rejection message.
+- The studio does not post to Discord and does not write an Action Log entry.
+
+## Limits and edge cases
+
+- **Queue card is text only.** FiveM does not render HTML in queue updates, so the **Connection queue** card is sent as an Adaptive Card. It shows text elements, dividers (as a gap) and text elements that share the same vertical position as columns. Images, buttons, spacers and the logo are not shown. The card refreshes about every 5 seconds, and only when its content changes.
+- **Cards are HTML.** All other scenarios are HTML. FiveM supports only a subset, so test with a real connection. The studio preview is an approximation.
+- **Logo.** Per scenario, **Watermark logo** overrides the default. An element named **Watermark logo** that is hidden hides the logo too.
+- **Legacy cards.** A card with no layout still works. It is built from a title and body text, with the request ID and tier appended.
+- **Size.** Width 320–720 px, height 120–480 px. Body text up to 2048 characters.
+- **Unsaved changes.** Leaving the studio or closing the browser tab with unsaved cards asks for confirmation.
+
+## Common tasks
+
+### Change the not-whitelisted card
+
+<Steps>
+<Step>Open **Settings → Deferral Cards**, set **Discord invite** to your server's invite and press **Save changes**.</Step>
+<Step>Press **Open deferral card studio**. **Whitelist — pending approval** is selected.</Step>
+<Step>Click the text you want to change and edit it in the panel on the right. Use `{discordInvite}` and `{requestId}` where needed.</Step>
+<Step>Press **Add → Button (link)** to add a join button. Set its label and leave the link as `{discordInvite}`.</Step>
+<Step>Press **Save card**. The next player who is turned away sees the new card.</Step>
+</Steps>
+
+### Add a logo image to a ban card
+
+<Steps>
+<Step>In the studio choose **Ban — temporary**, then **Add → Custom image**.</Step>
+<Step>Select the element and press **Upload image**. Choose a PNG, GIF or SVG within the size limits.</Step>
+<Step>Drag it into place. Switch on **Show grid** if you want guides.</Step>
+<Step>Repeat for **Ban — permanent**, since each scenario has its own layout.</Step>
+<Step>Save each card.</Step>
+</Steps>
+
+### Copy your cards to another server
+
+<Steps>
+<Step>On the old server press **Export all** on the **Deferral Cards** tab.</Step>
+<Step>On the new server press **Import** and choose `deferral-cards-all.json`.</Step>
+<Step>Check the cards in the studio, then press **Save changes** on the tab.</Step>
+</Steps>
+
+## Problems
+
+| Message | Cause and fix |
+| --- | --- |
+| `Deferral body template is too long.` | A scenario's body text is over 2048 characters. Shorten it. |
+| `Select a scenario first.` | You pressed **Save card** before choosing a scenario. |
+| `No response from server (timeout or connection lost).` | The save timed out. Check the panel connection and try again. |
+| `Server rejected the changes.` | The server refused the save. The toast gives the reason, often missing **Settings: Change**. |
+| `Cannot restore` | **Restore default** does not work for addon scenarios. |
+| Image or logo missing for players | The game client cannot reach the panel address. Check `TXHOST_TXA_URL` and that the panel port is reachable from players. |
+| A button does not appear | Its link is empty or not an `http`/`https` link. |
+| A queue card has no image | The queue card is text only. See [Limits and edge cases](#limits-and-edge-cases). |
+| The studio returns to the tab | It was opened by address. Open it from **Open deferral card studio**. |
