@@ -1,62 +1,375 @@
 ---
-title: Discord Integration
-description: Run and monitor your server directly from Discord.
+title: Discord Bot
+description: Create and invite the sxPanel Discord bot, configure it, customise the status and player list embeds, map Discord roles to permissions and use the slash commands.
 ---
 
-sxPanel ships with a built-in Discord bot. It can maintain persistent,
-auto-updated status/player-list embeds in your server and exposes a suite of
-slash commands so admins can moderate without ever opening the panel.
+sxPanel ships with a Discord bot. It keeps a status embed and a live player list embed up to date in a channel, shows server stats as its Discord presence, lets admins moderate with slash commands, posts your [log routes](#discord-logging) to channels and can give admins permissions based on their Discord roles. The same Discord application can also power the **Login with Discord** button on the panel login page.
 
-## Status & player list embeds
+This page covers creating and inviting the bot, every Discord setting, the embeds and their editor, role permissions and the slash commands.
 
-`/status` and `/players` each create a persistent, auto-updated embed —
-server status and live player list respectively. Both embeds are fully
-templated (custom JSON, including footer) from the panel's Discord settings
-and refresh on an interval you control.
+## Where to find it
+
+- Panel: **Settings → Discord** (`/settings#discord`).
+- Embed editor: **Edit status embed** and **Edit player list embed** on that tab, at `/settings/discord-embed/status` and `/settings/discord-embed/playerList`.
+- Log routes editor: **Edit Logging** on that tab, at `/settings/discord-logs`.
+- Discord: the slash commands listed under [Slash commands](#slash-commands).
+- Bot state and recovery buttons: **System → Diagnostics → Discord Bot**, see [System pages](/docs/system#discord-bot).
+
+## Who can use it
+
+| Action | Permission |
+| --- | --- |
+| See the **Discord** tab | **Settings: View** (`settings.view`). The bot token and OAuth client secret show `[redacted by sxPanel]`. |
+| Change any setting, open the embed editor, save | **Settings: Change** (`settings.write`). The embed editor page is only available with this permission. |
+| `/status` and `/players` in Discord | **Settings: Change** (`settings.write`) on your linked admin account or on a mapped Discord role. |
+| `/warn`, `/kick`, `/ban`, `/unban` | **Warn** (`players.warn`), **Kick** (`players.kick`), **Ban** (`players.ban`), **Unban** (`players.unban`) on your linked admin account. |
+| `/whitelist` | **Whitelist** (`players.whitelist`), linked admin or mapped role. |
+| `/reports` | **Reports** (`players.reports`), linked admin or mapped role. |
+| `/info`, `/admininfo`, `/history`, `/notes` | `/info` needs no account. The others need a linked admin account, with no extra permission. |
+
+Master admins and admins with **All Permissions** (`all_permissions`) pass every check. Without **Settings: Change**, the controls on the tab are disabled and a save fails with `You don't have permission to execute this action.` See [Settings](/docs/settings) for how saving works and [Admins and permissions](/docs/permissions) for the permission list.
+
+## Create and invite the bot
+
+<Steps>
+<Step>
+Open the [Discord Developer Portal](https://discord.com/developers/applications) and create an application. Open **Bot** and create or reset the token. Copy it once; you paste it into sxPanel.
+</Step>
+<Step>
+Under **Bot → Privileged Gateway Intents** enable **Server Members Intent** and **Message Content Intent**, then save. The bot asks Discord for both. Without them Discord refuses the login and sxPanel shows the `GUILD_MEMBERS` instructions below.
+</Step>
+<Step>
+Invite the bot to your server from **OAuth2 → URL Generator** with the `bot` and `applications.commands` scopes. Give it permission to view and send messages in the channels it will post to (status embed, player list, log channels, ticket threads). Without `applications.commands`, the bot stays online but its slash commands are missing.
+</Step>
+<Step>
+In Discord, enable **Developer Mode** (user settings → Advanced), right-click your server icon and choose **Copy Server ID**.
+</Step>
+<Step>
+In sxPanel open **Settings → Discord**. Turn **Discord Bot** on, paste the **Token** and the **Guild/Server ID**, and click **Save changes**.
+</Step>
+<Step>
+In the channel for the status embed, run `/status add`. Run `/players add` in the channel for the player list. See [Add or move an embed](#add-or-move-an-embed).
+</Step>
+</Steps>
+
+Saving with the bot enabled starts it and waits for it to report ready. The success toast reads `Discord bot running as <tag> on <server name>.` and adds a note to check **System → Console Log** if the status embed is not updating. If you save with the bot off, the bot is stopped and nothing else is checked.
+
+<Callout type="warn" title="Use a token that belongs to this bot only">
+  Do not reuse a token that another bot or program is already using. Two programs logging in with one token disconnect each other.
+</Callout>
+
+## Settings
+
+The **Discord** tab holds the settings below. They are saved together with **Save changes**, except the embeds and the log routes, which are saved from their own editor pages.
+
+| Setting | What it does | Default | Limits / values |
+| --- | --- | --- | --- |
+| **Discord Bot** | Starts or stops the bot. | Disabled | Enabled / Disabled. |
+| **Token** | The bot token from the Developer Portal. | Empty | Required when the bot is enabled. At most 96 characters in the field. Hidden in the panel after saving. |
+| **Guild/Server ID** | The Discord server the bot works in. Slash commands are registered on this server only. | Empty | Required when the bot is enabled. A numeric Discord ID of 17 to 20 digits. |
+| **Discord Logging** → **Edit Logging** | Opens the log routes editor. See [Discord logging](#discord-logging). | No routes | |
+| **Bot Presence** → **Activity Status** | The bot's online state. | **Online** | **Online**, **Idle**, **Do Not Disturb**, **Invisible**. |
+| **Bot Presence** → **Activity Type** | The verb in front of the activity text. | **Watching** | **Playing**, **Watching**, **Listening**, **Competing**, **Custom**. |
+| **Bot Presence** → **Activity Text** | The text of the activity. Supports `{playerCount}`, `{maxPlayers}`, `{serverName}` and `{uptime}`. | `[{playerCount}/{maxPlayers}] on {serverName}` | At most 128 characters. |
+| **Bot Presence** → **Refresh Interval (seconds)** | Stored with the presence, see [Limits and edge cases](#limits-and-edge-cases) for how often it really refreshes. | 60 | Whole number from 30 to 3600. |
+| **Role Permission Mapping** | Gives Discord roles an sxPanel permission preset. See [Role permissions](#role-permissions). | No mappings | |
+| **Status Embed** → **Edit status embed** | Opens the [embed editor](#embed-editor) for the status embed. | Factory status embed | |
+| **Player List Embed** → **Edit player list embed** | Opens the embed editor for the player list embed. | Factory player list embed | |
+| **Client ID** | Application ID for **Login with Discord**. Optional. | Empty | Needed together with the secret. You can reuse the bot's application. |
+| **Client Secret** | OAuth2 client secret for **Login with Discord**. Optional. | Empty | Hidden after saving. |
+
+The **Token** and **Guild/Server ID** fields are required only while the bot is enabled. With the bot enabled, saving fails with `You must provide a Discord Bot Token to enable the bot.` or `You must provide a Server ID to enable the bot.` when one is empty.
+
+`{uptime}` in the activity text is filled with the raw uptime value from the monitor, not a formatted duration like the `{{uptime}}` embed placeholder.
+
+### Login with Discord
+
+Fill in **Client ID** and **Client Secret** to show the **Login with Discord** button on the login page. In the Developer Portal, open your application's **OAuth2** page, copy the client ID and secret, and add `<your-panel-url>/login/discord/callback` as a redirect URL. The admin who signs in must have their Discord ID set in the [Admin Manager](/docs/permissions); a Discord account that matches no admin is refused as not an admin. Discord sessions last 24 hours.
+
+### Saving and errors
+
+Saving with the bot enabled validates the token, server ID, warnings channel and log guild override, then restarts the bot. Failures appear as an error toast titled `Discord Bot Error` or `Error starting the bot:`.
+
+| Message | Cause and fix |
+| --- | --- |
+| `The bot requires the GUILD_MEMBERS intent.` | Server Members Intent is off. Enable it under **Bot → Privileged Gateway Intents**, save in the portal, then save again in sxPanel. |
+| `Wrong server ID`, `Bot is not in the server` or `Wrong bot` (listed together, with an invite link) | The bot could not find the guild. Check the Server ID, invite the bot with the link shown, and make sure the token belongs to that bot. The message `Discord bot could not resolve guild/server ID <id>.` comes with it. |
+| `Missing required fields to enable the bot.` | Token or server ID is empty. |
+| `Discord bot startup is taking longer than 60 seconds. The bot process is still running and will keep starting in the background — check its status shortly.` | Slow start (cold disk, antivirus, Discord rate limits). The bot keeps starting and switches to ready by itself. |
+| `Discord bot startup timed out.` / `Discord bridge disconnected before the bot reported ready.` | The bot did not report ready. Check **System → Console Log** and **Diagnostics → Discord Bot**. |
+| `Discord bot could not detect its own permissions.` | The bot is in the server but Discord returned no member data for it. Re-invite it. |
+
+Embed JSON is validated on save, even while the bot is disabled. A failure shows `Embed validation failed:` or `Player list embed validation failed:` followed by the reason, see [Embed errors](#embed-errors).
+
+## Embeds
+
+The bot keeps two optional embeds. Each is a single message the bot edits in place.
+
+| Embed | Created with | Shows by default |
+| --- | --- | --- |
+| Status embed | `/status add` | Server name, status (online, partial, offline), players, F8 connect command, next restart, uptime, banner, thumbnail and **Connect** and community buttons. |
+| Player list embed | `/players add` | Players online, page summary, the players in three columns of up to ten, a **Connect** button, a **Server Page** button and **Prev** / **Next** page buttons when there is more than one page. |
+
+Each embed is made of two JSON documents that you edit in the [embed editor](#embed-editor):
+
+- **Embed JSON** is the card: `title`, `url`, `description`, `fields`, `image`, `thumbnail`, `footer`.
+- **Config JSON** holds the status colours and labels, the player templates, the paging options and the link buttons.
+
+Both can use `{{placeholders}}` that the bot fills in on every refresh.
+
+### Add or move an embed
+
+<Steps>
+<Step>
+Customise the embed in the [embed editor](#embed-editor) and save.
+</Step>
+<Step>
+In Discord, go to a text or announcement channel where the bot can send messages and run `/status add` (or `/players add`). You need **Settings: Change**.
+</Step>
+<Step>
+The bot posts a message and replies `Status embed saved.` (or `Player list embed saved.`). The channel and message are remembered across restarts.
+</Step>
+</Steps>
+
+Running `/status add` in the channel that already holds the embed edits it in place. Running it in another channel deletes the old message and posts a new one there. `/status remove` and `/players remove` delete the message and forget it; they reply `Old status embed removed.` or `Old player list embed removed.`.
+
+Saving or clearing the location is written to the [Action Log](/docs/system) as **Save Status Embed Location**, **Clear Status Embed Location**, **Save Player List Embed Location** and **Clear Player List Embed Location**.
+
+If a command fails you see `Failed to remove old status embed: <reason>`, `Channel <id> not found.`, `Stored status embed channel is not a text or announcement channel.`, or `**Failed to generate new status embed:**` followed by the embed error. If the bot posts `placeholder message, attempting to edit with embed...` and nothing more, Discord rejected the embed: check the JSON, URLs and button emoji.
+
+### Refreshing
+
+Both embeds refresh about every minute, immediately after you save embed or presence settings, and when the bot becomes ready. The default footer says `Updated every minute`. The player list pager buttons switch pages for everyone viewing the message; the current page is remembered and resets to 1 when you run `/players add`. A button on an embed that is no longer the active one replies `This player list embed is no longer active.`
+
+### Embed editor
+
+The editor opens from **Edit status embed** and **Edit player list embed**. It has two modes, a live preview and the save controls.
+
+| Control | What it does |
+| --- | --- |
+| **Preset** | Visual editor. Fields are described below. |
+| **Raw JSON** | Two text areas, **Embed JSON** and **Config JSON**. Comments and trailing commas are accepted. |
+| **Reload saved** | Replaces the editor content with the last saved version. |
+| **Factory default** | Replaces the editor content with the built-in default. Nothing is saved until you click **Save Changes**. |
+| **Back to Settings** | Returns to the Discord tab without saving. |
+| **Discard Changes** | Same as **Reload saved**. |
+| **Save Changes** | Saves both JSON documents. Disabled while the JSON has a syntax error. On success you return to **Settings → Discord**. Errors show `Error saving embed:`. |
+| **Show Placeholders** / **Hide Placeholders** | Lists every placeholder with its description and a copy button. |
+| **Preview status** (status embed only) | **Online**, **Partial**, **Offline** buttons that show the preview in each state. |
+
+The preview uses sample server and player data, not your live server. It shows `Fix JSON syntax to update the preview.` while the JSON is invalid. Switching from **Raw JSON** to **Preset** fails with `Cannot switch to preset mode` and the reason when the JSON cannot be read. If saved JSON cannot be read as a preset, the editor opens in **Raw JSON**.
+
+The editor saves with the same request as the Discord tab, so saving fails if the embed does not build.
+
+#### Preset mode
+
+| Section | Controls |
+| --- | --- |
+| **Content** | **Title**, **Title URL**, **Description**, **Color**, **Thumbnail URL**, **Image URL**, **Footer text**, **Footer icon URL**. |
+| **Fields** | **Add field**. Each field has **Field name**, a value and an **Inline** / **Not inline** toggle. |
+| **Buttons** | **Add button**. Each has **Label**, **URL** and **Emoji (optional)**. |
+| **Status colors** (status embed) | **Online color**, **Partial color**, **Offline color**, **Online label**, **Partial label**, **Offline label**. |
+| **Player list templates** | **Player line template**, **Inline player template**, **Column template**, **Column count**, **Players per column**, **Max players shown (legacy)**, **List separator**, **Inline separator**, **Empty list text**, **Pager buttons on** / **Pager buttons off**. |
+
+Anything in the JSON the preset editor does not know (such as `author`) is kept when you switch modes.
+
+### Placeholders
+
+Write placeholders as `{{name}}`, in any text of the embed JSON and in button labels, URLs and emoji. A name that does not exist is replaced by a readable fallback instead of failing.
+
+| Placeholder | Value |
+| --- | --- |
+| `{{serverName}}` | The server name from **Settings → Global**. |
+| `{{serverCfxId}}` | The Cfx.re id of your server, found at run time. |
+| `{{serverJoinUrl}}` | `https://cfx.re/join/<id>`. |
+| `{{serverBrowserUrl}}` | `https://servers.fivem.net/servers/detail/<id>`. |
+| `{{serverEndpoint}}`, `{{serverIp}}`, `{{serverPort}}` | The detected `ip:port` of FXServer and its two parts. `unknown` when the server is not running. |
+| `{{serverConnectCommand}}` | `connect <endpoint>`, or `connect unavailable`. |
+| `{{serverClients}}`, `{{serverMaxClients}}` | Players online and `sv_maxclients`. |
+| `{{serverAvailableSlots}}` | Free slots. |
+| `{{serverOccupancyPercent}}` | Occupancy such as `42%`. |
+| `{{statusString}}`, `{{statusColor}}` | The label and colour for the current health, from the Config JSON. |
+| `{{uptime}}` | For example `1 hr, 50 mins`, or `--` when the server is down. |
+| `{{nextScheduledRestart}}` | `not scheduled`, `skipped`, `right now` or `in 2 hrs, 48 mins`, with `(tmp)` for a temporary restart. |
+| `{{recentJoinCount}}`, `{{recentLeaveCount}}` | Joins and leaves in the recent window tracked by sxPanel. |
+| `{{playerList}}` | The current page, one line per player with the **Player line template**. |
+| `{{playerListColumns}}` | Expands one field into several side-by-side columns. |
+| `{{playerListInline}}` | The current page on one line with the **Inline player template**. |
+| `{{playerListSummary}}` | For example `12 players online`. |
+| `{{playerListPage}}`, `{{playerListTotalPages}}`, `{{playerListPageSummary}}` | Page number, page count and `Page 2/3 • Showing 31-60.` |
+| `{{configurableEmbedDescription}}` and the `…FieldLabel` and `…ButtonLabel` names used by the factory embeds | Translated default texts. Replace them with your own text. |
+
+Player templates (**Player line**, **Inline** and **Column** templates) can also use:
+
+| Placeholder | Value |
+| --- | --- |
+| `{{index}}` | 1-based position in the whole list. |
+| `{{netid}}` | The player's server ID. |
+| `{{displayName}}`, `{{pureName}}` | Name as shown in sxPanel (with tag decorations) and the raw name. |
+| `{{license}}` | The license identifier. |
+| `{{playTimeMinutes}}`, `{{playTime}}` | Stored playtime in minutes and as text, such as `48 mins`. |
+| `{{sessionTimeSeconds}}`, `{{sessionTimeMinutes}}`, `{{sessionTime}}` | Time connected in this session. |
+| `{{tags}}` | The player's tags joined by commas, or `none`. |
+
+### Config JSON options
+
+| Key | What it does | Default |
+| --- | --- | --- |
+| `onlineColor`, `partialColor`, `offlineColor` | Embed colour for each server health. Hex such as `#0BA70B`, or a number. | `#0BA70B`, `#FFF100`, `#A70B28` |
+| `onlineString`, `partialString`, `offlineString` | Text for `{{statusString}}`. | `🟢 Online`, `🟡 Partial`, `🔴 Offline` |
+| `playerLineTemplate` | One player in `{{playerList}}`. | `` `#{{netid}}` {{displayName}} `` |
+| `playerInlineTemplate` | One player in `{{playerListInline}}`. | `{{displayName}}` |
+| `playerColumnTemplate` | One player in `{{playerListColumns}}`. | Same as `playerInlineTemplate` |
+| `playerListSeparator`, `playerListInlineSeparator` | Between players in multi-line and inline lists. | newline, `, ` |
+| `playerColumnCount` | Columns per page. A value above 1 lays the list out in inline columns. | 3 |
+| `playersPerColumn` | Players per column. A page holds `playerColumnCount × playersPerColumn` players. | 10 |
+| `maxPlayersShown` | Older option. Used only when `playersPerColumn` is missing and `playerColumnCount` is set. | none |
+| `emptyPlayerListString` | Text when nobody is online. | `No players online.` |
+| `showPagerButtons` | Show **Prev** / page / **Next** buttons when there is more than one page (player list only). | true |
+| `pagerPrevLabel`, `pagerNextLabel`, `pagerPageLabelTemplate` | Pager button texts. The template can use `{{playerListPage}}` and `{{playerListTotalPages}}`. | `Prev`, `Next`, `Page 1/3` style |
+| `buttons` | Up to 5 link buttons, each with `label`, `url` and optional `emoji`. | A **Connect** button and a second link |
+
+Button emoji can be a Unicode emoji, a custom emoji ID (17 to 19 digits) or `<:name:id>` / `<a:name:id>`.
+
+The status embed and the player list embed each have their own factory defaults (see **Factory default** in the editor). The footer of the factory embeds reads `sxPanel <version>`.
+
+<Callout type="info" title="The embed colour always follows the server status">
+  The embed's colour is always taken from the status colour for the server's current health (`onlineColor`, `partialColor`, `offlineColor`). A `color` key in the Embed JSON, or the **Color** field in preset mode, has no effect on the finished embed.
+</Callout>
+
+### Embed errors
+
+These appear when saving, in the editor or from `/status add`.
+
+| Message | Fix |
+| --- | --- |
+| `Embed JSON Error: <reason>` / `Embed Config JSON Error: <reason>` | The text is not valid JSON or not an object. |
+| `Invalid URL <url>.` / `Empty URL.` | Every URL must start with `http://`, `https://` or `discord://`. Remove empty `url` keys. If the URL starts with `{{`, you probably edited a placeholder name. |
+| `Invalid status color <value>. Use a hex value like #0BA70B.` / `Status color cannot be empty.` | Fix the colour in the Config JSON. |
+| `Embed field name must be a non-empty string.` / `Embed field value must be a non-empty string.` | Every field needs a name and a value. |
+| `Embed footer text must be a non-empty string.` | A footer needs `text`. |
+| `Over limit of 5 buttons.` | Keep at most 5 buttons. |
+| `Invalid button in Discord Status Embed Config.` | Each button needs a non-empty `label` and `url`. |
+| `Button label must resolve to a non-empty string.` | The label turned into an empty text. |
+| `Invalid emoji for button <label>.` | Use a Unicode emoji, an emoji ID or `<:name:id>`. |
+
+## Role permissions
+
+**Role Permission Mapping** gives Discord roles an sxPanel [permission preset](/docs/permissions#presets). It is used in two places:
+
+- Discord commands that check a permission (`/status`, `/players`, `/whitelist`, `/reports`) accept a member who has a mapped role, even if they have no admin account.
+- Admins with a Discord ID set in the Admin Manager receive the mapped permissions on their admin account.
+
+### Add a mapping
+
+<Steps>
+<Step>
+Create the permission preset first in the **Admin Manager → Permission Presets**. The mapping has nothing to choose from until a preset exists, and the tab shows `No permission presets are available yet. Create one in Admin Manager before saving role mappings here.`
+</Step>
+<Step>
+On **Settings → Discord**, click **Add Mapping**.
+</Step>
+<Step>
+Enter a **Mapping Label** (for example `Moderators`, up to 64 characters). It is shown as the name of the actor in logs.
+</Step>
+<Step>
+Pick the **Discord Role IDs**. With the bot ready, the picker lists your server's roles with search and a refresh button. If roles cannot be loaded you can paste role IDs or role mentions separated by commas, spaces or new lines. The picker is disabled while the bot is disabled.
+</Step>
+<Step>
+Choose the **Permission Preset** and click **Save changes**.
+</Step>
+</Steps>
+
+The trash button removes a mapping. Saving fails with one of these messages:
+
+| Message | Fix |
+| --- | --- |
+| `Each Discord role mapping needs a label.` | Fill in **Mapping Label**. |
+| `Each Discord role mapping needs at least one Discord role ID.` | Add a role. |
+| `Invalid Discord role ID: <id>` | Role IDs are numeric Discord IDs. |
+| `Each Discord role mapping needs a permission preset.` | Pick a preset. |
+
+### How permissions are resolved
+
+- A member's roles are matched against every mapping. All matching mappings apply, and their presets' permissions are merged.
+- If no mapped preset gives any permission, the member gets nothing from roles.
+- A linked admin keeps their own permissions and gains the mapped ones on top.
+- A member with no admin account but a mapped role can run the Discord commands listed above. Their actions are logged as `[Discord] <labels>`, with the labels of the matching mappings joined by commas.
+- Role permissions apply to the panel too: when a linked admin's roles change, the mapped permissions are re-read.
+
+### Role sync for linked admins
+
+For admins with a Discord ID, the mapped permissions are stored on the admin account. Roles are re-checked when the admin signs in to the panel, when Discord reports a role change for them (instantly, while the bot is ready), when you save the mappings and about once a minute while the bot is ready.
+
+The synced permissions are tracked separately from the ones you ticked by hand. If the admin loses the role, only the synced permissions are removed; manually granted permissions stay. If the bot is not ready when the admin signs in, the last synced permissions are used.
+
+Discord role changes also refresh the player tags that are tied to Discord roles for players who are online.
+
+<Callout type="warn" title="Moderation commands use the linked admin account only">
+  `/warn`, `/kick`, `/ban` and `/unban` check the permissions of the linked admin account. Mapped roles do not grant them. Likewise, `/history` and `/notes` need a linked admin account.
+</Callout>
+
+## Discord logging
+
+**Edit Logging** opens the **Discord Log Routes** page (`/settings/discord-logs`). Each route below has an on/off switch, a channel and an optional filter on which log entries it sends. The page also holds the warnings channel (`warningsChannel`, where announcements go) and a log guild override (`logGuildOverride`, a different Discord server for logs than the main one). Messages are sent as cards and grouped per channel, so busy streams do not hit Discord's rate limit.
+
+| Route | Sends |
+| --- | --- |
+| **Panel Action Logs** | Panel actions, moderation activity and ticket workflow events. |
+| **Whitelist Logs** | Whitelist applications, approvals, grants and revocations. |
+| **Panel Command Logs** | Server control commands and live console commands. |
+| **Login Logs** | Successful admin sign-ins. |
+| **Config Change Logs** | Configuration changes saved in the panel. |
+| **Monitor Logs** | Restarts, crash handling and health alerts. |
+| **Scheduler Logs** | Scheduled actions. |
+| **System Logs** | Other sxPanel system events. |
+| **Admin Command Logs** | In-game admin menu actions such as noclip and teleport. |
+| **Combat Logs** | Kills, other deaths and fight summaries. See [Combat log](/docs/server-log#combat-log). |
+| **Player Connection Logs** | Joins, leaves and joins denied by a ban or the whitelist. |
+| **Chat Logs** | In-game chat. Use a dedicated channel on busy servers. |
+
+Reports can also open a Discord thread per ticket. That channel is set under the report settings in [Game settings](/docs/settings/game).
 
 ## Slash commands
 
+The bot registers these commands on your server when it starts and when the addon list or the reports setting changes. `/reports` only exists while **Reports** is enabled.
+
 | Command | Description |
 | --- | --- |
-| `/status add` / `/status remove` | Create or remove the persistent status embed |
-| `/players add` / `/players remove` | Create or remove the persistent player list embed |
-| `/info` | Look up a player (self, Discord member, or license/ID) in the sxPanel database |
-| `/admininfo` | Admin-only: look up a player's identifiers, notes and action history |
-| `/history` | Show recent moderation history for your linked account |
-| `/notes` | View or update player notes |
-| `/warn` | Warn a player |
-| `/kick` | Kick a player |
-| `/ban` | Ban a player |
-| `/unban` | Remove a ban |
-| `/whitelist member` / `/whitelist application` | Add a member to the whitelist, or approve a pending application by ID |
-| `/reports summary` | Discord-native report/ticket triage |
+| `/status add` / `/status remove` | Create, move or remove the status embed. |
+| `/players add` / `/players remove` | Create, move or remove the player list embed. |
+| `/info self`, `member`, `id` | Look up a player in the sxPanel database. |
+| `/admininfo self`, `member`, `id` | The same lookup with identifiers, notes and action history. Needs a linked admin account. |
+| `/history` | Recent actions for a player. Options for who to look up (`self`, `member`, `id`, `serverid`) and `limit` (default 5, maximum 10). |
+| `/notes view` / `/notes set` | Read or replace a player's note (maximum 1000 characters). |
+| `/warn`, `/kick` | Warn or kick a player, with a reason. |
+| `/ban` | Ban a player with a duration such as `1 day`, `2 weeks` or `permanent`, and a reason. |
+| `/unban action`, `member`, `id`, `serverid` | Revoke a ban by action ID (for example `B1234`) or for a player, with an optional reason. |
+| `/whitelist member`, `application` / `request` | Pre-approve a Discord member, or approve an application by ID (for example `R1234`). |
+| `/reports summary`, `claim`, `assign`, `resolve`, `reopen` | Triage reports. Leave the ticket ID empty inside a ticket thread. |
 
-## Notifications
+Target options accept a Discord member, an identifier such as `license:…` or `discord:…`, or a connected player's server ID. The actions are recorded in the [History](/docs/history) and the [Action Log](/docs/system) under the admin's name.
 
-Discord notifications are configured as "Log Routes" in the panel's Discord
-settings — each route can be routed to its own channel and filtered. Routes
-include:
+When someone without access runs a command, they see `Your account does not have sxPanel access.` with their Discord ID, `Your linked sxPanel account does not have the "<permission>" permission required for this action.`, or `Your Discord roles do not grant the "<permission>" permission required for this action.`. Make sure the admin's **Discord ID** in the Admin Manager is the numeric user ID.
 
-- Panel action logs (moderation activity, ticket workflow)
-- Whitelist logs (applications, approvals, grants, revocations)
-- Panel/console command logs
-- Admin login logs
-- Config change logs
-- Monitor logs (restarts, crash handling, health alerts)
-- Scheduler logs
-- Admin in-game menu command logs
-- Combat logs (kills and non-lethal fight summaries; see
-  [Combat log](/docs/server-log#combat-log))
+## Limits and edge cases
 
-Reports/tickets can also open their own Discord threads for triage.
+- **Runtime.** The bot normally runs as a separate Node process. On hosts with no Node binary, such as FXServer on Windows, it runs in a worker thread instead. The environment variable `SXPANEL_BOT_RUNTIME` (`node`, `worker` or `auto`, the default) forces one.
+- **Bridge.** The bot talks to sxPanel over a local connection on `127.0.0.1`, port 36120 by default. If the connection drops, sxPanel restarts the bot after 30 seconds. A crashed bot process is restarted after 5 seconds, then 10, 20, 40 and up to 60 seconds apart.
+- **Startup time.** sxPanel waits up to 60 seconds for the bot to become ready. Slow starts continue in the background.
+- **Refresh rate.** Embeds and presence are refreshed once a minute and on every relevant save, regardless of **Refresh Interval (seconds)**.
+- **Offline server.** The status embed shows the **Offline** state and `unknown` for values it cannot find. The player list shows `No players online.`
+- **Channels.** Embeds can only live in text or announcement channels.
+- **Role lookups** are cached for 60 seconds, and the member list refresh is limited to once a minute.
+- **Disabling the bot** stops it but keeps the embed message locations, so the messages are updated again when you re-enable it.
 
-<Callout title="Bot permissions">
-  The bot needs the **Server Members Intent** and **Message Content Intent**
-  enabled in the Discord Developer Portal to resolve member roles and read
-  message-based interactions.
-</Callout>
+## Problems
 
-<Callout title="Tip">
-  Combine slash commands with per-admin [access control](/docs/permissions)
-  so each admin only sees the actions they're permitted to run.
-</Callout>
+| Symptom | Cause and fix |
+| --- | --- |
+| Status shows **ERROR** in Diagnostics | Open **System → Diagnostics → Discord Bot** for the last bot error and use **Restart Runtime**. See [System pages](/docs/system#discord-bot). |
+| The bot is online but slash commands are missing | The bot was invited without `applications.commands`. Re-invite it. Registration errors are logged in the Console Log. |
+| `Used disallowed intents` | Enable both privileged intents in the Developer Portal. |
+| The status embed does not update | Check the Console Log for embed errors, confirm the bot can send and edit messages in the channel, and run `/status add` again. |
+| Role-based admin does not get permissions | The admin needs a Discord ID, the bot must be ready, and **Server Members Intent** must be on. Save the mapping and wait up to a minute. |
+| **Login with Discord** says the account is not an admin | The Discord account's ID is not set on any admin in the Admin Manager. |
