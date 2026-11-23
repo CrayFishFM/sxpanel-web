@@ -526,7 +526,9 @@
         "core/globalData.ts"
       ],
       "notes": "Every environment variable and convar with default and effect, ports and interfaces, reverse proxies and HTTPS, data folder layout, running several servers. Setup and migration material moves to their own pages.",
-      "status": "todo"
+      "status": "done",
+      "writtenAt": "2026-11-23",
+      "sourceSha": "a21e752720dac257eafa73132d5d73599ec76ff2"
     },
     {
       "id": "events-api",

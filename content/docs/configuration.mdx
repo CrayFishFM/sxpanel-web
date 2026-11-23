@@ -1,49 +1,495 @@
 ---
 title: Configuration
-description: Environment variables, advanced options and the Events API.
+description: Every TXHOST environment variable and convar, ports and interfaces, reverse proxies and HTTPS, web server hardening settings, the data folder layout and running several servers.
 ---
 
-Most of sxPanel is configured through the web panel itself during first-time
-setup. This page covers the lower-level knobs.
+sxPanel is configured in three places. Host-level options (ports, data
+folder, provider limits) come from `TXHOST_*` **environment variables** read
+once at boot. A few legacy **convars** are only used to warn you. Everything
+else is stored in the server profile's `config.json`, mostly edited from the
+panel; the web server hardening options are the exception and are edited in
+that file directly.
 
-## First-time setup
+This page is for server owners, hosting providers and anyone running sxPanel
+behind a proxy. First-time installation is in
+[Installation](/docs/quick-start), the setup wizard in
+[First-Time Setup](/docs/setup), and moving from txAdmin in
+[Migrating from txAdmin](/docs/migrating-from-txadmin).
 
-Creating your account, linking a server data folder and deploying a recipe are
-covered in [First-Time Setup](/docs/setup).
+## Environment variables
 
-## Environment variables & advanced options
+Set these in the environment of the FXServer process, before it starts. sxPanel
+reads them once at boot. Changing one needs a full FXServer restart.
 
-Advanced deployments can be tuned with `TXHOST_*` environment variables (the
-same convention txAdmin used — legacy `txAdminPort`/`txDataPath`/`txAdminInterface`
-ConVars still work but print a deprecation warning telling you which
-`TXHOST_*` variable replaces them). The most useful ones are listed below; the
-panel also exposes a settings UI for everything else, including enabling or
-disabling the Discord bot.
+Empty variables are treated as unset. A value wrapped in quotes (`"` or `'`)
+stops the boot, because that is almost always a mistake in how the variable
+was declared. An invalid value also stops the boot, printing the variable
+name, the value and the reason. See [Problems](#problems).
 
-| Variable | Default | Description |
+### General
+
+| Variable | What it does | Default | Limits / values |
+| --- | --- | --- | --- |
+| `TXHOST_DATA_PATH` | Folder that holds all sxPanel data (the "data folder"). See [Data folder layout](#data-folder-layout). | `txData` next to your FXServer files (see below) | Absolute path. Must not contain non-ASCII characters |
+| `TXHOST_GAME_NAME` | Restricts the panel to one game. Only recipes for that game are listed in the setup wizard, and `server.cfg` validation rejects a `gamename` that does not match. | Not set (both games allowed) | `fivem` or `redm` |
+| `TXHOST_MAX_SLOTS` | Caps `sv_maxclients`. A `server.cfg` that sets a higher value is rejected with ``your 'sv_maxclients' MUST be <= N.``. If the running server reports a higher value, sxPanel sends `sv_maxclients` back to the limit. It also becomes the `maxClients` default in recipes. | Not set (no cap) | Positive integer |
+| `TXHOST_QUIET_MODE` | Stops FXServer output from being printed to the terminal, the same as the **Quiet Mode** server setting, which is then locked in the panel. | Not set (off) | Only the exact text `true` turns it on. Any other value means off |
+| `TXHOST_ARTIFACT_CUSTOM_DOWNLOAD` | Allows installing a custom artifact build from a URL in the updater. | On when the variable is not set | Only the exact text `true` keeps it on. Any other value turns it off, and a custom download is refused |
+| `TXHOST_API_TOKEN` | Token for the [host status endpoint](#host-status-endpoint). | Not set (endpoint answers `token not configured`) | `disabled`, or 16 to 48 characters from `A-Z a-z 0-9 _ -` |
+
+The default `txData` location is in the parent folder of your artifacts folder
+on Windows, and in the artifacts root (the folder that contains `alpine`) on
+Linux.
+
+<Callout type="warn">
+  `TXHOST_DATA_PATH` and your FXServer path must both be free of non-ASCII
+  characters such as `ç`, `ñ` or `警`. sxPanel stops at boot otherwise, because
+  these paths crash Node.js in locale functions.
+</Callout>
+
+### Networking
+
+| Variable | What it does | Default | Limits / values |
+| --- | --- | --- | --- |
+| `TXHOST_TXA_PORT` | TCP port of the web panel. | `40120` | Positive integer, not `30120` |
+| `TXHOST_INTERFACE` | Binds the web panel to one IPv4 address instead of all interfaces. The address is also treated as local for the in-game and rate limiter checks. | Not set (listens on `0.0.0.0`) | IPv4 address |
+| `TXHOST_FXS_PORT` | Forces the game port. `endpoint_add_tcp` and `endpoint_add_udp` lines in `server.cfg` must use it, and the wizard writes it into new configs. | Not set | Positive integer, not between `40120` and `40150` |
+| `TXHOST_TXA_URL` | The public URL of the panel. It is the only URL shown in the "All ready" console box, it is the base address for the images of [deferral cards](/docs/settings/deferral-cards) that players see in-game, and it is reported as the panel URL in telemetry. | Not set | A valid URL, for example `https://panel.example.com` |
+
+Whenever the web server starts with `TXHOST_INTERFACE` set, the console prints
+`Starting with interface <address>.` followed by a warning that the server may
+fail to start because of it.
+
+### Provider
+
+For hosting providers that run sxPanel for customers.
+
+| Variable | What it does | Default | Limits / values |
+| --- | --- | --- | --- |
+| `TXHOST_PROVIDER_NAME` | Name of the hosting provider. It is shown as the logo's alt text on the sign-in page, and prefixes the messages the provider's limits cause, such as the `sv_maxclients` correction and the locked **Quiet Mode** setting. Without it those messages say `Host Config`. | Not set | 2 to 16 characters: letters, numbers, `_`, `.`, `-` and spaces. Must start and end with a letter or number, and cannot contain two special characters in a row |
+| `TXHOST_PROVIDER_LOGO` | URL of the provider's logo, shown on the sign-in page. | Not set | A valid URL |
+
+### Defaults for new servers
+
+These pre-fill the setup wizard and the recipe deployer. They do not change a
+server that is already set up.
+
+| Variable | What it does | Default | Limits / values |
+| --- | --- | --- | --- |
+| `TXHOST_DEFAULT_ACCOUNT` | Creates the master admin account at first boot, so nobody has to use the PIN. | Not set | `username:fivemId`, `username:fivemId:bcrypt`, or `username::bcrypt`. See below |
+| `TXHOST_DEFAULT_CFXKEY` | Pre-fills the license key in the deployer. | Not set | `cfxk_xxxxxxxxxxxxxxxxxxxx_yyyyy` format, or the old 32-character format |
+| `TXHOST_DEFAULT_DBHOST` | Pre-fills the database **Host** in the deployer. | `localhost` | Any text |
+| `TXHOST_DEFAULT_DBPORT` | Pre-fills the database **Port**. | `3306` | Any text |
+| `TXHOST_DEFAULT_DBUSER` | Pre-fills the database **Username**. | `root` | Any text |
+| `TXHOST_DEFAULT_DBPASS` | Pre-fills the database **Password**. | Empty | Any text |
+| `TXHOST_DEFAULT_DBNAME` | Pre-fills the database name. | The deployment id | Any text |
+
+For `TXHOST_DEFAULT_ACCOUNT`, the username must be a valid Cfx.re username.
+The FiveM id is the number in the `fivem:0000000` identifier, and the password,
+when given, must be a bcrypt hash. At least one of the FiveM id and the
+password is required. The deployer fields these defaults fill in are described
+in [First-Time Setup](/docs/setup).
+
+### Host status endpoint
+
+`GET /host/status` returns a JSON summary of the server for hosting dashboards:
+whether sxPanel is configured, the data and `server.cfg` paths, player count,
+health status, the Cfx.re id, game name, join links, player slots, project name
+and description.
+
+How it authenticates depends on `TXHOST_API_TOKEN`:
+
+| `TXHOST_API_TOKEN` | Behaviour |
+| --- | --- |
+| Not set | Every request is answered with the error `token not configured` |
+| A token | Send it in the `x-txadmin-envtoken` header. A token in the query string is refused with `query token unsupported`. Other errors are `token missing` and `invalid token` |
+| `disabled` | No token is needed, but only loopback addresses (`127.x`, `::1`) are accepted. Other addresses get `forbidden` and a warning in the console |
+
+`disabled` is meant for development on the same machine. Use a token for
+anything reachable over a network.
+
+### Deprecated convars
+
+These FXServer convars are no longer read. When one is set, sxPanel prints a
+warning naming its replacement:
+
+| Convar | Use instead |
+| --- | --- |
+| `txDataPath` | `TXHOST_DATA_PATH` |
+| `txAdminPort` | `TXHOST_TXA_PORT` |
+| `txAdminInterface` | `TXHOST_INTERFACE` |
+| `serverProfile` | Still works but is deprecated. Use a separate `TXHOST_DATA_PATH` per server, see [Running several servers](#running-several-servers) |
+
+Gen9 (FiveM Enhanced) servers do not expose convars at this point of the boot,
+so none of the convars above have any effect there. The environment variables
+work the same on both.
+
+## Ports and interfaces
+
+| Port | Default | Used for |
 | --- | --- | --- |
-| `TXHOST_TXA_PORT` | `40120` | Port the web panel listens on (cannot be `30120`) |
-| `TXHOST_DATA_PATH` | `txData` next to your artifacts | Absolute path to the data directory |
-| `TXHOST_INTERFACE` | — | IPv4 address to bind the web panel to |
-| `TXHOST_FXS_PORT` | — | The FXServer game port (cannot be `40120`-`40150`, which is reserved for the panel) |
-| `TXHOST_API_TOKEN` | — | Token for the host/provider API, or `disabled` to turn it off |
-| `TXHOST_MAX_SLOTS` | — | Max player slots reported to the host/provider |
-| `TXHOST_QUIET_MODE` | `false` | Reduce console output |
+| Web panel (TCP) | `40120`, set with `TXHOST_TXA_PORT` | The panel, its WebSocket (Socket.IO) and the in-game menu requests |
+| Game server | Set in `server.cfg`, usually `30120` | Players connecting. Set with `endpoint_add_*` or forced with `TXHOST_FXS_PORT` |
+
+- The panel port can never be used for the game server. `server.cfg` validation
+  rejects an `endpoint_add_*` line on the panel port.
+- If the panel port is taken, sxPanel stops with
+  `Failed to start HTTP server, port <port> is already in use.`.
+- Open the panel port in your operating system firewall and your host's
+  firewall to reach the panel from the internet. Players only need the game
+  port.
+
+## Reverse proxies and HTTPS
+
+sxPanel serves plain HTTP. For HTTPS, put a reverse proxy (nginx, Caddy,
+Traefik, Cloudflare Tunnel) in front of it that terminates TLS and forwards to
+`TXHOST_TXA_PORT`. Binding the panel to `127.0.0.1` with `TXHOST_INTERFACE`
+makes the proxy the only way in.
+
+The proxy must:
+
+- Forward WebSocket upgrades on `/socket.io`. The live console, player list and
+  dashboard use them.
+- Pass the original `Host` header.
+- Send `X-Forwarded-For` and `X-Forwarded-Proto` if you enable **Trust Reverse
+  Proxy** below.
+- Not compress request bodies. sxPanel rejects any request with a
+  `Content-Encoding` other than `identity` with `415 Unsupported
+  Content-Encoding`.
+
+<Steps>
+<Step>
+
+### Set the public URL
+
+Set `TXHOST_TXA_URL` to the address people will use, for example
+`https://panel.example.com`. The console then prints it instead of the
+server's IP addresses.
+
+</Step>
+<Step>
+
+### Configure the proxy
+
+Point it at `http://127.0.0.1:40120` (or your port) with WebSocket support.
+Make it overwrite `X-Forwarded-For` and `X-Forwarded-Proto` with the values
+it observed, and never pass through what a client sent.
+
+</Step>
+<Step>
+
+### Trust the proxy
+
+Stop sxPanel, edit `config.json` as described in
+[Web server settings](#web-server-settings), set `webServer.trustProxy` to
+`true` and, if more than one proxy is in the chain, set
+`webServer.proxyTrustedHops` to the number of proxies. Start FXServer again.
+
+</Step>
+<Step>
+
+### Check it
+
+Sign in through the HTTPS address. Session cookies carry the `Secure` flag and
+responses carry a `Strict-Transport-Security` header.
+
+</Step>
+</Steps>
+
+<Callout type="warn">
+  Only enable **Trust Reverse Proxy** when sxPanel can be reached only through
+  your proxy. Otherwise anyone can send a fake `X-Forwarded-For` header and
+  appear to come from any address, which defeats the login rate limiter and
+  the IP shown in logs.
+</Callout>
+
+### What the proxy settings change
+
+With trust enabled, sxPanel takes the client IP, the protocol and the host
+from the `X-Forwarded-*` headers. The effects:
+
+- The login rate limiter counts attempts per real client address instead of
+  per proxy address.
+- Responses over HTTPS include `Strict-Transport-Security` with a two-year
+  `max-age`, `includeSubDomains` and `preload`. It is only sent when the
+  request is secure, so plain HTTP is never affected.
+- The panel's public hostname is learned from the first request that arrives
+  through a real domain name, and used as the panel URL in telemetry when
+  `TXHOST_TXA_URL` is not set. Requests to `localhost`, to an IP address or
+  to a name without a dot are ignored for this.
+
+The global per-IP limiter described under [Limits](#limits-and-edge-cases)
+always uses the address of the TCP connection, not the forwarded one. Because
+a proxy on the same machine or LAN connects from a local address, which is
+exempt, add rate limiting at the proxy.
+
+## Web server settings
+
+These settings live under `webServer` in the profile's `config.json`. They do
+not appear in the panel's **Settings** pages. Changes to `config.json` are
+only read at boot.
+
+<Steps>
+<Step>
+
+### Stop FXServer
+
+sxPanel rewrites `config.json` while it runs, and would overwrite your edit.
+
+</Step>
+<Step>
+
+### Edit the file
+
+Open `config.json` in the profile folder (for example
+`txData/default/config.json`) and add the keys under a `webServer` object:
+
+```json
+{
+  "webServer": {
+    "trustProxy": true,
+    "proxyTrustedHops": 1,
+    "persistSessions": true
+  }
+}
+```
+
+</Step>
+<Step>
+
+### Start FXServer
+
+A value that fails validation is replaced by the setting's default.
+
+</Step>
+</Steps>
+
+| Setting | What it does | Default | Limits / values |
+| --- | --- | --- | --- |
+| **Disable NUI Source Check** (`disableNuiSourceCheck`) | The in-game menu and the Lua resource reach the panel through FXServer, and sxPanel only accepts those requests from local addresses. This turns that source check off. | `false` | `true` or `false`. See the warning below |
+| **Trust Reverse Proxy (X-Forwarded-*)** (`trustProxy`) | Trust `X-Forwarded-For`, `X-Forwarded-Proto` and `X-Forwarded-Host` for the client IP, HTTPS detection and hostname. | `false` | `true` or `false` |
+| **Proxy Trusted Hops (X-Forwarded-For Tail)** (`proxyTrustedHops`) | How many addresses to read from the end of `X-Forwarded-For`. Set it to the number of proxies in front of sxPanel. Only used when trust is on. | `0` (read the whole list) | Whole number from `0` to `10` |
+| **Rate Limiter Minutes** (`limiterMinutes`) | How long a client is blocked after using up its login attempts. Also the window the attempts are counted in. | `15` | Whole number, at least `1` |
+| **Rate Limiter Attempts** (`limiterAttempts`) | Login-related requests allowed per client address in that window. | `10` | Whole number, at least `5` |
+| **Use Secure Cookies** (`useSecureCookies`) | Marks the session cookie `Secure`, so browsers only send it over HTTPS. | `false` | `true` or `false`. See the callout below |
+| **Persist Sessions to Disk** (`persistSessions`) | Keeps signed-in sessions across an FXServer restart. | `false` | `true` or `false` |
+
+<Callout type="warn">
+  Leave **Disable NUI Source Check** off. When it is on, the check meant to
+  limit in-game requests to local addresses is skipped, so a request that
+  arrives from a remote address is no longer refused on that basis. The
+  request still needs the in-game token. Only turn it on if your host
+  forwards in-game requests from a non-local address and you understand the
+  trade-off.
+</Callout>
 
 <Callout>
-  There is no `SXPANEL_LOG_LEVEL`-style verbosity variable — the system logger
-  writes structured JSONL entries at a fixed level. There is also no dedicated
-  variable to disable the Discord bot; toggle "Bot Enabled" in the panel's
-  Discord settings instead.
+  `useSecureCookies` is also treated as on when FXServer runs with
+  `NODE_ENV=production`. A browser does not send a `Secure` cookie over plain
+  HTTP, so if you cannot sign in over `http://` after enabling it, use HTTPS
+  or turn it off.
 </Callout>
+
+### Rate limiter scope
+
+The limiter covers the sign-in endpoints: password login and logout, the
+master account PIN and registration steps, the Cfx.re and Discord sign-in
+redirects and callbacks, and two-factor verify and disable. When a client
+passes the limit it gets `Too many attempts. Blocked for <minutes> minutes.`.
+Counters are held in memory and reset on restart.
+
+### Sessions
+
+A session lasts 24 hours and is kept in memory, for at most 5000 sessions
+(the least recently used is dropped first). The session cookie is named
+`fxp:` followed by a hash of the profile path, so several servers on one host
+never share cookies. It is `HttpOnly` and `SameSite=Lax`. The cookie signing
+key is generated at every start, so cookies from a previous run are not
+accepted. The sessions file only comes back if **Persist Sessions to Disk** is
+on.
+
+With **Persist Sessions to Disk**, sessions are written to
+`data/sessions.json` in the profile when sxPanel shuts down, and loaded on the
+next start. Sessions that signed in with a password, or are waiting for a
+two-factor code, are not written, so those admins sign in again after a
+restart. Sessions from Cfx.re and Discord sign-in survive. The file is
+unencrypted, so keep the data folder private.
+
+## Data folder layout
+
+`TXHOST_DATA_PATH` is the data folder. Inside it, each server has a **profile**
+folder, named `default` unless you use the deprecated `serverProfile` convar.
+sxPanel creates missing folders at boot, and an empty `config.json` for a new
+profile.
+
+```text
+txData/
+├── admins.json                  admin accounts (shared by all profiles)
+├── permissionPresets.json       Admin Manager permission presets (shared)
+├── locale.json                  custom language file, if you made one (shared)
+└── default/                     the profile
+    ├── config.json              all settings
+    ├── config.lock              process id of the running sxPanel
+    ├── data/                    databases, caches, statistics, sessions.json,
+    │                            configChangelog.json, ticket-screenshots/
+    ├── logs/                    log files
+    └── addon-data/              data stored by addons
+```
+
+- Admin accounts, permission presets and the custom language file sit in the
+  data folder itself, not in the profile, so every profile in one data folder
+  shares them.
+- `config.lock` stops two sxPanel processes from using the same profile. It
+  holds the process id. If the process in it is still alive, the second start
+  stops with `Another instance is already using this config file.`. A lock
+  left by a dead process is overwritten, and it is removed on a normal
+  shutdown. Delete it by hand only if you are sure nothing is running.
+- When sxPanel upgrades the `config.json` format, it keeps a copy of the old
+  file as `config.backup.v<version>.json` next to it.
+- Back up the whole data folder to back up the server. `data/playersDB.json`
+  is the player database, with `playersDB.backup.json` kept beside it.
+- Moving the data folder is a matter of stopping FXServer, moving it and
+  pointing `TXHOST_DATA_PATH` at the new location. Existing txAdmin folders
+  work unchanged, see [Migrating from txAdmin](/docs/migrating-from-txadmin).
+
+## Running several servers
+
+Run one FXServer per server, each with:
+
+- Its own `TXHOST_DATA_PATH`. This keeps the admins, config and databases
+  apart.
+- Its own `TXHOST_TXA_PORT`. Two panels cannot share a port.
+- Its own game port in `server.cfg`, or `TXHOST_FXS_PORT`.
+
+The session cookie name includes a hash of the profile path, so signing in to
+two panels on the same hostname in one browser does not clash.
+
+You can also keep one data folder and tell FXServer to use a different
+profile with the deprecated `serverProfile` convar. Profile names keep only
+letters, numbers, `.`, `_` and `-`. They cannot end in `.base`, and cannot end
+up empty after that clean-up. On Windows, the first run of a non-default
+profile writes `start_<build>_<profile>.bat` next to your artifacts folder
+that starts FXServer with that profile. Profiles in one data folder share
+`admins.json`, so separate data folders are the better choice when the
+servers have different admins.
+
+## Limits and edge cases
+
+### Request limits
+
+| Limit | Value |
+| --- | --- |
+| Request time | A request that takes longer than 47 seconds is answered with `408` and `Route timed out: <path>` |
+| JSON body size | 8 MB. Bigger bodies get `413` and `Entity too large for: <path>` |
+| Per-address request rate | Over 5000 requests in one minute from a non-local address blocks that address. While under attack the limit is 2500 |
+| Local addresses | Loopback, private IPv4 ranges (`10.x`, `172.16-31.x`, `192.168.x`, `127.x`), `::1`, `fd00::` addresses, the addresses of the machine's own network interfaces, `TXHOST_INTERFACE` and the detected public address are never rate limited |
+| Attack detection | More than 20000 requests in one minute declares an attack. The console prints `You might be under a DDoS attack!`, offenders stay blocked until 15 minutes after the attack stops, and the lower limit applies in that time |
+| High load | At about 15000 requests per minute, sxPanel prints a warning. If Node.js heap use then passes 90%, all requests get `503 Service Unavailable` for 60 seconds, then `HTTP requests are now allowed again.` is printed |
+
+A blocked address gets `429 Too Many Requests`. Blocks are held in memory and
+clear on restart. The panel is not a replacement for a firewall: run a reverse
+proxy with rate limiting in front of any panel exposed to the internet.
+
+### Security headers
+
+Every response carries `X-Frame-Options: DENY`, `X-Content-Type-Options:
+nosniff`, a strict `Referrer-Policy`, a `Permissions-Policy` that disables
+camera, microphone, geolocation and similar features, and a
+`Content-Security-Policy`. The CSP allows scripts only from the panel itself
+(with a per-request nonce) and from `cdnjs.cloudflare.com`, `unpkg.com` and
+`cdn.jsdelivr.net`. The panel therefore cannot be embedded in an iframe, and
+it must be able to load those CDNs and `raw.githubusercontent.com` (used for
+recipes). API and in-game responses are sent with caching disabled. Every
+response includes an `X-Request-Id`: if your proxy sends one (up to 128
+characters) it is kept, otherwise sxPanel generates it. Include it when
+reporting a problem.
+
+### Request compression
+
+Compressed request bodies are rejected with `415`. This blocks a decoder flaw
+(CVE-2026-111497) in older Node.js versions. If the Node.js inside your
+FXServer is not on a patched version (22.23.4, 24.22.1, 26.12.1 or newer),
+the console warns about it at boot. Response compression is not affected.
+
+### FXServer versions
+
+- On the usual (gen8) FXServer, builds older than `5894` are refused with
+  `This version of FXServer is too outdated and NOT compatible with sxPanel`.
+- On gen9 (FiveM Enhanced), sxPanel prints a warning that support is early and
+  experimental. It skips the build number check, and finds its own folder
+  from the FXServer binary instead of a convar. The resource folder is named
+  `txadmin` on gen9 and `monitor` on gen8.
+- A custom or unparseable FXServer build is allowed after a console warning
+  that nothing is guaranteed.
+- Node.js older than 18 inside FXServer is refused.
+- On Windows, running FXServer from inside an unextracted WinRAR archive is
+  refused.
+- Only Windows and Linux are supported.
+
+### Public panel URL
+
+For telemetry and dashboards, sxPanel picks the panel URL in this order:
+`TXHOST_TXA_URL`; the hostname seen on real requests; a URL found in the
+Cfx.re server listing for your server; then your interface or public IP and
+the panel port. Setting `TXHOST_TXA_URL` removes the guessing.
+
+## Problems
+
+### `Invalid value for a TXHOST environment variable.`
+
+The boot stops and prints the variable name, the value and what was wrong,
+for example `TXA_PORT cannot be 30120` or `Invalid IPv4 address`. Fix the
+variable and start again. The value must not be surrounded by quotes: the
+message in that case says `The value is surrounded by quotes`. Do not write
+`TXHOST_TXA_PORT="40121"` in a shell script or compose file in a way that
+keeps the quotes in the value.
+
+### `Failed to start HTTP server, port <port> is already in use.`
+
+Another program, or another sxPanel, already uses the panel port. Pick a
+different `TXHOST_TXA_PORT`, stop the other process, or restart the machine.
+
+### `Another instance is already using this config file.`
+
+Another sxPanel is running with the same profile. Give each server its own
+data folder, or stop the other one. If you are sure nothing is running, delete
+`config.lock`.
+
+### `Too many attempts. Blocked for 15 minutes.`
+
+The sign-in limiter was hit. Wait the time given, or restart FXServer to clear
+the counters. Behind a proxy, check **Trust Reverse Proxy** is on, otherwise
+every user shares the proxy's address and one person's attempts block all.
+
+### Everyone is blocked, or every IP in the logs is the proxy's
+
+You are behind a proxy without **Trust Reverse Proxy**. Enable it as described
+in [Reverse proxies and HTTPS](#reverse-proxies-and-https).
+
+### `Invalid Request: source`
+
+An in-game menu request reached the panel from an address that is not local.
+Check `TXHOST_INTERFACE` and that the game server and panel are on the same
+machine. See **Disable NUI Source Check** for the trade-off.
+
+### `Unsupported Content-Encoding`
+
+Your proxy or a tool compresses request bodies. Turn that off for requests to
+sxPanel.
+
+### `Route timed out` or `Service Unavailable`
+
+A request took more than 47 seconds, or the panel is shedding load because of
+heavy traffic and memory use. Check the console for the high-load and
+heap warnings, and add rate limiting in front of the panel.
+
+### Panel works on `http://` but sign-in loops
+
+The session cookie is marked `Secure` and your browser will not send it over
+HTTP. See **Use Secure Cookies**.
 
 ## Events API
 
 Listen to sxPanel server events in your own resources with the
 [Events API](/docs/events-api). This lets your scripts react to bans, warnings,
 whitelist changes and other panel activity in real time.
-
-## Migrating from txAdmin
-
-Moving an existing txAdmin install over is covered in
-[Migrating from txAdmin](/docs/migrating-from-txadmin).
