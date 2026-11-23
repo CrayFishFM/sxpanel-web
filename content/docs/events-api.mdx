@@ -1,97 +1,626 @@
 ---
-title: Events API
-description: React to bans, warnings, whitelist changes and more from your own resources.
+title: Events API and exports
+description: Every server event sxPanel fires and every export it offers, with payloads, timing and Lua and JavaScript examples.
 ---
 
-sxPanel emits server-side events that your resources can listen to. This lets
-custom scripts react in real time to moderation actions, whitelist changes and
-server lifecycle events — without polling or extra database access.
+sxPanel gives your own resources two ways to work with it. **Events** tell your
+scripts that something happened: a ban, a warning, a whitelist change, a
+scheduled restart. **Exports** let your scripts ask sxPanel to do something:
+check an admin's permissions, tag a player, or kick, ban and warn through the
+normal moderation pipeline. Both are server-side only, and both need no extra
+database access or polling.
 
-<Callout title="Resource must be named `monitor`">
-  sxPanel's FXServer resource is expected to be named `monitor` (this is the
-  same convention txAdmin used). Exports are called as `exports.monitor:...`.
-  On FiveM Enhanced (gen9) servers the resource is named `txadmin` instead, so
-  exports are called as `exports.txadmin:...`.
+Use this page if you write server scripts. To extend the panel itself, see
+[Addons](/docs/addons) and the [Addon API](/docs/addon-api).
+
+## The resource name
+
+sxPanel's FXServer resource is named `monitor`, and you call its exports as
+`exports.monitor:<name>(...)`. On FiveM Enhanced (gen9) the resource is named
+`txadmin`, so you call `exports.txadmin:<name>(...)`. The resource refuses to
+start under any other name.
+
+<Callout title="Server-side only">
+  Events are fired on the server, and exports exist on the server. Register
+  handlers and call exports from a `server_script`, never from a client script.
+</Callout>
+
+<Callout title="Server must be running">
+  Events are delivered to FXServer through its console. When the server is
+  stopped, or still starting, nothing is delivered. For example, banning a
+  player from the panel while the server is offline saves the ban but fires no
+  `playerBanned` event.
 </Callout>
 
 ## Listening to events
 
-Events are namespaced under `txAdmin:events:` (kept from the underlying
-txAdmin codebase sxPanel is built on) and fire with a single data table
-argument.
+Events are named `txAdmin:events:<name>`. The prefix is kept from the codebase
+sxPanel is built on, so scripts written for txAdmin keep working. Every event
+is fired with one argument: a table (Lua) or object (JavaScript) with the
+fields listed below.
+
+<Steps>
+<Step>Add a handler in a server script of your resource with `AddEventHandler` (Lua) or `on` (JavaScript).</Step>
+<Step>Read the fields you need from the table. Field names are case-sensitive.</Step>
+<Step>Do not assume every field is present. Fields marked **nullable** can be `nil`/`null`.</Step>
+</Steps>
 
 ```lua
 AddEventHandler('txAdmin:events:playerBanned', function(eventData)
-  print(('Banned %s: %s'):format(eventData.targetName, eventData.reason))
+  print(('Banned %s (%s): %s'):format(eventData.targetName, eventData.actionId, eventData.reason))
 end)
 ```
 
-<Callout title="Server-side only">
-  All Events API emissions happen server-side. Register your handlers in a
-  server resource, never on the client.
+```js
+on('txAdmin:events:playerBanned', (eventData) => {
+  console.log(`Banned ${eventData.targetName} (${eventData.actionId}): ${eventData.reason}`);
+});
+```
+
+sxPanel triggers the event first and then runs its own handling (kicking the
+player, showing the warning), so your handler sees the event before the player
+is dropped.
+
+<Callout title="Showing your own notifications">
+  sxPanel shows its own on-screen notice for announcements, direct messages,
+  warnings and scheduled restart countdowns. To replace one with your own UI,
+  listen to the matching event and turn the default off under **Settings →
+  Game**. See [Game settings](/docs/settings/game#notifications).
 </Callout>
 
 ## Event reference
 
-| Event | Payload | Fires when |
-| --- | --- | --- |
-| `txAdmin:events:playerWarned` | `author, reason, actionId, targetNetId, targetIds, targetName` | A player is warned |
-| `txAdmin:events:playerBanned` | `author, reason, actionId, expiration, durationInput, durationTranslated, targetNetId, targetIds, targetHwids, targetName, kickMessage` | A player is banned |
-| `txAdmin:events:playerKicked` | `target, author, reason, dropMessage` | A player is kicked |
-| `txAdmin:events:actionRevoked` | `actionId, actionType, actionReason, actionAuthor, playerName, playerIds, playerHwids, revokedBy` | A ban/warn is revoked (unbanned/unwarned) |
-| `txAdmin:events:whitelistPlayer` | `action ('added'\|'removed'), license, playerName, adminName` | A whitelist entry is added or removed |
-| `txAdmin:events:playerDirectMessage` | `target, author, message` | An admin sends a player a direct message |
-| `txAdmin:events:announcement` | `message, author` | An admin broadcasts a server announcement |
-| `txAdmin:events:scheduledRestart` | `secondsRemaining, translatedMessage` | A scheduled restart warning is sent |
-| `txAdmin:events:scheduledRestartSkipped` | `secondsRemaining, temporary, author` | A scheduled restart is postponed/skipped |
-| `txAdmin:events:configChanged` | — | The panel configuration is saved |
+### Moderation
 
-<Callout>
-  There is no dedicated "server crashed" event — restart/crash handling is
-  covered by the monitor logs surfaced in the panel and in [Discord log
-  routes](/docs/discord#notifications).
+| Event | Fires when |
+| --- | --- |
+| `playerWarned` | A warning is issued. |
+| `playerBanned` | A ban is issued. |
+| `playerKicked` | One player, or everyone, is kicked. |
+| `actionRevoked` | A ban or warning is revoked. |
+
+#### `txAdmin:events:playerWarned`
+
+Fired when an admin warns a player from the panel or with the `warnPlayer`
+export. The warning is saved to the database before the event
+fires.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `author` | string | Name of the admin who issued the warning. |
+| `reason` | string | The reason. `no reason provided` when left empty. |
+| `actionId` | string | The warning's id in the history. |
+| `targetNetId` | number, nullable | The player's server id. `nil` when the player is not connected. |
+| `targetIds` | string[] | All identifiers of the player (`license:`, `discord:` and so on). |
+| `targetName` | string | The player's display name. |
+
+#### `txAdmin:events:playerBanned`
+
+Fired when a ban is issued from a player's page, the **History** page (ban by
+identifier), or the `banPlayer` export. It is not
+fired when the server is offline.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `author` | string | Name of the admin who issued the ban. |
+| `reason` | string | The reason. `no reason provided` when left empty. |
+| `actionId` | string | The ban's id in the history. |
+| `expiration` | number or `false` | Unix timestamp in seconds when the ban ends, or `false` for a permanent ban. |
+| `durationInput` | string | The duration as entered, such as `2 days` or `permanent`. |
+| `durationTranslated` | string, nullable | The duration in the server's language, such as `2 days`. `nil` for permanent bans. |
+| `targetNetId` | number, nullable | The player's server id. `nil` when the ban was placed on identifiers only (**History** page). |
+| `targetIds` | string[] | The identifiers the ban applies to. |
+| `targetHwids` | string[] | The hardware ids the ban applies to. Can be empty. |
+| `targetName` | string | The player's display name. `identifiers` for a ban placed on identifiers only. |
+| `kickMessage` | string | The text shown to the player when they are dropped. |
+
+Every connected player who matches one of the `targetIds` is kicked with
+`kickMessage` right after the event.
+
+#### `txAdmin:events:playerKicked`
+
+Fired when a player is kicked from the panel or with the
+`kickPlayer` export, and when an admin uses **Kick All Players**.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `target` | number | The player's server id, or `-1` when everyone is kicked. |
+| `author` | string | Name of the admin who kicked. |
+| `reason` | string | The reason. When empty, the server's default reason text is used. |
+| `dropMessage` | string | The text shown to the player when they are dropped. |
+
+The kick history entry is saved before the event fires. The server shutdown
+and the ban flow drop players without firing this event.
+
+#### `txAdmin:events:actionRevoked`
+
+Fired when a ban or warning is revoked (unbanned or un-warned) from the
+history, or from a player's page. Deleting an action from the database does not
+fire it.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `actionId` | string | The revoked action's id. |
+| `actionType` | string | `ban` or `warn`. |
+| `actionReason` | string | The reason the action was originally issued with. |
+| `actionAuthor` | string | Who issued the action. |
+| `playerName` | string, nullable | The player's name. `nil` for bans placed on identifiers only. |
+| `playerIds` | string[] | The identifiers of the action. |
+| `playerHwids` | string[] | The hardware ids. Always empty for warnings. |
+| `revokedBy` | string | Name of the admin who revoked it. |
+
+### Messages
+
+| Event | Fires when |
+| --- | --- |
+| `announcement` | A server announcement is broadcast. |
+| `playerDirectMessage` | An admin sends a player a direct message. |
+| `scheduledRestart` | A scheduled restart countdown message is due. |
+| `scheduledRestartSkipped` | A scheduled restart is cancelled. |
+
+#### `txAdmin:events:announcement`
+
+Fired when an admin sends an announcement from the panel or with the
+`sendAnnouncement` export. It is also fired by sxPanel
+itself with the author `sxPanel` when the server's web health check is close to
+forcing a restart and warns players one minute ahead.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `message` | string | The announcement text. |
+| `author` | string | Name of the admin, or `sxPanel` for automatic warnings. |
+
+#### `txAdmin:events:playerDirectMessage`
+
+Fired when an admin sends a direct message from a player's page. The player
+must be connected.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `target` | number | The player's server id. |
+| `author` | string | Name of the admin. |
+| `message` | string | The message text. |
+
+#### `txAdmin:events:scheduledRestart`
+
+Fired for each countdown warning of a scheduled restart. Warnings fire at
+30, 15, 10, 5, 4, 3, 2 and 1 minutes before the restart time. See
+[Server settings](/docs/settings/server) for how to set the schedule.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `secondsRemaining` | number | Seconds until the restart: `1800`, `900`, `600`, `300`, `240`, `180`, `120` or `60`. |
+| `translatedMessage` | string | The warning text in the server's language. |
+
+#### `txAdmin:events:scheduledRestartSkipped`
+
+Fired when an admin cancels the next scheduled restart, whether it is a regular
+or a one-off restart.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `secondsRemaining` | number | Seconds that were left until the cancelled restart. |
+| `temporary` | boolean | `true` when the cancelled restart was a one-off restart set from the panel. |
+| `author` | string, nullable | Name of the admin who cancelled it. |
+
+### Whitelist
+
+| Event | Fires when |
+| --- | --- |
+| `whitelistPlayer` | A player is added to or removed from the whitelist. |
+| `whitelistPreApproval` | A pre-approval for an identifier is added or removed. |
+| `whitelistRequest` | A whitelist request is created, approved or denied. |
+
+See [Whitelist](/docs/whitelist) for how the workflows themselves work.
+
+#### `txAdmin:events:whitelistPlayer`
+
+Fired when a player's whitelist status changes: an admin toggles it on the
+player's page, or a pre-approved player joins and their approval is consumed.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `action` | string | `added` or `removed`. |
+| `license` | string | The player's `license:` identifier. |
+| `playerName` | string | The player's display name. |
+| `adminName` | string | The admin who made the change, or who had granted the pre-approval. |
+
+#### `txAdmin:events:whitelistPreApproval`
+
+Fired when an admin adds or removes a pre-approval from the whitelist page or
+with the Discord bot.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `action` | string | `added` or `removed`. |
+| `identifier` | string | The approved identifier, in lower case. |
+| `playerName` | string | Only on `added`. The name stored with the approval. |
+| `adminName` | string | The admin who made the change. |
+
+#### `txAdmin:events:whitelistRequest`
+
+Fired through the lifecycle of a whitelist request. The fields depend on
+`action`.
+
+| `action` | Meaning | Other fields |
+| --- | --- | --- |
+| `requested` | A player tried to join and a new request was created. | `playerName`, `requestId`, `license` |
+| `approved` | An admin approved the request. | `playerName`, `requestId`, `license`, `adminName` |
+| `denied` | An admin denied the request. | `playerName`, `requestId`, `license`, `adminName` |
+| `deniedAll` | An admin denied all pending requests at once. | `adminName` |
+
+### Server and admins
+
+| Event | Fires when |
+| --- | --- |
+| `serverShuttingDown` | The server is about to stop or restart. |
+| `configChanged` | Settings are saved or the server starts. |
+| `consoleCommand` | An admin runs a command from the Live Console. |
+| `adminAuth` | An in-game admin signs in or is signed out. |
+| `adminsUpdated` | The admin list changed. |
+| `playerHealed` | An admin heals one or all players. |
+
+#### `txAdmin:events:serverShuttingDown`
+
+Fired when the server is stopped or restarted by sxPanel and the process is
+still alive. It fires before the shutdown notice delay. After it, sxPanel drops
+every player with the shutdown message and refuses new connections until the
+server is gone.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `delay` | number | Milliseconds sxPanel waits before it stops the process. `0` when the delay is skipped. |
+| `author` | string | Who requested it. `sxPanel` when no one is named. |
+| `message` | string | The shutdown message in the server's language, shown to players as their drop reason. |
+
+#### `txAdmin:events:configChanged`
+
+Fired without data when sxPanel pushes its settings to the server, which
+happens after settings are saved. Use it to
+re-read convars (`txAdmin-*`) your script depends on. It is also what
+sxPanel's own resource uses to refresh its notification settings and the
+language.
+
+#### `txAdmin:events:consoleCommand`
+
+Fired when an admin runs a command from the [Live Console](/docs/live-console).
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `channel` | string | `sxPanel`. |
+| `command` | string | The command line, with line breaks replaced by spaces. |
+| `author` | string | The admin's display name. |
+
+#### `txAdmin:events:adminAuth`
+
+Fired on the server whenever an in-game player's admin status is decided: when
+a player opens the menu and is checked against the panel, when the check fails,
+and when all admins are signed out at once.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `netid` | number | The player's server id, or `-1` when every admin was invalidated at once. |
+| `isAdmin` | boolean | `true` when the player is an admin. |
+| `username` | string | The panel username. Only present when `isAdmin` is `true`. |
+
+#### `txAdmin:events:adminsUpdated`
+
+Fired when the admin list or admin permissions change in the panel (for
+example in the **Admin Manager**). The argument is not a table of fields but an
+array of the server ids of the players who are online and match an admin. After
+it, every admin's in-game session is reset and they authenticate again, which
+produces `adminAuth` events.
+
+#### `txAdmin:events:playerHealed`
+
+Fired when an admin heals a player from the panel or the in-game menu.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `target` | number | The player's server id, or `-1` when everyone was healed. |
+| `author` | string | The admin's name, or `unknown`. |
+
+An older name, `txAdmin:events:healedPlayer`, is still fired for scripts written
+against it, with the fields `id`, `target` and `author`. Triggering either
+event yourself makes the other fire as well.
+
+### Other events
+
+| Event | Fires when |
+| --- | --- |
+| `customCommandsChanged` | The custom chat commands were edited in the panel. |
+| `ticketCreated` | A player opens a ticket. |
+| `ticketNewMessage` | A new message is added to a ticket. |
+
+`customCommandsChanged` carries no data. It makes the server reload the custom
+commands.
+
+`ticketCreated` carries `ticketId`, `category`, `reporterName` and
+`description`. `ticketNewMessage` carries `ticketId`, `reporterLicense` and the
+`message` object. sxPanel's own resource uses them to notify staff and
+reporters in game; see [Reports](/docs/reports) for the feature itself.
+
+<Callout title="Panel-internal events">
+  The panel also fires `webPlayerHealed`, `webSpectatePlayer`,
+  `webScreenshotPlayer`, `webLiveSpectateStart` and `webLiveSpectateStop` when an
+  admin uses the matching action on the web panel. They are triggers for
+  sxPanel's own resource. Their fields are not a stable interface, so do not
+  build on them. Use `playerHealed` to react to a heal.
 </Callout>
 
-## Resource exports
+<Callout>
+  There is no event for a server crash or a restart caused by the monitor.
+  Crashes and restarts are shown in the [Live Console](/docs/live-console).
+</Callout>
 
-All 10 exports live on the `monitor` resource (server-side only) and are
-called as `exports.monitor:<name>(...)`. There are two families: **tag
-exports** (act on any player) and **admin/action exports** (the first
-argument is always the acting *admin's* server ID, not the target's — sxPanel
-looks that admin up and checks their permission before doing anything).
+### Triggering events yourself
 
-| Export | Parameters | Returns | Notes |
-| --- | --- | --- | --- |
-| `addPlayerTag` | `serverId, tagId` | `boolean` success | `tagId` must already exist in Settings → Player Tags |
-| `removePlayerTag` | `serverId, tagId` | `boolean` success | Removes a previously-applied tag |
-| `hasPermission` | `serverId, permission` | `boolean` | Checks if `serverId` (an admin) has the given permission, e.g. `players.ban` |
-| `isPlayerAdmin` | `serverId` | `boolean` | Whether `serverId` is a logged-in sxPanel admin |
-| `getAdminUsername` | `serverId` | `string \| nil` | The admin's username, or `nil` if not an admin |
-| `getAdminPermissions` | `serverId` | `table \| nil` | Array of the admin's permission strings, or `nil` |
-| `kickPlayer` | `serverId, targetId, reason?` | — | `serverId` must have `players.kick`; logs to action history |
-| `banPlayer` | `serverId, targetId, reason?, duration?` | — | `serverId` must have `players.ban`; `duration` e.g. `'2 hours'`, `'1 week'`, defaults to `'permanent'` |
-| `warnPlayer` | `serverId, targetId, reason?` | — | `serverId` must have `players.warn`; logs to action history |
-| `sendAnnouncement` | `serverId, message` | — | `serverId` must have `announcement` permission |
+Events are normal FXServer events. `TriggerEvent('txAdmin:events:...')` from
+your own resource runs other resources' handlers but does not run sxPanel's
+built-in behaviour. For example, triggering `playerBanned` does not kick anyone
+and does not save a ban. To really ban, warn or kick, use the exports below.
+
+The console command `txaEvent`, which sxPanel uses internally, only accepts
+commands from the server console itself, not from players or resources.
+
+## Exports
+
+Exports are called as `exports.monitor:<name>(...)` (`exports.txadmin` on
+gen9). They split into two groups.
+
+- **Tag exports** act on any player by server id. They need no permission.
+- **Admin exports** take the server id of an **admin** as their first argument.
+  sxPanel looks that admin up and checks their permission before it does
+  anything. The admin must have signed in through the in-game menu so that
+  sxPanel knows them. Use these when your script performs an action *on behalf
+  of* a staff member, for example from a custom command or menu.
+
+Arguments must have the right type. Server ids must be numbers, not strings;
+run `GetPlayers()` results through `tonumber`. If an argument has the wrong
+type, the export prints an error in the server console and returns
+`false` (or `nil` for the ones that return a value).
+
+| Export | Parameters | Returns |
+| --- | --- | --- |
+| `addPlayerTag` | `serverId`, `tagId` | `boolean` |
+| `removePlayerTag` | `serverId`, `tagId` | `boolean` |
+| `hasPermission` | `serverId`, `permission` | `boolean` |
+| `isPlayerAdmin` | `serverId` | `boolean` |
+| `getAdminUsername` | `serverId` | `string` or `nil` |
+| `getAdminPermissions` | `serverId` | `string[]` or `nil` |
+| `kickPlayer` | `adminServerId`, `targetServerId`, `reason?` | `true` or `nil` |
+| `banPlayer` | `adminServerId`, `targetServerId`, `reason?`, `duration?` | `true` or `nil` |
+| `warnPlayer` | `adminServerId`, `targetServerId`, `reason?` | `true` or `nil` |
+| `sendAnnouncement` | `adminServerId`, `message` | `true` or `nil` |
+
+### Tag exports
+
+`addPlayerTag(serverId, tagId)` and `removePlayerTag(serverId, tagId)` add or
+remove a custom player tag. The tag is saved to the player's record, so it
+stays after they leave.
+
+- `tagId` is converted to lower case and must be defined as a custom tag under
+  **Settings → Game → Player Tags**. See
+  [Player tags](/docs/settings/game#player-tags-tab).
+- Tags that are managed by Discord roles cannot be changed with these exports.
+- `tagId` is at most 32 characters.
+- The player must be known to sxPanel (registered), not only connecting.
+- The export waits for the panel's answer, for at most 5 seconds, and
+  returns `true` only when the change was applied. On failure it returns
+  `false` and prints the reason in the console, prefixed with `[playerTag]`
+  and then `[addPlayerTag]` or `[removePlayerTag]`.
+
+Because the export waits, call it from a thread or event handler, not from a
+frame-critical loop.
+
+### Permission exports
+
+`hasPermission(serverId, permission)` returns `true` when the admin has the
+permission or has **All Permissions** (`all_permissions`). It returns `false`
+for players who are not signed-in admins. Use the permission ids from the
+[Admin Manager](/docs/permissions), for example `players.ban` or
+`console.write`.
+
+`isPlayerAdmin(serverId)` returns `true` when the player is a signed-in admin.
+
+`getAdminUsername(serverId)` returns the admin's panel username, or `nil`.
+
+`getAdminPermissions(serverId)` returns a copy of the admin's permission ids as
+an array, or `nil`. A master account or full-access admin contains
+`all_permissions`.
+
+<Callout title="Admins are known only after signing in">
+  sxPanel learns which players are admins when they open the in-game menu and
+  sign in. A staff member who has not done this yet is not recognised by these
+  exports. If the admin list changes in the panel, everyone signs in again
+  automatically.
+</Callout>
+
+### Action exports
+
+`kickPlayer`, `banPlayer`, `warnPlayer` and `sendAnnouncement` run the same
+pipeline as the panel. They record the action in the history and the action
+log under the admin's name and fire the matching event. `sendAnnouncement`
+also posts the announcement to Discord. Players see the normal kick, ban and
+warning screens.
+
+| Export | Permission the admin needs | What it does |
+| --- | --- | --- |
+| `kickPlayer` | **Kick** (`players.kick`) | Kicks a connected player. `reason` is optional. |
+| `banPlayer` | **Ban** (`players.ban`) | Bans all identifiers and hardware ids of the player. `reason` is optional. `duration` defaults to `permanent`. |
+| `warnPlayer` | **Warn** (`players.warn`) | Warns the player. `reason` is optional. |
+| `sendAnnouncement` | **Send Announcements** (`announcement`) | Broadcasts a message to everyone. `message` is required. |
+
+When `reason` is omitted, or not a string, kicks use the server's default
+reason text, and bans and warnings use `no reason provided`.
+
+`duration` is a number and a unit separated by a space: `1 hour`, `2 days`,
+`1 week`, `3 months` (a month is 30 days), or `permanent`. Plural units work
+(`hours`, `days`, `weeks`, `months`). The number must be 1 or more. An invalid
+duration makes the ban fail.
+
+<Callout type="warn" title="A returned true only means it was queued">
+  These four exports hand the request to sxPanel and return `true` straight
+  away. They cannot tell you whether the action worked afterwards. If the
+  target is not found, has no identifiers, or the duration is invalid, sxPanel
+  prints a warning in its own console and nothing happens. A kick also fails
+  when the player has already left. To react to the result, listen for the
+  matching event.
+</Callout>
+
+<Callout type="warn" title="Permanent bans do not need Ban: Permanent">
+  `banPlayer` only checks **Ban** (`players.ban`). It does not check **Ban:
+  Permanent** (`players.ban.permanent`), so an admin with only temporary-ban
+  rights can create a permanent ban through your script. Check
+  `hasPermission(adminServerId, 'players.ban.permanent')` yourself before you
+  pass `permanent` or leave `duration` empty.
+</Callout>
+
+If the admin argument is not a signed-in admin, or lacks the permission, the
+export prints an error such as `[banPlayer] admin does not have players.ban
+permission` in the server console and returns `nil`.
+
+### Examples
+
+#### Tag a player when they buy a package
 
 ```lua
--- tag exports: target the player directly
-exports.monitor:addPlayerTag(targetServerId, 'donator')
-exports.monitor:removePlayerTag(targetServerId, 'donator')
-
--- admin/action exports: first arg is the ADMIN performing the action
-exports.monitor:hasPermission(adminServerId, 'players.ban') -- boolean
-exports.monitor:isPlayerAdmin(adminServerId)                -- boolean
-exports.monitor:getAdminUsername(adminServerId)
-exports.monitor:getAdminPermissions(adminServerId)
-exports.monitor:kickPlayer(adminServerId, targetServerId, reason)
-exports.monitor:banPlayer(adminServerId, targetServerId, reason, duration)
-exports.monitor:warnPlayer(adminServerId, targetServerId, reason)
-exports.monitor:sendAnnouncement(adminServerId, message)
+RegisterNetEvent('myshop:purchased', function(packageId)
+  local src = source
+  if packageId == 'vip' then
+    local ok = exports.monitor:addPlayerTag(src, 'vip')
+    if not ok then
+      print('Could not tag player ' .. src)
+    end
+  end
+end)
 ```
 
-## Next steps
+```js
+onNet('myshop:purchased', (packageId) => {
+  const src = source;
+  if (packageId === 'vip') {
+    const ok = exports.monitor.addPlayerTag(src, 'vip');
+    if (!ok) console.log(`Could not tag player ${src}`);
+  }
+});
+```
 
-- Pair events with [Discord notifications](/docs/discord) to mirror actions in
-  your community.
-- Review [access control](/docs/permissions) to scope which admins can trigger
-  each event.
+#### A staff-only `/slap` command that warns
+
+```lua
+RegisterCommand('slap', function(source, args)
+  if not exports.monitor:hasPermission(source, 'players.warn') then
+    return TriggerClientEvent('chat:addMessage', source, { args = { 'You cannot warn players.' } })
+  end
+
+  local target = tonumber(args[1])
+  if not target then return end
+  exports.monitor:warnPlayer(source, target, table.concat(args, ' ', 2))
+end, false)
+```
+
+```js
+RegisterCommand('slap', (source, args) => {
+  if (!exports.monitor.hasPermission(source, 'players.warn')) return;
+
+  const target = parseInt(args[0], 10);
+  if (Number.isNaN(target)) return;
+  exports.monitor.warnPlayer(source, target, args.slice(1).join(' '));
+}, false);
+```
+
+#### Ban from a script with a duration
+
+```lua
+-- The admin (adminId) must be signed in and have the Ban permission.
+local function banForCheating(adminId, targetId)
+  if exports.monitor:hasPermission(adminId, 'players.ban') then
+    exports.monitor:banPlayer(adminId, targetId, 'Cheating', '1 week')
+  end
+end
+```
+
+```js
+function banForCheating(adminId, targetId) {
+  if (exports.monitor.hasPermission(adminId, 'players.ban')) {
+    exports.monitor.banPlayer(adminId, targetId, 'Cheating', '1 week');
+  }
+}
+```
+
+#### Mirror moderation actions to your own log
+
+```lua
+local function log(msg) print('[mod-log] ' .. msg) end
+
+AddEventHandler('txAdmin:events:playerKicked', function(e)
+  log(('%s kicked #%s: %s'):format(e.author, e.target, e.reason))
+end)
+
+AddEventHandler('txAdmin:events:playerWarned', function(e)
+  log(('%s warned %s: %s'):format(e.author, e.targetName, e.reason))
+end)
+
+AddEventHandler('txAdmin:events:actionRevoked', function(e)
+  log(('%s revoked %s %s'):format(e.revokedBy, e.actionType, e.actionId))
+end)
+```
+
+#### Show your own announcement UI
+
+<Steps>
+<Step>Under **Settings → Game**, set **Hide Announcement Notifications** to **Hidden** and save. See [Game settings](/docs/settings/game#notifications).</Step>
+<Step>Listen to `txAdmin:events:announcement` and draw your own notification with the `message` and `author` fields.</Step>
+</Steps>
+
+```lua
+AddEventHandler('txAdmin:events:announcement', function(e)
+  TriggerClientEvent('myui:announce', -1, e.message, e.author)
+end)
+```
+
+## How it connects
+
+- Bans, warnings and kicks made through the exports appear in the
+  [history](/docs/history) and in the sxPanel action log like any other
+  action. For Discord notifications, see [Discord log routes](/docs/discord-logs).
+- **Hide Announcement Notifications**, **Hide Direct Message Notification**,
+  **Hide Warning Notification**, **Hide Scheduled Restart Warnings** and the
+  options that hide the admin's name are in [Game settings](/docs/settings/game).
+- Permission ids you pass to `hasPermission` are listed in
+  [Permissions](/docs/permissions).
+- Addons running next to the panel receive the player events `playerKicked`,
+  `playerBanned` and `playerWarned` as well; see the [Addon API](/docs/addon-api).
+
+## Limits and edge cases
+
+- Events and exports exist only while the server is running. Nothing is queued
+  for later.
+- Events from actions made in the panel while the server is offline are not
+  replayed when it starts.
+- `playerBanned` is not fired for a ban placed while the server is offline.
+- Admin exports only recognise admins who are connected and signed in through
+  the in-game menu. They do not work for the web panel's accounts.
+- `addPlayerTag` and `removePlayerTag` give up after 5 seconds.
+- Triggering `txAdmin:events:*` events yourself does not make sxPanel act on
+  them; use the exports.
+- The exports are available on both FiveM and RedM. The resource name differs
+  on FiveM Enhanced (gen9) as described above.
+
+## Problems
+
+| Message in the server console | Cause and fix |
+| --- | --- |
+| `[hasPermission] invalid arguments: serverId must be number, permission must be string` | You passed a string server id. Convert with `tonumber(id)`. |
+| `[kickPlayer] invalid arguments: serverId and targetId must be numbers` | Same for `kickPlayer`, `banPlayer` and `warnPlayer`. |
+| `[banPlayer] source player is not an admin` | The first argument is not a signed-in admin. The player must open the in-game menu and sign in first. |
+| `[banPlayer] admin does not have players.ban permission` | The admin lacks the permission. The same message exists for `players.kick`, `players.warn` and `announcement`. |
+| `[sendAnnouncement] invalid arguments: serverId must be number, message must be string` | Pass a number and a text. |
+| `[playerTag] serverId must be a number and tagId must be a string` | Check the argument types of `addPlayerTag` / `removePlayerTag`. |
+| `[playerTag] tagId cannot be empty` | Pass a non-empty tag id. |
+| `[playerTag] unknown custom tag id: <id>` | The tag is not an assignable custom tag under **Settings → Game → Player Tags**. |
+| `[playerTag] tag '<id>' is managed by Discord roles` | Tags tied to Discord roles cannot be changed by exports. |
+| `[playerTag] player netid <n> not found or not registered` | The server id is wrong, or the player has not finished joining. |
+| `[playerTag] intercom request timed out` | sxPanel did not answer within 5 seconds. Check that the panel is running. |
+| `[playerTag] intercom HTTP 400: ...` | The request was rejected, for example a `tagId` longer than 32 characters. |
