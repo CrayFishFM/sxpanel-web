@@ -1,127 +1,323 @@
 ---
-title: Addons
-description: Install, approve and manage addons that extend sxPanel with new panel pages, widgets, server routes and Discord commands.
+title: Installing and managing addons
+description: Install, approve, review, start, stop and troubleshoot addons from the Addon Manager, and configure the addon system limits.
 ---
 
-Addons are self-contained packages that bolt extra functionality onto
-sxPanel — their own panel pages and dashboard widgets, HTTP routes, in-game
-Lua resources and Discord slash commands — without patching core. This page
-covers **running and managing** addons from the panel. To build one, see the
-[Addon API](/docs/addon-api).
+Addons are self-contained packages that add panel pages and widgets, HTTP routes, in-game scripts and Discord commands to sxPanel without changing the core. The **Addon Manager** is where an owner installs them, reviews the permissions they ask for, and starts, stops, reloads or removes them. To write an addon, see the [Addon API](/docs/addon-api).
 
-## Where addons live
+## Where to find it
 
-Every folder under `addons/` in your sxPanel data directory that contains an
-`addon.json` manifest is an addon. sxPanel discovers them on boot, validates
-each manifest, and lists them in **Addons → Addon Manager**.
+- Panel navigation: **Addons → Addon Manager**, at `/addons`.
+- The **Addons** section of the sidebar also lists the pages that running addons add, below **Addon Manager**.
+- When an addon needs your attention, a banner titled **Addons need attention** appears at the top of every page (see [The attention banner](#the-attention-banner)).
+
+## Who can use it
+
+The Addon Manager and every addon control need **All Permissions** (`all_permissions`). The master admin always has it.
+
+| You have | You see |
+| --- | --- |
+| **All Permissions** | The sidebar entry, the full page and every control. |
+| Anything else | The **Addon Manager** entry is greyed out in the sidebar. The list endpoint, approval, lifecycle and log endpoints all answer `Insufficient permissions.` |
+
+Pages that addons add to the sidebar have their own optional permission, set by the addon. Admins without it see that entry greyed out. Addon-defined admin permissions are assigned in the Admin Manager under **Addons**; see [Permissions](/docs/permissions).
+
+The page can also be hidden for everyone with the **Addon Manager** switch (`panelFeatures.addonsPage`, label **Addons Page Enabled**) in **Settings → Panel Features**, group **System**. It is on by default. A hidden page leaves the sidebar and `/addons` redirects to the dashboard. The switch only hides the page: the API and the running addons are not affected, and the setting is read when the panel loads, so reload after saving.
+
+## How addons are discovered
+
+Every folder directly inside `addons/` in the sxPanel (monitor) folder that contains an `addon.json` is an addon. When the panel boots, the Addon Manager:
+
+1. Reads every `addon.json` and validates it. A folder without one is skipped silently. An invalid manifest is skipped and the reason is written to the console.
+2. Skips an addon whose `id` is already used by another folder.
+3. Skips an addon whose `sxpanel.minVersion` is newer than the running sxPanel, or whose `sxpanel.maxVersion` is older.
+4. Skips an addon whose server, Discord commands or Discord events path points outside its own folder.
+5. Lists every remaining addon as **discovered**, then starts the ones you have already approved, dependencies first.
+
+A skipped addon never appears in the Addon Manager. Check the console for the reason.
 
 <Callout>
-  A panel build can run up to **20 addons** at once. The Addon Manager header
-  shows your current count (e.g. `2/20`).
+  An addon is trusted only after you approve it. A freshly copied addon runs none of its code until then.
 </Callout>
 
-## Addon Manager
+Addon folders are only read at boot and when you press **Rescan Addons**. Editing files on disk does not reload anything by itself.
 
-Open **Addons** in the top navigation. Each discovered addon is shown as a
-card with its name, version, author, description, the permissions it requests,
-and lifecycle controls.
+## The Addon Manager screen
 
 ![Addon Manager showing a discovered addon awaiting approval and a running addon with reload/stop/revoke controls](/docs/addon-manager.webp)
 
-| Status | Meaning |
+### Header
+
+| Element | What it does |
 | --- | --- |
-| **Discovered** | Found on disk but never approved. It is not running and none of its code has executed. Press **Approve** to review its permissions and start it. |
-| **Running** | Approved and its server process is up. Routes, pages, widgets and Discord commands are live. |
-| **Stopped** | Approved but not currently running — either stopped manually or halted after a crash. Use **Reload** to start it again. |
-| **Needs re-approval** | The manifest changed to request new permissions since it was last approved. It stays stopped until an admin re-approves it. |
-| **Error** | The manifest failed validation or the process failed to start. The reason is logged. |
+| **Addons** counter | Shows the number of listed addons against the maximum, for example `2/20`. It shows `—` until the list has loaded. |
+| **Rescan Addons** | Reloads every addon (see [Rescan Addons](#rescan-addons)). Shows **Scanning…** while it runs. Only visible with **All Permissions**. |
 
-### Approving an addon
+The list refreshes itself every 10 seconds.
 
-Approval is a security gate, not a formality. The dialog lists every
-permission the addon asks for (see the [permission reference](/docs/addon-api#permission-reference))
-and any [admin permissions](/docs/permissions) it wants to register.
+### Empty and error states
 
-<Callout title="Approval implies full trust">
-  An approved addon runs as a normal Node process with the same OS-level
-  access as sxPanel itself. Permissions only gate calls *into* core (storage,
-  player tags, tickets, WebSocket push, deferral). Only approve addons you
-  have read or trust.
+| You see | Meaning |
+| --- | --- |
+| **Addon system is disabled** | `enabled` is `false` in `addon-config.json`. See [System settings](#system-settings). |
+| **No addons installed** | No addon folder was discovered. Place addon folders in the `addons/` directory. |
+| **Failed to load addons** with **Retry** | The list request failed. **Retry** asks again. |
+
+### Addon cards
+
+Each addon is a card showing its name, `v<version> by <author>`, its description and a state badge.
+
+| Part | What it shows |
+| --- | --- |
+| Error box | The last error, for addons in the **invalid**, **failed** or **crashed** state. |
+| Re-approval notice | `This addon has been updated and requires new permissions. Please re-approve to continue using it.` |
+| **Depends on** | The other addon ids that must be running first. |
+| **Permissions** | One chip per permission the manifest asks for. A red `*` marks a required permission. An optional permission shows a green shield when it is granted. |
+| Logs button (scroll icon) | Shown while the addon is **running**, **failed** or **crashed**. Opens the log dialog. |
+| Settings button (gear icon) | Shown only while the addon is **running** and its manifest declares a settings component. Opens its settings dialog. |
+
+### States
+
+| State | Meaning | Buttons |
+| --- | --- | --- |
+| `discovered` | Found on disk but not approved. Nothing has run. | **Approve** |
+| `discovered`, with the re-approval notice | You approved it before, but its manifest now lists a required permission you did not grant. It stays stopped. | **Re-approve** |
+| `running` | Approved and started. Its routes, pages, widgets, admin permissions and Discord commands are live. | **Reload**, **Stop**, **Revoke** |
+| `stopped` | Approved, but stopped by you with **Stop**. It is on the disabled list and does not start on boot. | **Start**, **Revoke** |
+| `failed` | It could not start: a missing dependency, a start error, or no ready signal in time. | **Start**, **Reload**, **Revoke** |
+| `crashed` | The process exited while running. | **Start**, **Reload**, **Revoke** |
+| `invalid` | A reload found a manifest that is invalid, incompatible with this sxPanel version, or has a path that escapes the addon folder. | None. Fix `addon.json`, then press **Rescan Addons**. |
+
+`approved`, `starting`, `stopping` and `validating` are passing states and normally last a moment.
+
+### Approve and Re-approve
+
+**Approve** (or **Re-approve**) opens a dialog titled `Approve Addon: <name>` (`Re-approve Addon: <name>` for a re-approval). The text under the title is `Review and grant permissions for this addon. Required permissions are marked with *.` or, for a re-approval, `This addon has been updated and requires new permissions. Review the updated permission list below.`
+
+The dialog lists every permission the addon asks for with a one-line description:
+
+| Permission | Description shown | Required or optional |
+| --- | --- | --- |
+| `storage` | Read/write to addon's own scoped key-value store | Set by the addon |
+| `players.read` | Read player data such as custom tags and metadata | Set by the addon |
+| `players.write` | Modify player custom tags via the players.addTag / players.removeTag APIs | Set by the addon |
+| `tickets.read` | Read ticket/report data and receive ticket lifecycle events | Set by the addon |
+| `ws.push` | Push real-time data to panel clients via WebSocket | Set by the addon |
+| `deferral` | No description is shown. Lets the addon resolve dynamic deferral tokens and present deferral cards. | Set by the addon |
+
+- Required permissions are ticked and locked, marked `*required`.
+- Optional permissions are ticked by default. Untick any you want to deny. On a re-approval they are ticked again, even if you denied them earlier.
+- **Cancel** closes the dialog without changes. **Approve** saves the approval and starts the addon.
+
+The dialog does not list the admin permissions an addon registers. They appear in the Admin Manager once the addon runs.
+
+<Callout type="warn" title="Approval implies full trust">
+  An approved addon runs code on your server with the same access to the machine as sxPanel itself. The permissions only gate what an addon can ask the panel core to do (storage, player tags, tickets, WebSocket push, deferral). Approve only addons whose code you have read or whose author you trust.
 </Callout>
 
-Approved grants are stored in `addon-config.json` in your data directory —
-**not** inside the addon's own folder — so re-copying or updating the addon
-files does not silently re-grant anything.
+The server accepts only permissions that sxPanel knows and that the manifest declares, and it requires all required ones. The approval is stored in `addon-config.json` with the time and the name of the admin who approved it, outside the addon's own folder, so replacing the addon's files never grants anything silently.
 
-### Per-addon controls
+### Reload, Stop, Start and Revoke
 
-Running addons expose:
+| Button | Confirms? | What it does |
+| --- | --- | --- |
+| **Reload** | No | Stops the addon, re-reads and re-validates `addon.json`, and starts it again. Shows **Reloading…**. Toast: `Addon "<id>" reloaded.` Use it after changing server code or the manifest. |
+| **Stop** | No | Stops the addon, removes the admin permissions it registered, and puts it on the disabled list so it stays stopped across restarts. Toast: `Addon "<id>" stopped.` |
+| **Start** | No | Takes the addon off the disabled list and starts it. Needs an existing approval. Toast: `Addon "<id>" started.` |
+| **Revoke** | Yes | Opens **Revoke Addon**: `Are you sure you want to revoke <name>? This will stop the addon and remove its approval. You can re-approve it later.` Confirming stops it, unregisters its admin permissions and deletes its approval. It returns to `discovered`. Toast: `Addon revoked.` |
 
-- **Reload** — restart the addon's server process. Required after you change
-  its `server/` code; panel-only changes just need a browser refresh.
-- **Stop** — shut the addon down without revoking it. It stays approved.
-- **Revoke** — remove approval entirely. The addon drops back to
-  **Discovered** and must be re-approved (and its permissions re-reviewed)
-  to run again.
-- **Logs** — the addon's stdout/stderr and lifecycle events.
-- **Settings** — shown only if the addon ships a settings component.
+The Manager reports these results as toasts:
+
+| Toast | Meaning |
+| --- | --- |
+| `Reload failed: <reason>`, `Stop failed: <reason>`, `Start failed: <reason>` | The action returned an error. |
+| `Failed to approve addon: <message>`, `Failed to revoke addon: <message>`, `Failed to reload addon: <message>`, `Failed to stop addon: <message>`, `Failed to start addon: <message>` | The request itself failed. |
+| `Addon revoked. Restart FXServer to fully unload the running instance.` | The panel could not stop the addon live. The revoke is saved and takes effect on the next restart. |
+| `Addon "<id>" stop is pending restart.` | The same for **Stop**. |
+
+None of these actions writes to the Action Log, and none sends a Discord notification. Panel and in-game pages update on their own: after any of these actions the panel tells every connected browser and the Discord bot that the addon changed.
+
+### Logs
+
+The scroll icon opens a dialog titled `<name> Logs`: `Last <n> log entries. Auto-refreshes every 3 seconds.` Each line shows the time, the level (`info`, `warn` or `error`) and the message. An empty log shows `No log entries.`
+
+- Only messages the addon writes through the addon SDK logger appear here. Anything else it prints goes to the console, not to this dialog.
+- The panel keeps the last **200** entries per running instance, and each message is cut at 2000 characters. They are cleared when the addon stops or reloads.
+
+### Settings
+
+An addon that declares a settings component gets the gear icon. It opens a dialog titled `<name> Settings` with the addon's own form. If the component cannot be found, the dialog shows `Settings component not available.` Addons can also place cards in an **Addon Settings** area at the bottom of the Addon Manager page; each card carries a title the addon chooses.
 
 ### Rescan Addons
 
-**Rescan Addons** re-reads the `addons/` directory without restarting the
-panel — use it after dropping in a new addon folder so it shows up as
-*Discovered* without a full FXServer restart.
+**Rescan Addons** is a full reload, not just a look at the folder. It does the following in order, for every addon known or found on disk:
 
-## Installing an addon
+1. Stops every running process.
+2. Re-reads each manifest.
+3. Adds new folders as `discovered`, and drops addons whose `addon.json` has gone.
+4. Starts every approved addon that is not on the disabled list, and leaves stopped ones stopped.
+
+Toast: `Addon folder rescanned.` Addons restart, so any in-memory state is lost. If a running addon ships in-game NUI content, the `monitor` resource is ensured once, which resets the in-game menu for players; they stay connected.
+
+A new folder with a manifest that fails validation is not added to the list on rescan. The reason is only in the console.
+
+### The attention banner
+
+Admins with **All Permissions** see a banner titled **Addons need attention** on every page while any addon is `discovered`.
+
+| Message | When |
+| --- | --- |
+| `<n> addon(s) awaiting approval.` | Only new addons are pending. |
+| `<n> addon(s) updated with new permissions — re-approval required.` | Only re-approvals are pending. |
+| `<n> addon(s) awaiting approval and <m> needing re-approval.` | Both. |
+
+**Go to Addons** opens the Addon Manager. **Dismiss** hides the banner in your browser until the set of pending addons changes.
+
+## System settings
+
+The addon system has no settings screen. It is configured in `addon-config.json`, which sxPanel creates with defaults in your server profile folder on first boot. Edit it while the server is stopped or the panel is not running: the file is read once at boot and rewritten each time an approval or a start/stop changes.
+
+| Key | What it does | Default | Limits / values |
+| --- | --- | --- | --- |
+| `enabled` | Turns the whole addon system on or off. Off: nothing is discovered or started and the Addon Manager shows **Addon system is disabled**. | `true` | `true` / `false` |
+| `maxAddons` | Maximum number of addons listed. Boot discovery stops adding folders at this number. | `20` | 1 to 100 |
+| `maxStorageMb` | Size cap of each addon's key-value storage. A write that would exceed it fails with `Storage limit exceeded (max <n> MB)`. | `10` | 1 to 100 |
+| `processTimeoutMs` | How long an addon has to send its ready signal after starting. | `10000` | 1000 to 60000 |
+| `publicServerPort` | Port for the separate public server of addons that use `publicRoutes`. `0` means use the addon's own `publicServer.defaultPort`. | `0` | 0 to 65535 |
+| `approved` | The approvals: for each addon id, the granted permissions, `approvedAt` and `approvedBy`. Written by **Approve** and **Revoke**. | `{}` | Managed by the panel |
+| `disabled` | Addon ids that stay stopped. Written by **Stop** and **Start**. | `[]` | Managed by the panel |
+
+<Callout type="warn" title="A broken file resets approvals">
+  If `addon-config.json` is not valid JSON or fails validation (for example `maxAddons` set to `500`), sxPanel logs `Failed to load addon config, using defaults` and then **overwrites the file with defaults**. Every approval is lost and each addon returns to `discovered`. Keep a copy before editing.
+</Callout>
+
+Addon data lives in `addon-data/<addon-id>.json` in the same profile folder. Revoking or removing an addon does not delete it.
+
+## Common tasks
+
+### Install an addon
 
 <Steps>
 <Step>
-### Copy the addon folder
+### Copy the folder
 
-Place the addon's folder inside `addons/` in your sxPanel data directory, so
-you have `addons/<addon-id>/addon.json`.
+Put the addon so that `addons/<folder>/addon.json` exists in your sxPanel folder. The folder name does not have to match the addon `id`, but the `id` must be unique.
 </Step>
 <Step>
 ### Rescan
 
-In **Addons → Addon Manager**, press **Rescan Addons**. The addon appears
-with status **Discovered**.
+Open **Addons → Addon Manager** and press **Rescan Addons**. The addon appears as `discovered`. Existing addons restart while this runs.
 </Step>
 <Step>
-### Approve
+### Review and approve
 
-Press **Approve**, review the requested permissions and admin permissions,
-and confirm. The addon's server process starts and its status becomes
-**Running**.
+Read the description and the **Permissions** chips, press **Approve**, untick any optional permission you do not want to give, and confirm. The addon starts and its state becomes `running`.
 </Step>
 <Step>
-### Grant admin access (if needed)
+### Grant its admin permissions
 
-If the addon registered its own admin permissions, assign them to the
-relevant admins or presets in **Server → Admins**. See
-[Permissions](/docs/permissions).
+If the addon registers admin permissions, give them to the admins or presets that need them. They appear under **Addons** in the Admin Manager. See [Permissions](/docs/permissions).
 </Step>
 </Steps>
 
-## Panel pages & widgets
+### Update an addon
 
-Addons can add their own entries to the sidebar and drop widgets onto the
-Overview dashboard. These appear automatically once the addon is **Running**;
-if an addon page declares a required permission, admins without it simply
-don't see the entry.
+<Steps>
+<Step>
+### Replace the files
 
-## Updating & removing
+Overwrite the addon folder with the new version.
+</Step>
+<Step>
+### Reload
 
-- **Update** — replace the addon's files and press **Reload** (or **Rescan**
-  then **Reload**). If the new manifest asks for more permissions it flips to
-  **Needs re-approval** first.
-- **Remove** — **Revoke** it in the Addon Manager, then delete its folder
-  from `addons/`. Its approval entry in `addon-config.json` is cleared on
-  revoke.
+Press **Reload** on its card. A changed manifest is re-read. Panel files are cached by the browser for a few minutes, so reload the browser tab if a page looks stale.
+</Step>
+<Step>
+### Re-approve if asked
 
-## Next steps
+If the new version lists a required permission you never granted, the addon returns to `discovered` with the re-approval notice. Press **Re-approve**. New optional permissions do not trigger a re-approval; they stay denied until you approve again.
+</Step>
+</Steps>
 
-- Build your own: the [Addon API](/docs/addon-api) documents the manifest,
-  server SDK, panel SDK and Discord SDK, with a copy-paste starter template.
-- Addons that react to server events can also use the plain
-  [Events API](/docs/events-api) from a Lua resource.
+### Remove an addon
+
+<Steps>
+<Step>
+### Revoke it
+
+Press **Revoke** and confirm. This stops it and deletes its approval.
+</Step>
+<Step>
+### Delete the folder
+
+Delete the addon's folder from `addons/`.
+</Step>
+<Step>
+### Rescan
+
+Press **Rescan Addons**. The addon disappears from the list. Delete `addon-data/<addon-id>.json` too if you want its stored data gone.
+</Step>
+</Steps>
+
+### Stop an addon temporarily
+
+Press **Stop**. It stays stopped across restarts until you press **Start**. **Revoke** is the stronger choice if you no longer trust it, because it removes the approval.
+
+## Where addon pages appear
+
+| Where | What appears | Condition |
+| --- | --- | --- |
+| Sidebar, **Addons** section | An entry for each addon page. | The addon is running. Entries whose permission you lack are greyed out. |
+| **Overview** dashboard | Addon widgets and cards. See [Overview](/docs/overview#addon-widgets). | The addon is running. |
+| Header account menu | Addon menu entries. | The addon declares them. |
+| In-game menu | Addon NUI pages and player profile tabs. See [In-game menu](/docs/in-game-menu). | The addon is running and ships a `nui` section. |
+| **Settings** | Addon tabs and the **Addon Settings** area on this page. | The addon declares them. |
+| Discord | Addon slash commands. See [Discord commands](/docs/discord-commands). | The addon is running and declares `discordBot`. |
+| **Settings → Deferral Cards** | Addon deferral scenarios and tokens. See [Deferral cards](/docs/settings/deferral-cards). | The addon declares them. |
+
+When an addon stops, is revoked or reloads, its pages and menu entries disappear or refresh in open browsers without a reload.
+
+If an addon page cannot be loaded, the page shows `Addon page failed to load` with the addon id and the error instead of crashing the panel.
+
+## How it connects
+
+- **Admin permissions.** Addons register their own admin permissions with the ids `addon.<addonId>.<permId>`. They exist only while the addon runs and disappear when it is stopped or revoked. See [Permissions](/docs/permissions).
+- **Public routes.** An addon whose manifest sets `publicRoutes` is served from a separate HTTPS listener on `0.0.0.0` at the configured port, never from the panel's own address. It needs TLS credentials in the environment (`TXHOST_ADDON_PUBLIC_TLS_KEY` and `TXHOST_ADDON_PUBLIC_TLS_CERT`, or the `_FILE` variants) and allows 600 requests per minute per IP. It starts with the first running addon that needs it and stops when none does.
+- **Events.** Addons receive server events through the addon SDK. Lua resources use the [Events API](/docs/events-api).
+- **Building addons.** Manifest fields, the SDKs and the permission gates are in the [Addon API](/docs/addon-api).
+
+## Limits and edge cases
+
+- At most `maxAddons` addons (default 20) are loaded at boot. Folders beyond the limit are skipped with a console warning. The limit is not applied when a **Rescan Addons** adds a new folder, so check the **Addons** counter.
+- An addon with `dependencies` starts only after all of them are running. Otherwise it is `failed` with `Missing dependencies: <ids>`. Start order follows the dependencies.
+- An addon has `processTimeoutMs` (default 10 seconds) to become ready, otherwise it fails with `Addon did not send ready signal within <n>ms`.
+- Requests from the panel to an addon's routes time out after 30 seconds (`Addon request timed out.`, HTTP 504). Storage calls time out after 5 seconds. JSON request bodies above 1 MB are refused. The panel removes cookies, tokens and authorisation headers before forwarding a request, and removes `Set-Cookie`, CORS and CSP headers from the response.
+- Static files an addon serves (`panel/`, `nui/`, `static/`) are limited to its own folder. Dotfiles, symlinks and `..` paths are refused with 404. Panel files are cached for 5 minutes.
+- On Linux the addon runs inside the sxPanel process. On other platforms it runs in a separate Node process. The environment variable `SXPANEL_ADDON_RUNTIME` (`inprocess`, `worker`, `node` or `auto`) overrides this.
+- Automatic reload on file changes is switched off. Reload addons by hand.
+- On a panel shutdown every addon is stopped and its storage is flushed to disk. Storage is also saved every 5 seconds.
+- There is no per-addon uninstall button. Removal is revoke, delete folder, rescan.
+
+## Problems
+
+| Message | Cause and fix |
+| --- | --- |
+| `Insufficient permissions.` | The admin does not have **All Permissions**. |
+| `Invalid addon ID format.` | The id in the request is not 3 to 64 lowercase letters, digits and hyphens. |
+| `Addon not found` | The addon is not in the list. Press **Rescan Addons**. |
+| `Missing required permissions: <list>` | A required permission was not ticked, or a reload found one not yet granted. Re-approve. |
+| `Unknown permissions: <list>` / `Permissions not declared in manifest: <list>` | The approval request included a permission sxPanel does not know or the manifest does not declare. |
+| `Addon is not running (state: <state>)` | **Stop** was used on an addon that is not running. |
+| `Addon is already running` / `Addon is not approved` | **Start** was used on a running addon, or one with no approval. Approve it first. |
+| `Missing dependencies: <ids>` | A dependency is not running. Start or approve the dependency, then **Start** this addon. |
+| `Addon did not send ready signal within <n>ms` | The addon did not finish starting. Open **Logs**, fix its code, or raise `processTimeoutMs`. |
+| `Entry path escapes addon directory` / `Server entry escapes addon directory` | The manifest's `server.entry` points outside the addon folder. Fix `addon.json`. |
+| `Invalid manifest: <details>` | `addon.json` failed validation. The details list each field. |
+| `Version incompatible` | The addon's `sxpanel.minVersion` or `maxVersion` excludes this sxPanel version. |
+| `addon-sdk not found (checked <path> and <path>)` | The `addon-sdk` package is missing from the monitor `node_modules`. Redeploy the monitor resource. |
+| `Addon is not running.` (HTTP 503) | A panel page called an addon route while it was stopped. Start it. |
+| `Addon request timed out.` (504) / `Addon request failed.` (502) | The addon did not answer in time, or crashed. Check **Logs**. |
+| `Public addon server requires TLS credentials. ...` | An addon uses `publicRoutes` but no TLS key and certificate are set. |
+| `Storage limit exceeded (max <n> MB)` | The addon filled its storage. Raise `maxStorageMb` or clear its data. |
+| An addon is not in the list | The manifest is invalid, incompatible, a duplicate `id`, or beyond `maxAddons`. The console has the reason. |

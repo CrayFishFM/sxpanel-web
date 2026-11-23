@@ -564,7 +564,9 @@
         "panel/src/pages/AddonsPage.tsx"
       ],
       "notes": "Addon Manager in full: discovery, approval and re-approval, permission review, lifecycle controls, limits, where addon pages appear.",
-      "status": "todo"
+      "status": "done",
+      "writtenAt": "2026-11-23",
+      "sourceSha": "a21e752720dac257eafa73132d5d73599ec76ff2"
     },
     {
       "id": "addon-api",
