@@ -1,10 +1,44 @@
 ---
 title: Troubleshooting
-description: Common sxPanel issues and how to resolve them.
+description: Common sxPanel problems grouped by symptom, with the likely cause and a link to the page that has the full list of messages and fixes.
 ---
 
-Most sxPanel issues come down to the `monitor/` folder swap, the FXServer launch
-command, or Discord bot configuration. This page covers the most common ones.
+Most sxPanel problems come down to the `monitor/` folder swap, the FXServer
+launch command, a permission the admin does not have, or the Discord bot
+configuration. This page covers the most common ones and points you to the
+**Problems** section of the page that owns each feature, where every error
+message is listed exactly as shown.
+
+## Find your problem
+
+| You see or want to fix | Go to |
+| --- | --- |
+| Fatal boot errors (`FATAL ERROR: E<code>`), the panel never starts | [Installation problems](/docs/quick-start#problems) |
+| Setup wizard, recipe deployer or `Task Failed` errors | [Setup problems](/docs/setup#problems) |
+| Boot stops after switching from txAdmin, database or `admins.json` errors | [Migration problems](/docs/migrating-from-txadmin#problems) |
+| Invalid `TXHOST_*` variable, port in use, `Too many attempts`, proxy issues | [Configuration problems](/docs/configuration#problems) |
+| An update failed or the server did not return | [Update problems](/docs/updating#problems) |
+| Cannot sign in, 2FA, `Unable to load admins.json` | [Admin and sign-in problems](/docs/permissions#problems) |
+| Server controls, announcements, scheduled restarts | [Overview problems](/docs/overview#problems) |
+| Console stuck on **Connecting…**, cannot send commands | [Live console problems](/docs/live-console#problems) |
+| Resources will not start, config files will not save | [Resource problems](/docs/resources#problems) |
+| `server.cfg` will not save or the server will not start | [CFG editor problems](/docs/cfg-editor#problems) |
+| Missing or empty events, combat entries or session files | [Server log problems](/docs/server-log#problems) |
+| Custom `/` commands that do nothing | [Chat command problems](/docs/chat-commands#problems) |
+| Warn, kick, ban, screenshot or tag actions fail | [Player problems](/docs/players#problems) and [History problems](/docs/history#problems) |
+| Banned players can still join | [History problems](/docs/history#problems) |
+| Tickets or report threads do not work | [Report problems](/docs/reports#problems) |
+| Empty Insights cards, Player Drops errors | [Insights problems](/docs/insights#problems) |
+| Action Log, Console Log or Diagnostics pages | [System page problems](/docs/system#problems) |
+| Players refused by the whitelist | [Whitelist problems](/docs/whitelist#problems) |
+| Queue not holding players | [Queue problems](/docs/settings/queue#problems) |
+| A settings card will not save | [Settings problems](/docs/settings#problems), [General and FXServer](/docs/settings/server#problems), [Appearance](/docs/settings/appearance#problems) |
+| Players see no image or the wrong card while connecting | [Deferral card problems](/docs/settings/deferral-cards#problems) |
+| In-game menu messages such as `You do not have this permission.` | [In-game menu problems](/docs/in-game-menu#problems) and [Staff tool problems](/docs/staff-tools#problems) |
+| Bot offline, missing slash commands | [Discord bot problems](/docs/discord#problems) and [slash command problems](/docs/discord-commands#problems) |
+| Nothing arrives in a Discord log channel | [Log route problems](/docs/discord-logs#problems) |
+| An addon is missing, will not start or is rate limited | [Addon Manager problems](/docs/addons#problems) and [Addon API problems](/docs/addon-api#problems) |
+| Export or event errors in the server console | [Events API problems](/docs/events-api#problems) |
 
 ## The panel URL does not open
 
@@ -22,6 +56,8 @@ command, or Discord bot configuration. This page covers the most common ones.
   `http://localhost:40120`.
 - If the port is in use, set the `TXHOST_TXA_PORT` environment variable to an
   alternate port (see [Configuration](/docs/configuration)).
+- A `FATAL ERROR: E<code>` line means a requirement failed. The code table is
+  in [Installation problems](/docs/quick-start#problems).
 
 ## Migration from txAdmin appears broken
 
@@ -33,6 +69,23 @@ Existing `txData` directories work without modification. If something looks off:
 
 See [Migrating from txAdmin](/docs/migrating-from-txadmin) for what is migrated, the backups and the error messages.
 
+## You cannot sign in
+
+- `Wrong username or password!`, `Wrong PIN.` and two-factor errors are
+  explained in [Admins and permissions](/docs/permissions#problems).
+- `Too many attempts. Blocked for 15 minutes.` is the sign-in limiter. Wait, or
+  restart FXServer. Behind a reverse proxy, turn on **Trust Reverse Proxy** so
+  one user's attempts do not block everyone; see
+  [Configuration](/docs/configuration#problems).
+
+## An action says you do not have permission
+
+Almost every "permission" message means the admin account lacks one specific
+permission. The message or the page's **Who can use it** section names it.
+Add it in the Admin Manager; see [Admins and permissions](/docs/permissions).
+Some actions need **All Permissions** (addon and update management) or the
+master account (the [Danger Zone](/docs/settings)).
+
 ## The Discord bot is offline
 
 - Double-check the bot token and "Bot Enabled" toggle in the panel's Discord
@@ -40,7 +93,12 @@ See [Migrating from txAdmin](/docs/migrating-from-txadmin) for what is migrated,
 - Make sure the **Server Members Intent** and **Message Content Intent** are
   enabled for your bot application in the Discord Developer Portal — the bot
   needs both to resolve roles and read command interactions.
-- Re-invite the bot with the correct scopes if it was removed.
+- Re-invite the bot with the correct scopes if it was removed. Slash commands
+  need the `applications.commands` scope.
+- Open **System → Diagnostics → Discord Bot** to see the last bot error and
+  restart the runtime; see [System pages](/docs/system#discord-bot).
+
+More in [Discord bot problems](/docs/discord#problems).
 
 ## Players can't connect after enabling whitelist
 
@@ -49,15 +107,29 @@ See [Migrating from txAdmin](/docs/migrating-from-txadmin) for what is migrated,
 - For Discord Role workflows, verify the role IDs configured in Discord settings.
 - Remember only one workflow is active at a time — check the
   [Whitelist](/docs/whitelist) guide if you expected multiple checks to combine.
+- If the [connection queue](/docs/settings/queue) is on, players also pass the
+  queue after the whitelist check.
+
+See [Whitelist problems](/docs/whitelist#problems).
 
 ## Charts or console look empty
 
 Insights and the live console depend on the server running through sxPanel. If
 you bypass the panel and start FXServer directly, telemetry won't be captured.
-Always start via sxPanel so it can instrument the server.
+Always start via sxPanel so it can instrument the server. Individual Insights
+cards also stay empty until enough data exists; each message is explained in
+[Insights problems](/docs/insights#problems).
+
+## A page is missing from the sidebar
+
+The admin either lacks the permission for the page or the page was switched
+off in **Settings → Panel Features**. See [Settings](/docs/settings) and
+[Admins and permissions](/docs/permissions).
 
 ## Still stuck
 
 If none of the above helps, join the [Discord community](/docs/discord) or open
 an issue on [GitHub](https://github.com/Snipzil/sxpanel). Include the relevant
-JSONL log lines from the system logger — they make diagnosing much faster.
+JSONL log lines from the system logger — they make diagnosing much faster. You
+can also send a support report from
+[System → Diagnostics](/docs/system).

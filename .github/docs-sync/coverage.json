@@ -597,7 +597,9 @@
         "panel/src/layout/sidebarConfig.ts"
       ],
       "notes": "Last pass. Rewrite index.mdx and features.mdx as short overviews that link to every page written so far, and expand troubleshooting.mdx with the problems documented across the other pages, linking to each. Check every page is in meta.json in the right section.",
-      "status": "todo"
+      "status": "done",
+      "writtenAt": "2026-11-24",
+      "sourceSha": "a21e752720dac257eafa73132d5d73599ec76ff2"
     }
   ]
 }

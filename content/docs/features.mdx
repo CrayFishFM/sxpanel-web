@@ -1,157 +1,72 @@
 ---
 title: Features
-description: A complete tour of everything sxPanel can do.
+description: An overview of what sxPanel can do, with a link to the page that documents each feature in full.
 ---
 
 sxPanel bundles a web panel, an in-game admin menu, analytics, player management,
-access control and a Discord bot into a single build.
+access control, a Discord bot and an addon system into a single build. This page
+is a map: each item links to the page that explains it completely.
 
 ![sxPanel Overview dashboard — server controls, live player count, server stats, console and performance charts](/docs/overview.webp)
 
+## Getting started
+
+- [Installation](/docs/quick-start): requirements, replacing the `monitor` folder, first start and PIN
+- [First-time setup](/docs/setup): the Server Setup wizard and the recipe deployer
+- [Migrating from txAdmin](/docs/migrating-from-txadmin): what carries over and how to go back
+- [Updating](/docs/updating): sxPanel and FXServer artifact updates
+- [Host configuration](/docs/configuration): `TXHOST_*` variables, ports, reverse proxy and the data folder
+- [Troubleshooting](/docs/troubleshooting): problems by symptom, with links to the fix
+
 ## Web Panel
 
-A real-time control room for your server. The home page is described in
-the [Overview dashboard](/docs/overview) guide.
+A real-time control room for your server.
 
-- [Live console](/docs/live-console) with block-based buffer, lazy-loading, saved commands, search & filters
-- Server performance charts — players, FXServer/Node memory, and a per-thread
-  tick-time histogram (`svMain`, `svNetwork`, …)
-- [Resource manager](/docs/resources) with folder grouping and start/stop/restart, plus an
-  **Edit config files** action for editing a resource's config files
-- [Chat commands](/docs/chat-commands) page for turning in-game menu actions, chat messages,
-  console commands and server/client events into `/` commands
-- [CFG editor](/docs/cfg-editor) for `server.cfg` with multi-file support and validation on save
-- Real-time playerlist with fuzzy search & tag filtering, and a full
-  [player roster and profile](/docs/players)
-- Light/dark themes plus a full custom theme builder, see [Appearance and custom themes](/docs/settings/appearance)
-- [Settings](/docs/settings) with one save per card, and [Panel Features](/docs/settings#panel-features) to hide pages you do not use
-- [Deferral cards](/docs/settings/deferral-cards): a visual studio for the ban, whitelist and queue screens players see while connecting
+- [Overview dashboard](/docs/overview): server controls, players, stats, console tail and performance charts
+- [Live console](/docs/live-console): real-time output, commands, search, filters and saved commands
+- [Resources](/docs/resources): start, stop, restart and ensure resources, and edit their config files
+- [CFG editor](/docs/cfg-editor): edit `server.cfg` and other `.cfg` files, with validation on save
+- [Server log](/docs/server-log): joins, chat, deaths, combat and admin actions, live and replayed
+- [Chat commands](/docs/chat-commands): built-in `/` commands and your own custom ones
+- [Players](/docs/players): the roster and the player profile with every moderation action
+- [History](/docs/history): bans and warnings, ban templates and durations
+- [Reports](/docs/reports): player tickets and report analytics
+- [Insights](/docs/insights): retention, peak hours, session length and player drops
+- [System pages](/docs/system): Action Log, Console Log, Diagnostics and Advanced
+- [Admins and permissions](/docs/permissions): accounts, presets, login methods and two-factor
+- [Whitelist](/docs/whitelist): join workflows, requests and approvals
 
 ![Live console with block buffer, saved commands, search, filter and download](/docs/live-console.webp)
 
-![Resource manager grouped by folder, with start/stop/restart controls and per-folder counts](/docs/resources.webp)
+## In-game menu
 
-## In-Game Menu
+Admin tooling inside the game, opened with `/tx`.
 
-Admin tooling that lives inside the game. See [In-game menu](/docs/in-game-menu)
-for every page, action and setting.
+- [In-game menu](/docs/in-game-menu): every page, action and menu setting
+- [Staff tools](/docs/staff-tools): staff chat, coordinates HUD, entity inspector, invisibility and vehicle clean up
 
 ![The in-game menu's main page with self, teleport, vehicle, world, staff tool and server actions](/docs/menu-main.webp)
 
-- Player Mode: NoClip, God, SuperJump
-- Teleport, Vehicle, Heal, Announcements
-- Live Spectate from the web panel
-- Built-in screenshot capture (replaces `screenshot-basic`)
-- Ban / Warn / DM with editable durations
-- Server Stats and Resources pages, so you can check uptime, player count and
-  resource status, or [start/stop/restart/ensure resources](/docs/resources#in-the-in-game-menu), without leaving the
-  game
-- [Staff tools](/docs/staff-tools): staff-only chat, a coordinates HUD and entity inspector,
-  invisibility, unoccupied-vehicle cleanup, and returning or disarming players
-- Mouse-wheel speed control while in NoClip freecam
-- Every menu action is also available as a chat command — see
-  [Chat commands](/docs/chat-commands)
+## Settings
 
-## Chat commands
+The [Settings overview](/docs/settings) explains the page, Panel Features and the Danger Zone. Each tab has its own page:
 
-Every `/tx` menu action is available as a chat command by default (for example
-`/heal`, `/noclip` or `/sc` for staff chat). The **Chat Commands** page under
-**Server** in the panel lets you add your own commands, or replace and turn off
-the built-in ones, without a restart. See [Chat commands](/docs/chat-commands)
-for every command, the editor and the permissions involved.
+- [General and FXServer](/docs/settings/server): server name, data folder, restarts, health monitor and language
+- [Game](/docs/settings/game): menu, notifications, tickets, combat log and player tags
+- [Connection queue](/docs/settings/queue): priority rules and reserved slot pools
+- [Deferral cards](/docs/settings/deferral-cards): the cards players see while connecting
+- [Appearance and custom themes](/docs/settings/appearance): light, dark and your own themes
 
-## Combat logging
+## Discord
 
-Turn on **Combat Log** in the [**Game** settings](/docs/settings/game) (master admin only, requires
-OneSync) to record player-versus-player kills and fight summaries in the
-[Server Log](/docs/server-log), and optionally send them to Discord through a [log route](/docs/discord-logs). See
-[Combat log](/docs/server-log#combat-log) for the settings and how fights are
-tracked.
+- [Discord bot](/docs/discord): create and invite the bot, status embeds and role permissions
+- [Slash commands](/docs/discord-commands): every command, its options and required permission
+- [Log routes](/docs/discord-logs): send activity, combat, joins and chat to Discord channels
 
-## Insights & Analytics
+## Developers
 
-Understand how your server actually performs. The [**Insights**](/docs/insights) page collects
-long-term trends:
-
-- Player retention — 1d / 7d / 30d return rate, plus 7d / 30d active share
-- Player count & host-memory trend, cumulative player growth
-- New vs returning players and new players per day
-- Peak-hours heatmap (weekday × hour)
-- Session length, playtime distribution and an all-time playtime leaderboard
-- Disconnect reasons and a server uptime timeline
-- Moderation activity over time
-
-Separate [**Player Drops**](/docs/insights#player-drops) and [**Report Analytics**](/docs/reports#report-analytics) pages break down
-disconnect causes and ticket volume in more detail.
-
-![Insights page — retention, player count & memory, new vs returning players](/docs/insights.webp)
-
-## Player Management
-
-Everything you need to keep the peace.
-
-- Warning & Ban system with full history, from the
-  [player profile](/docs/players#the-player-profile) and the
-  [History page](/docs/history), with ban templates and durations
-- Player [report tickets](/docs/reports) record nearby players, and reporters
-  and targets show their Discord ID
-- Configurable [whitelist](/docs/whitelist) — Admin Only, Discord Member,
-  Discord Role, Manual Review or an external allowlist
-- Role-based [connection queue](/docs/settings/queue) with priority rules and
-  reserved slot pools
-- Auto-tags + up to 20 [custom tags](/docs/settings/game#player-tags-tab), settable from other resources via [exports](/docs/events-api#exports)
-- Activity heatmap, risk assessment, name history
-- Self-contained flat-file database — no MySQL required
-
-![Players roster with identifiers, tags, online state and playtime](/docs/players.webp)
-
-## Access Control
-
-Granular permissions for every admin.
-
-- Login via Cfx.re (Discourse) OAuth or a local password, with optional TOTP
-  two-factor
-- 40+ granular permissions across System, Server, In-Game Menu and Player
-  Management — plus any registered by addons
-- Fully custom permission presets (no fixed tier list)
-- Per-admin statistics & action logging
-- Structured JSONL system logger
-
-See [Admins and permissions](/docs/permissions) for the full permission list,
-presets, login methods and two-factor, and [System pages](/docs/system) for the
-Action Log, Console Log and Diagnostics.
-
-## Discord Integration
-
-Manage and monitor without leaving Discord. See the
-[Discord bot guide](/docs/discord) for setup, the embed editor and role permissions,
-and the [slash command reference](/docs/discord-commands).
-
-- Auto-updated [status and player list embeds](/docs/discord#embeds) with an editor and live preview
-- Discord roles mapped to [permission presets](/docs/discord#role-permissions)
-- [Slash commands](/docs/discord-commands) for moderation, player lookup, whitelist and reports
-- [Log routes](/docs/discord-logs) that send panel actions, admin menu use, combat, joins and chat to Discord channels
-- Notifications for reports, bans, crashes and whitelist events
-
-## Addons
-
-Extend the panel without forking it. See [Installing and managing addons](/docs/addons) and
-the [Addon API](/docs/addon-api).
-
-- [Addon Manager](/docs/addons#the-addon-manager-screen) with per-addon approval, permission review and lifecycle
-  controls (reload / stop / revoke), up to 20 addons per build
-- Addons add their own sidebar pages and Overview dashboard widgets
-- Sandboxed IPC permissions — storage, player tags, tickets, WebSocket push,
-  deferral — granted individually at approval time
-- Ship server HTTP routes, in-game Lua and Discord slash commands from one
-  package, with a copy-paste starter template
+- [Events API and exports](/docs/events-api): server events and exports for your own resources
+- [Installing and managing addons](/docs/addons): the Addon Manager, approval and limits
+- [Addon API](/docs/addon-api): the manifest, permissions and SDKs for building addons
 
 ![Addon Manager — per-addon status, requested permissions and lifecycle controls](/docs/addon-manager.webp)
-
-## And more
-
-<Callout>
-  [Recipe-based server deployer](/docs/setup) with GitHub token support & a headless CLI ·
-  [Artifact and panel updates](/docs/updating) · [Host configuration](/docs/configuration) (`TXHOST_*` variables, ports, reverse proxy, data folder) · [Scheduled restarts](/docs/overview#scheduled-restart-behaviour) and [FXServer settings](/docs/settings/server) with postponable temp schedules ·
-  Ticket/report system with Discord notifications · 35 languages.
-</Callout>
