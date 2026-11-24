@@ -1,0 +1,98 @@
+---
+title: Security & Telemetry
+description: Anti-dump detection for stolen scripts and script error telemetry, both built into the sxPanel resource.
+---
+
+The sxPanel resource includes two server-side features that need nothing
+installed:
+
+- **Anti-dump detection** flags players running injected code, dumpers or
+  tools used to copy your scripts, and kicks or bans them through the normal
+  sxPanel ban system (recorded in the player's history, enforced on rejoin
+  with HWID matching).
+- **Error telemetry** captures script errors from your resources and delivers
+  them to an event and an optional Discord webhook.
+
+<Callout>
+  FiveM sends every client script and NUI file to the player's PC, so no
+  resource can stop someone reading files already on their disk. sxPanel
+  detects the tools and behaviour used to dump scripts while the player is
+  connected. Server-side scripts are never sent to clients.
+</Callout>
+
+## Detections
+
+| Detection | Default | What triggers it |
+| --- | --- | --- |
+| `honeypotEvent` | ban | A client triggered a bait server event. Only decoy client code references these events. |
+| `injectedResource` | ban | The client runs a resource the server never sent it. |
+| `injectedResourceError` | ban | Telemetry received a client script error blamed on a resource the server doesn't have. |
+| `resourceStopped` | kick | The client stopped a resource that is still running on the server, or restarted sxPanel's client script. Server-side restarts are ignored for 30 seconds. |
+| `heartbeatLost` | kick | sxPanel's client script sent no heartbeat for 90 seconds while the player's connection is otherwise alive. |
+| `nuiDevtools` | log | The NUI devtools were opened. |
+| `nuiForeignOrigin` | log | Another resource's NUI page called sxPanel's NUI callbacks. |
+| `telemetrySpam` | log | A client flooded the telemetry error event. |
+
+Players with an sxPanel admin account in game are only logged for every
+detection except `honeypotEvent` (see `exemptAdmins`). `log` detections are
+reported once per player per session. Client reports are limited to 20 per 10
+seconds per player.
+
+Every detection is printed to the server console and written to the **System
+Logs** as **Security Detection**, and optionally sent to a Discord webhook.
+For `kick` and `ban` the player is also removed through the ban system, with
+the reason `[Security] <detection>`.
+
+## Settings
+
+Set these in `server.cfg` with `set`, **never `setr`**: replicated convars can
+be read by every client.
+
+| Convar | What it does | Default | Values |
+| --- | --- | --- | --- |
+| `sxp:security:enabled` | Turns the whole module on or off. | `true` | `true` / `false` |
+| `sxp:security:action:<detection>` | Action for one detection, for example `sxp:security:action:nuiDevtools`. | per detection, see above | `ban`, `kick`, `log`, `off` (anything else is treated as `log`) |
+| `sxp:security:banDuration` | Length of security bans. | `permanent` | Same format as the panel, for example `2 days`, `1 week`, `permanent` |
+| `sxp:security:exemptAdmins` | Only log admins instead of punishing them (`honeypotEvent` still applies). | `true` | `true` / `false` |
+| `sxp:security:honeypotEvents` | Extra private bait events. | empty | Comma-separated event names |
+| `sxp:security:ignoreResources` | Resources never flagged as injected or stopped. | empty | Comma-separated names |
+| `sxp:security:webhook` | Discord webhook for detections. | falls back to `sxp:telemetry:webhook` | URL starting with `https://` |
+
+The built-in bait event names are public, so add a few of your own with
+`sxp:security:honeypotEvents` and reference them only from decoy client code.
+
+## Error telemetry
+
+Server-side script errors from every resource are captured from the console.
+Client-side errors need the hook as the **first** client script of each
+resource you want to watch, and the resource needs `lua54 'yes'`:
+
+```lua
+client_scripts {
+    '@monitor/resource/telemetry/hook.lua', -- '@txadmin/...' if your resource is named txadmin
+    'client.lua',
+}
+```
+
+Errors are delivered to the local server event `telemetry:error` and to the
+webhook, if set. If a standalone `telemetry` resource is running, sxPanel
+stands down to avoid double reports.
+
+```lua
+AddEventHandler('telemetry:error', function(entry)
+    -- entry.side 'client' | 'server', entry.resource, entry.trace, entry.source (client only)
+end)
+```
+
+| Convar | What it does | Default |
+| --- | --- | --- |
+| `sxp:telemetry:enabled` | Turns telemetry on or off. | `true` |
+| `sxp:telemetry:webhook` | Discord webhook for errors (falls back to `telemetry:webhook`). | empty |
+| `sxp:telemetry:cooldown` | Milliseconds between reports per resource (and per player). | `1000` |
+| `sxp:telemetry:stackWait` | Milliseconds to wait for the server stack trace. | `50` |
+| `sxp:telemetry:maxTraceLength` | Maximum trace length. | `2000` |
+| `sxp:telemetry:logClientErrors` | Log client errors. | `true` |
+| `sxp:telemetry:ignoreResources` | Resources to ignore, comma-separated. | empty |
+
+Telemetry is based on [PocusSoftware/telemetry](https://github.com/PocusSoftware/telemetry)
+(LGPL-3.0-or-later).

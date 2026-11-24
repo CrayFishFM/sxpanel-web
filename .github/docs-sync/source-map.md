@@ -16,6 +16,8 @@ here. Fix this file when a path moves or a page gains a new source.
 | `events-api.mdx` | `resource/shared.lua`, `resource/sv_main.lua`, `resource/sv_*.lua` (events and exports), emitters in `core/modules/FxScheduler.ts`, `core/modules/FxMonitor/`, `core/routes/player/actions.ts`, `core/routes/history/actions.ts`, `core/routes/fxserver/commands.ts` |
 | `addons.mdx` | `core/modules/AddonManager/`, `core/routes/addons.ts`, `panel/src/pages/AddonsManagerPage.tsx`, `panel/src/pages/AddonsPage.tsx` |
 | `addon-api.mdx` | `addon-sdk/src/` (the `.d.ts` files are the public SDK surface), `shared/addonTypes.ts`, `shared/deferralAddonTypes.ts`, `addons/addon-starter-template/`, `core/modules/AddonManager/`, `core/lib/addonEvents.ts`, `bot/addonRuntime.js` |
+| `database.mdx` | `core/routes/database.ts`, `core/lib/database/`, `panel/src/pages/Database/`, `shared/databaseApiTypes.ts`, `database.*` entries in `shared/permissions.ts` |
+| `security.mdx` | `resource/sv_security.lua`, `resource/cl_security.lua`, `resource/telemetry/`, `core/modules/FxRunner/handleFd3Messages.ts` |
 | `troubleshooting.mdx` | Symptom-driven; verify each fix against the feature that owns it above |
 
 Screenshots referenced by the docs live in this repo under `public/docs/`.

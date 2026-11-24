@@ -1,0 +1,113 @@
+---
+title: Database
+description: Browse, search and edit your server's MySQL/MariaDB database from the panel.
+---
+
+The **Database** page lets admins browse the tables of the MySQL or MariaDB
+database your server resources use (the one `oxmysql` connects to), look at
+table structures, run SQL queries and, with the right permission, edit rows.
+It does not touch sxPanel's own player data.
+
+## Where to find it
+
+**Server → Database**, at `/server/database`.
+
+## Who can use it
+
+| Permission | Id | What it allows |
+| --- | --- | --- |
+| **View Database** | `database.view` | Open the page, browse tables and structures, run read-only queries (`SELECT`, `SHOW`, `DESCRIBE`, `DESC`, `EXPLAIN`, `WITH`). |
+| **Edit Database** | `database.edit` | Run any SQL statement and add, edit or delete rows. Flagged as dangerous. |
+
+Without **View Database** the page is not in the sidebar. With only **View
+Database**, the page shows a **Read-only** badge and hides the row controls.
+
+The page can also be switched off with **Database Page Enabled** in
+**Settings → sxPanel → Panel Features**. Unlike most page toggles, this one is
+also enforced by the backend: every request is refused with "The database page
+is disabled in Settings → Panel Features."
+
+## Connection
+
+sxPanel reads the `mysql_connection_string` convar, the same one `oxmysql`
+uses. It looks first in the server's startup arguments (`+set
+mysql_connection_string ...`) and then in your `server.cfg` (the last setting
+wins). Both formats are accepted:
+
+```cfg
+set mysql_connection_string "mysql://user:password@127.0.0.1:3306/database?charset=utf8mb4"
+set mysql_connection_string "server=127.0.0.1;port=3306;database=es_extended;userid=root;password=secret"
+```
+
+The port defaults to `3306`. A `socketPath` (URI query parameter, or `socket`
+/ `socketpath` in the key/value form) connects through a socket instead. The
+page header shows `user@host:port/database · server version`.
+
+## The screen
+
+A table list on the left (with a **Search tables…** box and an estimated row
+count per table) and, for the selected table, three tabs.
+
+### Data
+
+Rows of the selected table, paginated.
+
+- **Search all columns…** matches rows where any text column contains the
+  text. Binary, geometry, point and polygon columns are not searched.
+- Click a column header to sort by it; click again to change direction or
+  clear the sort. Primary key columns are highlighted.
+- **Rows per page** is 25, 50, 100 or 250 (default 50).
+- **Refresh** reloads the page.
+- `NULL` values are shown as **NULL**. Binary values show as
+  `(binary, N bytes)` with a hex preview, and text longer than 16,384
+  characters is shown truncated; both are read-only.
+
+With **Edit Database**:
+
+- **Add row** opens the row editor. Leave an auto-increment column empty to
+  generate its value.
+- **Edit row** and **Delete row** act on one row, identified by its primary
+  key. Delete asks you to confirm ("Delete this row?").
+- Tables without a primary key show "This table has no primary key: rows can
+  only be changed with SQL queries." and have no row controls.
+- Binary columns can't be edited in the row editor.
+
+Row edits, inserts and deletes are written to the action log as **Edit
+Database Row**, **Insert Database Row** and **Delete Database Row**.
+
+### Structure
+
+One line per column: **Column**, **Type**, **Nullable**, **Default**, **Key**,
+**Extra** and **Comment**.
+
+### SQL Query
+
+An editor for one statement at a time. Press **Run (Ctrl+Enter)**, or select
+part of the text to run only the selection. A trailing `;` is ignored.
+
+- Results show up to 1000 rows; beyond that "Only the first 1000 rows are
+  shown." appears. Statements that change data report the affected rows and
+  any insert id.
+- Queries time out after 30 seconds ("Query timed out after 30s.").
+- Statements are limited to 100,000 characters.
+- With **View Database** only, queries run inside a read-only transaction.
+  Anything other than a read statement is refused (`"UPDATE" statements need
+  the "Edit Database" permission.`), as are executable comments (`/*! ... */`)
+  and `INTO OUTFILE` / `INTO DUMPFILE`.
+- With **Edit Database**, a statement that is not a plain read first asks "Run
+  a query that changes data?". Queries that are not plain reads (and any
+  `WITH` query) are written to the action log as **Run Database Query**,
+  truncated to 500 characters.
+
+## Problems
+
+| Message | Cause and fix |
+| --- | --- |
+| `No "mysql_connection_string" found in your server.cfg. Add it (the same one oxmysql uses) to use the database page.` | Neither the startup arguments nor `server.cfg` set the convar. Add it. |
+| `Invalid mysql_connection_string: ...` | The string can't be parsed (bad URI, unsupported protocol, invalid port). |
+| `Could not connect to the database server (ECONNREFUSED).` | The database server is down or unreachable; `ETIMEDOUT` and `ENOTFOUND` mean a timeout or an unknown host. |
+| `Access denied: check the user and password in mysql_connection_string.` | The credentials are wrong. |
+| `The database page is disabled in Settings → Panel Features.` | Re-enable **Database Page Enabled**. |
+| `You don't have permission to do this.` | Your account lacks **View Database** or **Edit Database**. |
+
+See [Permissions](/docs/permissions) for how to grant them.
