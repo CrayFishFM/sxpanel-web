@@ -16,6 +16,7 @@ on:
         required: false
 
 permissions:
+  actions: write
   contents: write
   pull-requests: write
 
@@ -71,6 +72,13 @@ jobs:
           if [ -z "$area" ]; then
             echo "Every area in $COVERAGE is done."
             echo "run=false" >> "$GITHUB_OUTPUT"
+            # Nothing left once the last areas are merged: turn the schedule off
+            # so it stops producing empty runs. Re-enable it from the Actions tab
+            # after adding new areas.
+            if [ -z "${{ steps.pr.outputs.number }}" ]; then
+              gh workflow disable docs-backfill.yml --repo "$GITHUB_REPOSITORY"
+              echo "Disabled this workflow's schedule."
+            fi
             exit 0
           fi
           mkdir -p "$WORK"

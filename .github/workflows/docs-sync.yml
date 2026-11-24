@@ -4,10 +4,15 @@ name: Docs sync
 # the docs have not seen, Claude reads them against the source and edits the
 # pages they affect, and the result is opened as (or added to) one pull request.
 # Agent instructions: .github/docs-sync/prompt.md
+#
+# Runs when sxpanel main is pushed to: .github/workflows/notify-docs.yml in
+# sxPanel/sxpanel sends the sxpanel-main-push dispatch. The weekly schedule only
+# catches pushes whose dispatch was missed (for example an expired token), so
+# runs (and their notifications) happen only when there are new commits.
 
 on:
   schedule:
-    - cron: "7,37 * * * *"
+    - cron: "17 6 * * 1"
   repository_dispatch:
     types: [sxpanel-main-push]
   workflow_dispatch:
